@@ -36,7 +36,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from tests import pull_request_backbone
+from tests import pm_assignee_lookup, pull_request_backbone
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS_DIR = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
@@ -70,6 +70,13 @@ def _load(script: str, module_name: str):
     sys.modules[module_name] = module
     spec.loader.exec_module(module)
     return module
+
+
+@pytest.fixture(autouse=True)
+def _assignees_are_users(monkeypatch):
+    """GitHub answers every bare login these tests hand a Task to as a user's
+    account (DEC-079 point 1)."""
+    return pm_assignee_lookup.answer(monkeypatch)
 
 
 @pytest.fixture(scope="module")
@@ -276,10 +283,6 @@ class _Writer:
     legacy_stamp: str
 
 
-def _identity(module):
-    return module.Identity(github_login="alice", email="alice@example.test")
-
-
 def _dw_bypass(dw, reason, scope):
     return dw._post_bypass_audit_idempotent(42, reason, {}, head=scope)
 
@@ -288,7 +291,6 @@ def _dw_ci_bypass(dw, reason, scope):
     return dw._post_ci_bypass_audit(
         7,
         reason,
-        _identity(dw),
         ("tests (FAILURE)",),
         {},
         head=scope,
@@ -303,14 +305,13 @@ def _dw_reviewer_override(dw, reason, scope):
         block_comment_url=None,
         head=scope,
     )
-    return dw._post_reviewer_override_audit(7, audit_rec, reason, _identity(dw), {})
+    return dw._post_reviewer_override_audit(7, audit_rec, reason, {})
 
 
 def _mp_ci_bypass(mp, reason, scope):
     return mp._post_ci_bypass_audit(
         7,
         reason,
-        _identity(mp),
         ("tests (FAILURE)",),
         {},
         head=scope,
@@ -324,8 +325,7 @@ def _mi_transition(mi, reason, scope):
     landed_moves = scope.removeprefix("sha")
     reason = reason.strip()
     key = mi._transition_audit_key("todo", "backlog", reason, landed_moves)
-    invoker = SimpleNamespace(github_login="alice", email="alice@example.test")
-    body = mi._render_audit_comment(CAPABILITY_ROOT, invoker, reason) + "\n\n" + key
+    body = mi._render_audit_comment(CAPABILITY_ROOT, reason) + "\n\n" + key
     return mi._post_transition_audit_once(42, body, key, {})
 
 
@@ -508,14 +508,15 @@ PLANTINGS = {
 
 
 def _allow_member(module, monkeypatch) -> None:
+    from _lib.membership import Identity
+
     monkeypatch.setattr(module, "load_adopter_config", lambda root: {})
     monkeypatch.setattr(module, "_read_members", lambda root, loader: [])
     monkeypatch.setattr(
         module,
         "resolve_invoker_identity",
-        lambda config=None: SimpleNamespace(
-            github_login="octocat", email="o@e.com", unresolved_cause=None
-        ),
+        # GitHub answers that the credential acts as octocat, a user's account.
+        lambda config=None: Identity(github_login="octocat", email="o@e.com", kind="user"),
     )
     monkeypatch.setattr(
         module,
@@ -524,6 +525,13 @@ def _allow_member(module, monkeypatch) -> None:
     )
     monkeypatch.setattr(module.session_guard, "enforce", lambda **kw: True)
     monkeypatch.setattr(module.bootstrap_gate, "enforce", lambda *a, **kw: True)
+
+
+def _switch_off(module, monkeypatch) -> None:
+    """The merge verbs hold a change that turns on the sync's switch, read from the
+    host (DEC-072 point 3). That hold is no audit's, and this file's change turns
+    nothing on (its hold: `tests/test_pm_sync_switch.py`)."""
+    monkeypatch.setattr(module, "_switch_hold", lambda *a, **kw: module.sync_switch.NOT_HELD)
 
 
 _RED = [{"name": "tests", "status": "COMPLETED", "conclusion": "FAILURE"}]
@@ -563,6 +571,7 @@ def _wire_done_work(dw, monkeypatch) -> None:
     monkeypatch.setattr(
         dw, "_gh_get_status_rollup", lambda n, config: dw._RollupReading(tuple(_RED))
     )
+    _switch_off(dw, monkeypatch)
     _direct_merge(dw, monkeypatch)
     monkeypatch.setattr(dw.pr_merge, "delete_branch", lambda n, h, c, **kw: None)
     monkeypatch.setattr(dw.pr_merge, "cleanup_local", lambda b, c, **kw: None)
@@ -610,6 +619,7 @@ def _wire_merge_pr(mp, monkeypatch) -> None:
         "_gather_unticked_findings",
         lambda n, body, closing, config: {},
     )
+    _switch_off(mp, monkeypatch)
     _direct_merge(mp, monkeypatch)
     monkeypatch.setattr(mp.pr_merge, "delete_branch", lambda n, h, c, **kw: None)
     monkeypatch.setattr(mp.pr_merge, "cleanup_local", lambda b, c, **kw: None)
@@ -642,7 +652,7 @@ def _wire_move_issue(mi, monkeypatch) -> None:
     monkeypatch.setattr(
         mi,
         "_engine_status",
-        lambda n: {"position": {"state": "todo"}, "journal": [{}, {}]},
+        lambda n: {"position": {"state": "todo", "indeterminate": False}, "journal": [{}, {}]},
     )
     monkeypatch.setattr(mi.axis_carriage, "is_board_carried", lambda *a, **kw: False)
     monkeypatch.setattr(mi, "detect_placeholder_residuals", lambda **kw: [])
@@ -750,7 +760,7 @@ def _wire_move_issue_logging_off(mi, monkeypatch) -> _FakeGitHub:
         mi,
         "_engine_status",
         lambda n: {
-            "position": {"state": "todo"},
+            "position": {"state": "todo", "indeterminate": False},
             "journal": [],
             "journal_logging": {"enabled": False, "committed": False},
         },

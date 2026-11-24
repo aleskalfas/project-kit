@@ -40,7 +40,7 @@ A missing file, an empty file, or a missing key means the owning record's defaul
 ### 4. Strict when checked, forgiving when read
 
 - **Validation** (the methodology's validate command, and continuous integration) is strict. An unknown key is an error, reported with the nearest known key. So is a known key with an invalid value, and so is a file that does not parse.
-- **Commands that merely read** the file never fail because of it. On an unparsable file or an invalid value they warn and use the default. A typo is caught where checking happens and never blocks ordinary work.
+- **Commands that merely read** the file never fail because of it. On an unparsable file or an invalid value they warn and use the default. Where the owning record names a reading for a value that cannot be read, or that an unknown key may misspell, they use that reading instead, so that a fault need not widen what a command does (refinement per COR-072). A typo is caught where checking happens and never blocks ordinary work.
 
 ### 5. Written only with consent
 

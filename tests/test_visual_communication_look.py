@@ -55,6 +55,7 @@ from tests.test_visual_communication_viewing_browser import span as held_span
 from tests.test_visual_communication_viewing_browser import text as held_text
 from tests.visual_communication_browser import called, logged, stand_in
 from tests.visual_communication_project import (
+    LOOK_REPORT,
     RELEASED_FOUNDATIONS,
     RELEASES,
     TEST_BRAND,
@@ -62,6 +63,7 @@ from tests.visual_communication_project import (
     copy_library,
     importable,
     project,
+    reports_held,
     write,
     write_list,
     yaml_text,
@@ -110,6 +112,14 @@ def plugins(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     yield
     seam.unregister(producer.NAME)
     seam.unregister("svg")
+
+
+@pytest.fixture(autouse=True)
+def reports_hold_their_schema(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+    """Each report a look of the test writes holds to the report's schema."""
+    refused = reports_held(monkeypatch, viewing)
+    yield
+    assert refused == []
 
 
 def run_look(root: Path, *args: str) -> subprocess.CompletedProcess[str]:
@@ -2119,6 +2129,58 @@ def test_the_report_holds_each_read_of_the_browser_and_each_loss_of_the_renderer
     assert any("has no face of Held at weight 700" in each for each in lines)
     assert "refused: en, default: a request for https://example.invalid/a.png" in lines
     assert any(each.startswith("loss: figure (en, default): ") for each in lines)
+
+
+# --- the report's schema (DEC-062, Implications) -------------------------------------------------
+#
+# Each report a look of this module writes holds to it (`reports_hold_their_schema`). These
+# show that the schema names every key the report carries, and keeps each renderer's apart.
+
+
+def refused_of(report: Mapping[str, Any]) -> str:
+    """What the report's schema refuses in `report`, one refusal a line; empty where it
+    holds."""
+    return "\n".join(viewing.files.shape_problems(report, LOOK_REPORT))
+
+
+def without(held: Mapping[str, Any], key: str) -> dict[str, Any]:
+    return {each: value for each, value in held.items() if each != key}
+
+
+def test_the_schema_names_every_key_of_the_report_and_refuses_another(flow: Path) -> None:
+    assert run_look(flow, PIECE).returncode == 0
+    report = report_of(flow)
+    [image] = report["images"]
+    check, reach = next(iter(report["reaches"].items()))
+    assert refused_of(report) == ""
+    unexpected = "'unknown' was unexpected"
+    assert unexpected in refused_of({**report, "unknown": True})
+    assert unexpected in refused_of({**report, "images": [{**image, "unknown": True}]})
+    assert unexpected in refused_of({**report, "reaches": {check: {**reach, "unknown": True}}})
+    for key in ("capability", "reaches", "on-no-image", "dropped", "losses"):
+        assert f"'{key}' is a required property" in refused_of(without(report, key))
+    for key in ("findings", "measured-by", "not-measured", "on-white"):
+        held = {**report, "images": [without(image, key)]}
+        assert f"'{key}' is a required property" in refused_of(held)
+
+
+def test_the_schema_keeps_the_keys_of_each_renderer_s_report_apart(
+    tmp_path: Path, browser: Browser
+) -> None:
+    root = html_flow(tmp_path)
+    assert run_look(root, PIECE).returncode == 0
+    assert run_look(root, PIECE, "--renderer", "html").returncode == 0
+    through_svg, through_html = report_of(root), html_report(root)
+    assert refused_of(through_svg) == refused_of(through_html) == ""
+    [svg_image], [html_image] = through_svg["images"], through_html["images"]
+    assert "'stopped' was unexpected" in refused_of({**through_svg, "stopped": None})
+    assert f"'{viewing.NOT_READ}' was unexpected" in refused_of(
+        {**through_html, viewing.NOT_READ: [viewing_browser.CUT]}
+    )
+    assert refused_of({**through_svg, "images": [{**svg_image, viewing.FORCED: None}]})
+    assert refused_of({**through_html, "images": [{**html_image, viewing.ON_WHITE: False}]})
+    renamed = {**through_svg, "renderer": {**through_svg["renderer"], "name": viewing.HTML}}
+    assert "'stopped' is a required property" in refused_of(renamed)
 
 
 # --- the modes a page file holds (DEC-023 point 6) -----------------------------------------------

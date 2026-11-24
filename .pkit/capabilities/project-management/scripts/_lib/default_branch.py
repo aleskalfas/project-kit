@@ -48,8 +48,10 @@ from typing import Any
 # import it: part of the `_lib` package, or standalone-by-path.
 try:
     from _lib import backbone
+    from _lib import document_keys as keys
 except ImportError:  # pragma: no cover - `scripts/_lib/` itself on sys.path
     import backbone  # type: ignore[no-redef]
+    import document_keys as keys  # type: ignore[no-redef]
 
 #: The backbone's key (COR-054 point 1), and pm's transitional one.
 BACKBONE_KEY = "repository.default-branch"
@@ -75,7 +77,9 @@ class Unanswered(Exception):
 class Branch:
     """The default branch as the backbone declares and resolves it. `unborn` when
     it has no commit yet, so a reader of what it holds reads nothing (COR-054
-    point 4)."""
+    point 4). `resolved` is `remote` where the reference read is a remote-tracking
+    one, `local` for a local branch, and None where nothing resolves: read by the
+    sync's switch, which counts only the remote's copy."""
 
     name: str
     declared: bool
@@ -83,6 +87,7 @@ class Branch:
     commit: str | None
     problem: str | None
     unborn: bool = False
+    resolved: str | None = None
 
 
 @dataclass(frozen=True)
@@ -208,43 +213,59 @@ def _ask(explicit: str | None, run: Runner) -> Reading:
         document = json.loads(proc.stdout or "")
     except ValueError as exc:
         raise _unanswered(command, "its answer is not JSON") from exc
+    return reading_of(document, command)
+
+
+def reading_of(document: Any, command: str = f"`{' '.join(ARGV)}`") -> Reading:
+    """The backbone's answer, read by its keys (ADR-097 point 3). Raises Unanswered for a
+    version pm does not read, and for a key it reads that is missing, null where the CLI
+    reference prints no null, of another type, or a source or reading of a reference it
+    does not know: never a default branch the backbone did not declare."""
     version = document.get("schema_version") if isinstance(document, Mapping) else None
-    if version != VERSION:
+    if type(version) is not int or version != VERSION:
         raise _unanswered(command, f"it answered schema_version {version!r}; pm reads {VERSION}")
-    found = _reading(document)
-    if found is None:
-        raise _unanswered(command, "its answer names no default branch or base")
-    return found
+    try:
+        return _reading(document)
+    except keys.Untold as exc:
+        raise _unanswered(command, f"pm cannot read its answer: {exc}") from exc
 
 
-def _reading(document: Any) -> Reading | None:
-    if not isinstance(document, Mapping):
-        return None
-    branch_doc = document.get("default_branch")
-    base_doc = document.get("base")
-    if not isinstance(branch_doc, Mapping) or not isinstance(base_doc, Mapping):
-        return None
-    named = branch_doc.get("name")
-    ref = base_doc.get("ref")
-    if not isinstance(named, str) or not isinstance(ref, str):
-        return None
+#: The sources of the default branch, and the readings of a reference, the backbone
+#: gives (`default_branch.source`, `*.resolved`).
+SOURCES = (DECLARED, "default")
+RESOLVED = ("remote", "local")
+
+
+def _reading(document: Mapping[str, Any]) -> Reading:
+    branch_doc = keys.mapping(document, "default_branch", "")
+    base_doc = keys.mapping(document, "base", "")
+    branch, base = "default_branch", "base"
     return Reading(
         Branch(
-            name=named,
-            declared=branch_doc.get("source") == DECLARED,
-            ref=_text(branch_doc.get("ref")),
-            commit=_text(branch_doc.get("commit")),
-            problem=_text(branch_doc.get("problem")),
-            unborn=branch_doc.get("unborn") is True,
+            name=keys.text(branch_doc, "name", branch),
+            declared=keys.one_of(branch_doc, "source", branch, SOURCES) == DECLARED,
+            ref=_text(keys.text_or_null(branch_doc, "ref", branch)),
+            commit=_text(keys.text_or_null(branch_doc, "commit", branch)),
+            problem=_text(keys.text_or_null(branch_doc, "problem", branch)),
+            unborn=keys.flag(branch_doc, "unborn", branch),
+            resolved=_resolved(branch_doc, branch),
         ),
         Base(
-            ref=ref,
-            tip=_text(base_doc.get("tip")),
-            fork=_text(base_doc.get("fork")),
-            problem=_text(base_doc.get("problem")),
-            resolved=_text(base_doc.get("resolved")),
+            ref=keys.text(base_doc, "ref", base),
+            tip=_text(keys.text_or_null(base_doc, "tip", base)),
+            fork=_text(keys.text_or_null(base_doc, "fork", base)),
+            problem=_text(keys.text_or_null(base_doc, "problem", base)),
+            resolved=_resolved(base_doc, base),
         ),
     )
+
+
+def _resolved(entry: Mapping[str, Any], where: str) -> str | None:
+    """How a reference was read, `remote` or `local`, or `None` for a revision read as
+    named."""
+    if keys.text_or_null(entry, "resolved", where) is None:
+        return None
+    return keys.one_of(entry, "resolved", where, RESOLVED)
 
 
 def _text(value: Any) -> str | None:

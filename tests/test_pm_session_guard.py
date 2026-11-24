@@ -22,6 +22,7 @@ import importlib.util
 import subprocess
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -495,9 +496,13 @@ def test_enforce_keeps_the_operators_flag_whatever_the_comparison_found(guard, t
     assert passage.confirmed
 
 
-def test_autonomy_inferred_from_ci_identity(guard, monkeypatch):
-    """PM_INVOKER_LOGIN (the CI/agent identity signal) marks autonomy even on a tty."""
+def test_autonomy_is_read_from_the_terminal_alone(guard, monkeypatch):
+    """At a terminal the session is interactive whether or not PM_INVOKER_LOGIN is set,
+    since the variable names only the person the agent works for (DEC-076 point 3)."""
     monkeypatch.setenv("PM_INVOKER_LOGIN", "ci-bot")
+    monkeypatch.setattr(guard.sys, "stdin", SimpleNamespace(isatty=lambda: True))
+    assert guard._is_autonomous(None) is False
+    monkeypatch.setattr(guard.sys, "stdin", SimpleNamespace(isatty=lambda: False))
     assert guard._is_autonomous(None) is True
 
 

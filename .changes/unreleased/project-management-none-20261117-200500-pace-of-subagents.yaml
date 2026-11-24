@@ -1,0 +1,32 @@
+component: project-management
+kind: none
+body: >
+  DEC-082, which a person accepts in this change (#3394), decides how many
+  slots the project-manager agent's runs hold at once in a clone, all its
+  sessions together: one setting of the capability's committed
+  configuration, read from the default branch, gives the ceiling, `off`, a
+  number or `max`, and 4 where it is absent. `max` runs as many as the work
+  calls for, bounded only by the machine and the account's usage limits.
+  Every subagent the agent runs holds a slot while it runs: builders, whose
+  builds keep the slot through the build's checks, reviewers, fixers, a lead's
+  helpers, each with a share of the lead's slots that it hands to its own
+  subagents, and resumed runs; a run a person starts themselves takes none.
+  The agent starts first what its work in flight waits for, then a Task a
+  directive named, then a plan's reviewer, then the next Task nothing
+  blocks, nearest the work just done; a worker's directing seat may set the worker's pace on
+  its state issue, and a person any seat's, which replaces what a directing
+  seat set before it; the lowest binds; the build and review commands hold
+  the agent's calls to the pace from a register of the clone's runs; a
+  lowered pace stops nothing that runs; and the agent tells the person its
+  pace once in each session, a session with no seat among them, saying then
+  too where the commands cannot tell its call though the sign is declared for
+  the project's harness, and holding itself to the pace for the rest of the
+  session.
+  Counting slots, not subagents that run at once, departs from #3394's
+  unit, as the record says. It overturns DEC-059, DEC-061 and
+  DEC-063 in part, refines DEC-058, DEC-059, DEC-063 and ADR-071 in place,
+  and has a new architecture record, proposed in this change, overturn
+  ADR-073 in part and refine ADR-066 and ADR-073 in place. The
+  configuration, the state issues, the commands, the agent and the work
+  loop are unchanged until the Task that builds them,
+  which declares its own changeset, so no surface moves here.

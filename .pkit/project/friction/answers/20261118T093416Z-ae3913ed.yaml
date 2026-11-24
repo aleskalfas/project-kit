@@ -1,0 +1,1853 @@
+answers:
+  - artefact: README.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183906Z-1bc33a6b.yaml
+      - 20261027T190256Z-43f1ae13.yaml
+      - 20261027T191803Z-5aae943e.yaml
+      - 20261027T192358Z-673a43ca.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T125249Z-3beb67a4.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261031T183549Z-5d506662.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261101T153124Z-da768340.yaml
+      - 20261101T155246Z-cdd2022b.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T191319Z-d75fc556.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261107T153702Z-907fa2fc.yaml
+      - 20261107T195325Z-6b9f96fa.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T204123Z-cdef7772.yaml
+      - 20261108T205058Z-0587751c.yaml
+      - 20261108T213611Z-4add4b4b.yaml
+      - 20261108T214544Z-1452f2b4.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T221648Z-ac7a1532.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+      - 20261108T230732Z-908440cd.yaml
+      - 20261108T231929Z-eb90ad27.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T003739Z-1282ec53.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T074625Z-5e6cbb22.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T102842Z-19c5fb4f.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T084307Z-31fa735e.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T140022Z-1a3a1d07.yaml
+      - 20261111T140427Z-15276336.yaml
+      - 20261111T143433Z-c966325a.yaml
+      - 20261111T150420Z-3caaee28.yaml
+      - 20261111T205239Z-c97bba2e.yaml
+      - 20261111T205252Z-4cfa1660.yaml
+      - 20261111T211406Z-59d1a8df.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261111T215558Z-fb9e6aef.yaml
+      - 20261112T091032Z-823069cd.yaml
+      - 20261112T094911Z-6ef4bac4.yaml
+      - 20261112T103254Z-8c80b62f.yaml
+      - 20261112T123303Z-7c4eb2ad.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261112T134741Z-2c56fd6c.yaml
+      - 20261112T135407Z-115865f2.yaml
+      - 20261112T142932Z-280780ce.yaml
+      - 20261112T153532Z-b0471fdf.yaml
+      - 20261112T162755Z-424e83da.yaml
+      - 20261112T163411Z-b652b29d.yaml
+      - 20261112T170257Z-9f91acd4.yaml
+      - 20261112T171918Z-7f8cd174.yaml
+      - 20261112T181419Z-045fe687.yaml
+      - 20261112T235648Z-31cd7a21.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T074852Z-8d5346ed.yaml
+      - 20261113T081544Z-f47f0ca0.yaml
+      - 20261113T101850Z-ab407b6c.yaml
+      - 20261113T105452Z-38d663c9.yaml
+      - 20261113T115124Z-962884b7.yaml
+      - 20261113T120150Z-6de35706.yaml
+      - 20261113T124415Z-a30c5036.yaml
+      - 20261113T134717Z-36e0821f.yaml
+      - 20261113T140535Z-dad8bdc7.yaml
+      - 20261113T155900Z-499e23c9.yaml
+      - 20261113T162107Z-5e55cd43.yaml
+      - 20261113T164650Z-0b1377a1.yaml
+      - 20261113T181005Z-1533807d.yaml
+      - 20261113T194116Z-20533165.yaml
+      - 20261113T194652Z-522f1d81.yaml
+      - 20261113T200930Z-431fc6c0.yaml
+      - 20261113T204916Z-dab01a07.yaml
+      - 20261113T221124Z-bd48f436.yaml
+      - 20261113T221406Z-017933f3.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261114T165854Z-0aa5ab74.yaml
+      - 20261114T191856Z-f281d9f3.yaml
+      - 20261115T090812Z-225d76fb.yaml
+      - 20261115T101625Z-39c9fced.yaml
+      - 20261115T162304Z-326cf373.yaml
+      - 20261115T225309Z-fb593e04.yaml
+      - 20261115T235027Z-ae2f6a42.yaml
+      - 20261116T003622Z-7e851229.yaml
+      - 20261116T071805Z-ffb1106a.yaml
+      - 20261116T072033Z-1fa3401d.yaml
+      - 20261116T072934Z-f7ff88d6.yaml
+      - 20261116T095840Z-547638af.yaml
+      - 20261116T103723Z-5450c4f7.yaml
+      - 20261116T135757Z-270a2f07.yaml
+      - 20261116T221224Z-c0aa4e9d.yaml
+      - 20261116T223146Z-fdad67d7.yaml
+      - 20261116T232343Z-e53423de.yaml
+      - 20261116T234025Z-ff90f250.yaml
+      - 20261117T012006Z-cef96f31.yaml
+      - 20261117T193801Z-e9ff3e08.yaml
+    revalidated:
+      at: 2026-11-18T09:34:16Z
+      outcome: unchanged
+      unchanged-because: "The README carries DEC-028 among its anchors and states nothing of the agent's or the person's approval paths: its section on reviewer agents says the core's reviewers judge the work and never change it. This change's edits of DEC-028, none built, spell a remote reviewer's entry (ADR-094), name the account that runs review-pr on the local path (DEC-076), and read a verdict-marked review in human mode as no person's approval (DEC-079), which touch none of that."
+  - artefact: .pkit/process/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T011619Z-e405542a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T224219Z-be2d9a25.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T103219Z-76953beb.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T143433Z-c966325a.yaml
+      - 20261111T211406Z-59d1a8df.yaml
+      - 20261112T094911Z-6ef4bac4.yaml
+      - 20261112T145713Z-62aec44a.yaml
+      - 20261114T165854Z-0aa5ab74.yaml
+      - 20261115T233327Z-1dd181fa.yaml
+      - 20261116T072934Z-f7ff88d6.yaml
+    revalidated:
+      at: 2026-11-18T09:34:34Z
+      outcome: unchanged
+      unchanged-because: The README cites DEC-049 for project-management's audit trail where the journal is off, the tracker's timeline with pkit's audit comments. DEC-078's edit of DEC-049 point 1, not built, has a governed move the engine does not record for want of an acting account surfaced as a move that failed to journal, and an entry for such a move name no actor. The README's table of journal settings, and its account of a failed journal write being reported, hold.
+  - artefact: .pkit/capabilities/project-management/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T193339Z-5bd2a791.yaml
+      - 20261029T002130Z-82af462f.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261031T010527Z-8e577440.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T210254Z-faa0ccce.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T214054Z-3ec700bc.yaml
+      - 20261105T214057Z-5a0ecd5b.yaml
+      - 20261105T215849Z-25d2581b.yaml
+      - 20261105T220309Z-d2431027.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T123620Z-3d057b1b.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T132338Z-3c4c3246.yaml
+      - 20261107T134817Z-fbfbe8a0.yaml
+      - 20261107T144714Z-e8754301.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261107T153702Z-907fa2fc.yaml
+      - 20261107T163133Z-be7e7e83.yaml
+      - 20261107T195325Z-6b9f96fa.yaml
+      - 20261108T000436Z-9e30da30.yaml
+      - 20261108T015222Z-bdacd3c0.yaml
+      - 20261108T213649Z-c363a042.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T223622Z-2a5e1da3.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261109T074625Z-5e6cbb22.yaml
+      - 20261109T083359Z-579a84ef.yaml
+      - 20261109T103219Z-76953beb.yaml
+      - 20261109T112020Z-9faec713.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T175333Z-b0d8bc0a.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261112T160032Z-7fd436db.yaml
+      - 20261112T163245Z-ea50e1b3.yaml
+      - 20261112T221110Z-a675de74.yaml
+      - 20261112T235648Z-31cd7a21.yaml
+      - 20261113T104927Z-f6afe126.yaml
+      - 20261113T220619Z-6d103fc1.yaml
+      - 20261113T221227Z-8ea6b98a.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261113T224621Z-e14c21a4.yaml
+      - 20261114T003340Z-7383c183.yaml
+      - 20261114T010735Z-06110bd1.yaml
+      - 20261114T014159Z-54a2f4af.yaml
+      - 20261114T113546Z-35debc4d.yaml
+      - 20261114T123314Z-f9bc9653.yaml
+      - 20261114T201720Z-021bd185.yaml
+      - 20261114T201738Z-88b7102c.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T010054Z-99f01df7.yaml
+      - 20261115T030556Z-b31ada15.yaml
+      - 20261115T090812Z-225d76fb.yaml
+      - 20261115T091317Z-42b6403e.yaml
+      - 20261115T101625Z-39c9fced.yaml
+      - 20261115T103656Z-b7cfd657.yaml
+      - 20261115T162304Z-326cf373.yaml
+      - 20261115T180458Z-4e13664f.yaml
+      - 20261115T202513Z-2d70bae9.yaml
+      - 20261115T213811Z-fcb1a04e.yaml
+      - 20261115T215333Z-1b18b920.yaml
+      - 20261115T223351Z-f0ef2d62.yaml
+      - 20261115T224755Z-89ab25f5.yaml
+      - 20261115T224856Z-cb4ecf23.yaml
+      - 20261115T225419Z-956603ce.yaml
+      - 20261116T033725Z-695e2785.yaml
+      - 20261116T060759Z-75e99435.yaml
+      - 20261116T071501Z-ef7c72db.yaml
+      - 20261116T072033Z-1fa3401d.yaml
+      - 20261116T073934Z-de939802.yaml
+      - 20261116T075435Z-97191300.yaml
+      - 20261116T094702Z-8f6ea845.yaml
+      - 20261116T095840Z-547638af.yaml
+      - 20261116T103723Z-5450c4f7.yaml
+      - 20261116T110629Z-7871f194.yaml
+      - 20261116T112419Z-c3215b11.yaml
+      - 20261116T180023Z-57d33665.yaml
+      - 20261116T223146Z-fdad67d7.yaml
+      - 20261116T223221Z-8a885d2a.yaml
+      - 20261116T223818Z-0ab49eeb.yaml
+      - 20261116T225010Z-97b5aecd.yaml
+      - 20261116T225513Z-0d37c985.yaml
+      - 20261116T225522Z-83980882.yaml
+      - 20261116T225640Z-9b864975.yaml
+      - 20261116T230417Z-5d3639ec.yaml
+      - 20261116T232343Z-e53423de.yaml
+      - 20261116T233535Z-b44a843f.yaml
+      - 20261117T005457Z-37ce25dd.yaml
+      - 20261117T005816Z-bbf7fd59.yaml
+      - 20261117T010941Z-d7ea213a.yaml
+      - 20261117T011424Z-02e2722e.yaml
+      - 20261117T013904Z-1e19dbb0.yaml
+      - 20261117T021128Z-4bdf8d04.yaml
+      - 20261117T021240Z-547bb550.yaml
+      - 20261117T105341Z-07d093d7.yaml
+      - 20261117T113804Z-95a59178.yaml
+      - 20261117T155137Z-c5db0cd8.yaml
+      - 20261117T163349Z-7822125e.yaml
+      - 20261117T164543Z-11e32fdc.yaml
+      - 20261117T175844Z-0d920537.yaml
+      - 20261117T190214Z-f12213c3.yaml
+      - 20261117T211538Z-365d6e26.yaml
+    revalidated:
+      at: 2026-11-18T09:34:50Z
+      outcome: unchanged
+      unchanged-because: "Read with the answers on this README and the deferrals it keeps, against this change as it stands. The change makes ADR-094, ADR-098, DEC-076, DEC-078 and DEC-079 accepted and makes the edits they name in project-management's records, DEC-014, DEC-019, DEC-021, DEC-024, DEC-026, DEC-027, DEC-028, DEC-033, DEC-035, DEC-043, DEC-044, DEC-047, DEC-049, DEC-050, DEC-052, DEC-058, DEC-059, DEC-067, DEC-073 and DEC-077 among them. It builds none of it, and changes no code and no README text. The README describes the commands as they ship, so 'Who runs a command', with what it says of PM_INVOKER_LOGIN and git's email, and what it says of the membership gate, the post-check workflow's credential, assignees, members, reviewers, approvals in either review mode, audit comments, the journal and the board, hold of what runs. The builds of these records, tracked on #3171, bring those sections to them. The deferrals kept, DEC-074's to #3243, stand for what they name."
+      deferred:
+        - anchor:
+            kind: path
+            value: .pkit/capabilities/project-management/decisions/**
+          reason: "DEC-074, accepted in this change, has pre-check's board check read the board on each run and warn where the board does not answer, fail a configuration that declares a board and gives no board number its schema admits, and give each check's outcome under a key that keeps its check for good, the report kept stable as ADR-097 and the CLI reference's statement of it keep every command's machine-readable output, and has the skill's first step show pre-check's warnings; DEC-017 and DEC-037 take the edits it names, and ADR-031 and ADR-096 the facts it corrects. The change builds none of it, so pre-check, the skill and back-fill still run as the README describes them, with main's statement of the documents the commands print among it, which already has no key come to mean anything else. The README's table of what pre-check covers, its account of Step 0 under 'Verify with pre-check', the pre-check row under 'When the board does not answer', which leaves to project-kit#3193 whether the check reads the board, and the fields 'The prerequisites: pre-check' lists for its report, which name no key for each check, change with DEC-074's build, #3243, which brings pre-check, the skill and the README to the record together."
+        - anchor:
+            kind: record
+            value: ADR-031
+          reason: "ADR-031 point 5 now says the fourth member of back-fill's gate is back-fill's own, computed apart from pre-check, the fact DEC-074 corrects. The README's account of back-fill's gate and of what pre-check covers changes with DEC-074's build, #3243, which brings pre-check, the skill and the README to the record together."
+        - anchor:
+            kind: record
+            value: ADR-096
+          reason: "ADR-096 now cites DEC-074 where it said project-kit#3193 proposes that the board check warn. The README's pre-check row under 'When the board does not answer', which still leaves that to project-kit#3193, changes with DEC-074's build, #3243, which brings pre-check, the skill and the README to the record together."
+        - anchor:
+            kind: record
+            value: ADR-097
+          reason: "ADR-097 now cites DEC-074 point 4 where it spoke of project-kit#3193's draft: DEC-074 gives each of pre-check's checks a key in its report that keeps its check for good, and cites ADR-097 for how the report stays stable. None of ADR-097's points changes, so 'What the commands print for a program' keeps to the rule as it did. The fields 'The prerequisites: pre-check' lists for the report, which name no key for each check, change with DEC-074's build, #3243, which brings pre-check, the skill and the README to the record together."
+  - artefact: .pkit/capabilities/software-engineering/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T235716Z-019daf66.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261101T155246Z-cdd2022b.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T225036Z-926c13c5.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T013502Z-01dc9885.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T131245Z-5afe6d5a.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261107T163133Z-be7e7e83.yaml
+      - 20261108T000436Z-9e30da30.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T223323Z-d168f4f5.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T231918Z-ee80c064.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T083359Z-579a84ef.yaml
+      - 20261109T103219Z-76953beb.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T145230Z-c78b596e.yaml
+      - 20261111T205252Z-4cfa1660.yaml
+      - 20261111T211406Z-59d1a8df.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261112T091032Z-823069cd.yaml
+      - 20261112T094911Z-6ef4bac4.yaml
+      - 20261112T123303Z-7c4eb2ad.yaml
+      - 20261112T221110Z-a675de74.yaml
+      - 20261113T194652Z-522f1d81.yaml
+      - 20261113T200930Z-431fc6c0.yaml
+      - 20261114T165854Z-0aa5ab74.yaml
+      - 20261114T191101Z-fd895e57.yaml
+      - 20261115T090052Z-ef00fc82.yaml
+      - 20261115T144216Z-dac3a5e6.yaml
+      - 20261115T223351Z-f0ef2d62.yaml
+      - 20261115T225309Z-fb593e04.yaml
+      - 20261116T071805Z-ffb1106a.yaml
+      - 20261116T072934Z-f7ff88d6.yaml
+      - 20261116T223146Z-fdad67d7.yaml
+      - 20261116T232343Z-e53423de.yaml
+      - 20261116T234025Z-ff90f250.yaml
+      - 20261117T001230Z-ded9fa7f.yaml
+    revalidated:
+      at: 2026-11-18T09:45:47Z
+      outcome: unchanged
+      unchanged-because: "Judged with the two re-checks made apart on the default branch and this change together. The first, on install refusing --from and --ref until #3349 and the sync section, left installing and syncing software-engineering, a kit-shipped capability, and land-work running the review as one of its steps as the README gives them. The second, on a merge queue that may merge a later head than the landing enqueued, added to DEC-028 and DEC-055 point 5, found no passage of the README describing it. Both still hold at the head. The README cites DEC-027 and DEC-032 for the panel's verdicts only advising in human review mode, DEC-028 for the verdict grammar, the stale-verdict rule a floor approval keeps and the findings' tags, and DEC-028 and DEC-050 for a bypass on record with a reason. This change's edits of those records, none built, count no approving review that carries the verdict marker as a person's approval in human mode (DEC-079), which keeps the panel advisory there; name the account that runs review-pr on the local path (DEC-076), leaving the verdict's first line and marker as they are; spell the remote path's entries (ADR-094); and have DEC-050's audit comment name nobody beside its poster (DEC-078), while a bypass still takes its reason. None changes what the README says of the panel."
+  - artefact: docs/capabilities/software-engineering/README.md
+    read:
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261102T151637Z-974a0d9a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031311Z-415182b4.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T222708Z-59c67901.yaml
+      - 20261105T225036Z-926c13c5.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T013502Z-01dc9885.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T131245Z-5afe6d5a.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261107T163133Z-be7e7e83.yaml
+      - 20261107T194026Z-d540372c.yaml
+      - 20261108T000436Z-9e30da30.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T223323Z-d168f4f5.yaml
+      - 20261108T231918Z-ee80c064.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T083359Z-579a84ef.yaml
+      - 20261109T095138Z-4bf93c42.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T145230Z-c78b596e.yaml
+      - 20261111T161234Z-995dc8d9.yaml
+      - 20261111T205252Z-4cfa1660.yaml
+      - 20261111T211406Z-59d1a8df.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261111T221925Z-a0e54751.yaml
+      - 20261111T222332Z-9c425d5a.yaml
+      - 20261112T091032Z-823069cd.yaml
+      - 20261112T094911Z-6ef4bac4.yaml
+      - 20261112T221110Z-a675de74.yaml
+      - 20261113T194652Z-522f1d81.yaml
+      - 20261113T200930Z-431fc6c0.yaml
+      - 20261114T165854Z-0aa5ab74.yaml
+      - 20261114T191101Z-fd895e57.yaml
+      - 20261115T090052Z-ef00fc82.yaml
+      - 20261115T144216Z-dac3a5e6.yaml
+      - 20261115T223351Z-f0ef2d62.yaml
+      - 20261115T225309Z-fb593e04.yaml
+      - 20261116T071805Z-ffb1106a.yaml
+      - 20261116T223146Z-fdad67d7.yaml
+      - 20261116T232343Z-e53423de.yaml
+      - 20261117T001230Z-ded9fa7f.yaml
+      - 20261117T222004Z-7a8ddb3a.yaml
+    revalidated:
+      at: 2026-11-18T09:35:03Z
+      outcome: unchanged
+      unchanged-because: The page cites DEC-027, DEC-028, DEC-032 and DEC-050 for the panel's verdicts, which the gate requires and counts before a person authorises the merge, for verdicts that only advise in human review mode, and for a bypass on record with a reason. This change's edits of those records, none built, count no verdict-marked review as a person's approval in human mode, name the account that runs review-pr on the local path, spell the remote path's entries, and have the override comment name nobody beside its poster. The page describes none of these, so it holds.
+  - artefact: .pkit/process/shape.md
+    read:
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261108T224219Z-be2d9a25.yaml
+    revalidated:
+      at: 2026-11-18T09:35:10Z
+      outcome: unchanged
+      unchanged-because: The page states the blocked state as a determinate position with no legal move and the waits a binding declares, and an indeterminate check as fail-closed. ADR-098's edits of ADR-036 points 3 and 4, not built, have the engine read an exit not judged for want of an actor as one that may be open for a wait, keep a user sign-off's awaiting-human wait, and mark such an exit needs_actor beside indeterminate. The page's rule that a subject is blocked only with no legal move holds of that reading, and its states, detections and invariants are untouched.
+  - artefact: tech-docs/analysis/core/domain-model/060-changes-review-and-releases.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T190256Z-43f1ae13.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T155900Z-499e23c9.yaml
+    revalidated:
+      at: 2026-11-18T09:35:17Z
+      outcome: unchanged
+      unchanged-because: "The view cites ADR-047 for the report's fixed target that its distribution sets, the maintainer's commands run only in a clone of it, and an environment block safe before a person confirms the post. ADR-094's edit in this change rewrites only ADR-047 point 2: the confirmation names the reading's account, a bot's said to be one, nothing is posted where the reading names none, and the autonomy and prefilled-link bullets take in #662's block. The view states none of point 2's steps, so it holds."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/070-work-within-limits/UC-032-ask-before-other-repository.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183906Z-1bc33a6b.yaml
+      - 20261027T190640Z-271e6d40.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T200540Z-3b1c87fc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T153702Z-907fa2fc.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T074625Z-5e6cbb22.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T211406Z-59d1a8df.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261112T094911Z-6ef4bac4.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261112T162755Z-424e83da.yaml
+      - 20261112T170257Z-9f91acd4.yaml
+      - 20261112T171918Z-7f8cd174.yaml
+      - 20261112T181419Z-045fe687.yaml
+      - 20261113T074852Z-8d5346ed.yaml
+      - 20261113T081544Z-f47f0ca0.yaml
+      - 20261113T101850Z-ab407b6c.yaml
+      - 20261113T115124Z-962884b7.yaml
+      - 20261113T124415Z-a30c5036.yaml
+      - 20261113T134717Z-36e0821f.yaml
+      - 20261113T155900Z-499e23c9.yaml
+      - 20261113T162107Z-5e55cd43.yaml
+      - 20261113T181005Z-1533807d.yaml
+      - 20261113T194116Z-20533165.yaml
+      - 20261113T194652Z-522f1d81.yaml
+      - 20261113T204916Z-dab01a07.yaml
+      - 20261113T221124Z-bd48f436.yaml
+      - 20261114T135441Z-fd5c2dc0.yaml
+      - 20261114T140804Z-6f794478.yaml
+      - 20261114T165854Z-0aa5ab74.yaml
+      - 20261115T225309Z-fb593e04.yaml
+      - 20261116T234025Z-ff90f250.yaml
+      - 20261117T214247Z-417fae24.yaml
+    revalidated:
+      at: 2026-11-18T09:35:25Z
+      outcome: unchanged
+      unchanged-because: Variant 1e says a report is confirmed at a terminal and only drafted with nobody to ask. ADR-094's edit of ADR-047 point 2, not built, has the confirmation name the account the backbone's reading names, a bot's said to be one, and keeps the payload as a draft where the reading names none, so a post still waits on a person's confirmation at a terminal and nothing is posted without one. The variant names no account, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/060-report/UC-012-report-problem.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T200540Z-3b1c87fc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T224213Z-b22c8186.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T211406Z-59d1a8df.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261112T094911Z-6ef4bac4.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261112T162755Z-424e83da.yaml
+      - 20261112T170257Z-9f91acd4.yaml
+      - 20261112T171918Z-7f8cd174.yaml
+      - 20261112T181419Z-045fe687.yaml
+      - 20261113T074852Z-8d5346ed.yaml
+      - 20261113T081544Z-f47f0ca0.yaml
+      - 20261113T101850Z-ab407b6c.yaml
+      - 20261113T115124Z-962884b7.yaml
+      - 20261113T124415Z-a30c5036.yaml
+      - 20261113T134717Z-36e0821f.yaml
+      - 20261113T155900Z-499e23c9.yaml
+      - 20261113T162107Z-5e55cd43.yaml
+      - 20261113T165441Z-8c1e1c1b.yaml
+      - 20261113T181005Z-1533807d.yaml
+      - 20261113T194116Z-20533165.yaml
+      - 20261113T194652Z-522f1d81.yaml
+      - 20261113T204916Z-dab01a07.yaml
+      - 20261113T221124Z-bd48f436.yaml
+      - 20261114T165854Z-0aa5ab74.yaml
+      - 20261115T225309Z-fb593e04.yaml
+      - 20261116T234025Z-ff90f250.yaml
+    revalidated:
+      deferred:
+        - anchor:
+            kind: record
+            value: ADR-047#2
+          reason: "ADR-094's edit of ADR-047 point 2, accepted in this change and not built, has the confirmation name the account the backbone's reading names, said to be a bot's where it is one, and keep the report as a draft, posting nothing, where the reading names no account. Step 3's question `Post as @<login> to <target>?`, which names the adopter's gh identity, gains that with the build, #3171."
+  - artefact: tech-docs/analysis/project-management/domain-model/030-the-issue-lifecycle.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T225036Z-926c13c5.yaml
+      - 20261115T224856Z-cb4ecf23.yaml
+      - 20261117T113804Z-95a59178.yaml
+    revalidated:
+      at: 2026-11-18T09:49:43Z
+      outcome: unchanged
+      unchanged-because: "The view cites DEC-014 for a bypass's reason, which may not be empty and which an audit comment records before the write, and DEC-033 for the engine checking each move. DEC-078's line atop DEC-014 has a bypass's audit comment name no authoriser beside its poster, and its edit of DEC-033 D5 hands the engine a move whose actor the commands do not know with no actor; the view names no authoriser on the comment and no actor the engine is handed, so both hold. The journal's attribute 'an entry for each move, with who made it' holds of the engine as it ships; DEC-078's edit of DEC-049 point 1, not built, has the engine record no governed move for want of an acting account, surfaced as a move that failed to journal, and has an entry for such a move name no actor, which the attribute gains with the build, #3171."
+  - artefact: tech-docs/analysis/project-management/domain-model/040-reviews-and-the-merge.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T221030Z-aedda51f.yaml
+      - 20261105T225036Z-926c13c5.yaml
+      - 20261106T000405Z-f16023ec.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261116T223146Z-fdad67d7.yaml
+      - 20261116T232343Z-e53423de.yaml
+    revalidated:
+      at: 2026-11-18T09:35:46Z
+      outcome: unchanged
+      unchanged-because: The view describes agent-mode verdicts, whose first line and marker say whose review it is and which head and base it covers, the gate reading each required reviewer's latest verdict at one head, and a per-reviewer bypass with a reason an audit comment records (DEC-026, DEC-027, DEC-028, DEC-050). This change's edits of those records, none built, read human-mode approvals and reviewer assignment by account and kind (DEC-079), spell the remote path's entries (ADR-094), name the account that runs review-pr on the local path (DEC-076), and have DEC-050's comment name nobody beside its poster (DEC-078). The view states none of these, so it holds.
+  - artefact: tech-docs/analysis/project-management/domain-model/060-parallel-work.md
+    read:
+      - 20261029T002130Z-82af462f.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T220122Z-9823200c.yaml
+      - 20261106T000405Z-f16023ec.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261112T135407Z-115865f2.yaml
+      - 20261112T235648Z-31cd7a21.yaml
+    revalidated:
+      at: 2026-11-18T09:49:48Z
+      outcome: unchanged
+      unchanged-because: "The view cites DEC-043 for where the owner is written and the comment log as the record, and DEC-058 for state issues, their comments, the first claim that holds and a comment counting only where its author may write. ADR-094's edit of DEC-058 point 4 and DEC-079's of DEC-043 point 3 judge an author as one account with a member's entry or the assignee, and DEC-076's of DEC-058 point 5 lets a clone under a credential that names no user's account claim only where the gate is closed and its account is a member. Each narrows who may write, which the view's statements leave open, so they hold. The clone's rules that 'A clone with a number is an instance' and that a clone holding no seat 'is guarded by nothing' hold of the commands as they ship; DEC-076, not built, overturns DEC-035 point 1's id as the sole activation gate and DEC-059 point 6's 'is guarded by nothing' under a credential that names no user's account, where a clone takes no part in instance ownership and, holding no seat, starts no Task, which those rules gain with the build, #3171."
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-audit-comment
+    read:
+      - 20261026T145234Z-564794a2.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261107T144714Z-e8754301.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261113T222453Z-06dececb.yaml
+    revalidated:
+      at: 2026-11-18T09:49:52Z
+      outcome: unchanged
+      unchanged-because: "The distinctions cite DEC-049 for the timeline, the journal as the canonical record where it is kept, and the comments projecting it. DEC-078's edit of DEC-049 point 1 adds only how a move left unrecorded for want of an acting account is surfaced, so they hold. The example, a comment 'that names who bypassed the check, and why', holds of the template as it ships; DEC-078's line atop DEC-014, not built, has the comment name no authoriser beside its poster and read `Bypassed: <reason>`, which the example gains with the build, #3171."
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-authorisation
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T225036Z-926c13c5.yaml
+      - 20261117T113804Z-95a59178.yaml
+    revalidated:
+      at: 2026-11-18T09:36:15Z
+      outcome: unchanged
+      unchanged-because: The distinction on a bypass cites DEC-014 for a person authorising, with a reason, a move refused unless a person overrides it. DEC-078's line atop DEC-014 changes only what the bypass's audit comment names beside its poster, so the entry holds.
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-bypass
+    read:
+      - 20261026T145234Z-564794a2.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261109T194840Z-39b3598b.yaml
+    revalidated:
+      at: 2026-11-18T09:36:22Z
+      outcome: unchanged
+      unchanged-because: The example and the distinction cite DEC-014 for a bypass moving an issue with a reason, and for how a person authorises a move refused unless overridden. DEC-078's line atop DEC-014 has the audit comment name no authoriser beside its poster, which the entry does not describe, so it holds.
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-clone
+    read:
+      - 20261109T194840Z-39b3598b.yaml
+    revalidated:
+      at: 2026-11-18T09:36:29Z
+      outcome: unchanged
+      unchanged-because: The example and distinctions cite DEC-035 point 1 for a clone with a number being an instance, DEC-058 point 5 for the key, and DEC-059 points 4 and 6 for a clone taking a seat and its identity. DEC-076's lines atop DEC-035 and DEC-059, and its edits of DEC-058 point 5 and DEC-059 point 4, decide what a clone does under a credential that names no user's account, none built. The entry defines the word and says what a clone keeps, which those edits leave as it is.
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-clone-key
+    revalidated:
+      at: 2026-11-18T09:36:36Z
+      outcome: unchanged
+      unchanged-because: The entry cites DEC-035 point 1, DEC-058 point 5 and DEC-059 point 6 for the key a clone generates the first time it takes a seat and keeps beside its number. DEC-076's edits narrow which seat a clone under a credential that names no user's account takes, and when it claims on a state issue, and leave what the key is and where it is named, so the entry holds.
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-instance
+    read:
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261109T194840Z-39b3598b.yaml
+    revalidated:
+      at: 2026-11-18T09:49:57Z
+      outcome: unchanged
+      unchanged-because: "The entry's session and seat distinctions cite DEC-035 point 1 for the number a file in the clone keeps, and DEC-059 point 6 for a seat's name and number, with DEC-058 point 5 beside them; DEC-076's edits leave each. Its distinction 'A clone with no number', which 'is guarded by nothing', holds of the commands as they ship; DEC-076, not built, overturns DEC-035 point 1's 'no guard' under a credential that names no user's account, where the clash guard reads the owner for such a clone, which the distinction gains with the build, #3171."
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-issue-lifecycle
+    read:
+      - 20261026T145234Z-564794a2.yaml
+      - 20261031T010527Z-8e577440.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261106T021311Z-6bc15d0b.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261115T224856Z-cb4ecf23.yaml
+      - 20261115T225419Z-956603ce.yaml
+      - 20261116T033725Z-695e2785.yaml
+      - 20261117T113804Z-95a59178.yaml
+    revalidated:
+      at: 2026-11-18T09:36:55Z
+      outcome: unchanged
+      unchanged-because: The distinction cites DEC-033 for the core's engine checking the lifecycle. DEC-078's edit of DEC-033 D5 hands the engine a move whose actor the commands do not know with no actor, which leaves the engine checking each move, so the entry holds.
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-journal
+    read:
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261116T033725Z-695e2785.yaml
+    revalidated:
+      at: 2026-11-18T09:37:02Z
+      outcome: unchanged
+      unchanged-because: The example and distinctions cite DEC-033 and DEC-049 point 1 for start-work's move and the cascade's going into the journal, the journal as the canonical record, and a journal kept in one clone. DEC-078's edits of DEC-033 D5 and DEC-049 point 1 decide only a move whose actor the commands do not know, which the entry does not describe, so it holds.
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-kind-of-work
+    revalidated:
+      at: 2026-11-18T09:37:11Z
+      outcome: unchanged
+      unchanged-because: The distinctions cite DEC-059 point 7 for a scope naming workstreams and kinds of work, and for no record deciding a discipline. DEC-076's line atop DEC-059 adds only that a clone holding no seat starts no Task under a credential that names no user's account, and leaves point 7 as it is, so the entry holds.
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-lifecycle-hook
+    read:
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261116T095840Z-547638af.yaml
+    revalidated:
+      at: 2026-11-18T09:37:21Z
+      outcome: unchanged
+      unchanged-because: The distinctions cite DEC-024 for when a hook runs and that it runs within its command. DEC-078's edit of DEC-024's idempotency has the hook that fires after a move name the move's occurrence in its stamp, which the entry does not describe, so it holds.
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-merge-gate
+    read:
+      - 20261026T145234Z-564794a2.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261114T201720Z-021bd185.yaml
+      - 20261115T223351Z-f0ef2d62.yaml
+      - 20261116T095840Z-547638af.yaml
+      - 20261116T223146Z-fdad67d7.yaml
+      - 20261116T232343Z-e53423de.yaml
+    revalidated:
+      at: 2026-11-18T09:37:28Z
+      outcome: unchanged
+      unchanged-because: The example and the distinction cite DEC-026 and DEC-028 for done-work reading each required reviewer's latest verdict, the checks and the checkboxes and merging at the head it judged, and for the gate being project-management's. This change's edits of DEC-026 and DEC-028 read human-mode approvals by account and kind, spell the remote path's entries and name the account that runs review-pr, none built, and none changes what the entry says the gate reads.
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-organizer-seat
+    revalidated:
+      at: 2026-11-18T09:37:35Z
+      outcome: unchanged
+      unchanged-because: The entry cites DEC-059 points 2 and 5 for the organizer seat's one privilege more and a person's release by force. DEC-076's line atop DEC-059 and its edit of point 4 leave both points as they are, so the entry holds.
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-owner
+    read:
+      - 20261029T002130Z-82af462f.yaml
+    revalidated:
+      at: 2026-11-18T09:37:43Z
+      outcome: unchanged
+      unchanged-because: The entry cites DEC-035 points 2 and 6 for the owner paired with the assignee and a clash no lock prevents, DEC-043 for the owner's record, and DEC-059 point 9. DEC-076's line atop DEC-035, not built, takes a clone under a credential that names no user's account out of instance ownership, and DEC-079's edit of DEC-043 point 3 trusts a marker only from the assignee's own account and never a bot's. The entry describes the owner of an instance that takes part, the assignee as a GitHub account and a seat's holder, which hold.
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-ownership
+    read:
+      - 20261113T222453Z-06dececb.yaml
+    revalidated:
+      at: 2026-11-18T09:37:50Z
+      outcome: unchanged
+      unchanged-because: The entry cites DEC-035 points 2 and 3, DEC-043 point 3 and DEC-059 point 9 for the mark that makes an instance the owner and stops counting once its seat is released. DEC-079's edit of DEC-043 point 3, not built, trusts such a mark only where its author and the assignee are one account and never from a bot's, and DEC-076's line atop DEC-035 keeps a clone under a credential that names no user's account from writing one; the example and distinctions hold of the marks that count.
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-ready-task
+    read:
+      - 20261113T222453Z-06dececb.yaml
+    revalidated:
+      at: 2026-11-18T09:37:58Z
+      outcome: unchanged
+      unchanged-because: The entry cites DEC-059 points 7 and 9 for the ready Tasks in Backlog that no instance owns. DEC-076's line atop DEC-059 adds only that a clone holding no seat starts no Task under a credential that names no user's account, which leaves what a ready Task is, so the entry holds.
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-required-reviewer
+    read:
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261107T163133Z-be7e7e83.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T212240Z-c6177e80.yaml
+    revalidated:
+      at: 2026-11-18T09:38:05Z
+      outcome: unchanged
+      unchanged-because: The entry defines a required reviewer by DEC-032, beside the review modes of DEC-027 its anchor rests on. DEC-079's edits of DEC-027 read human-mode approvals and reviewer assignment by account and kind, which leave what a required reviewer is, so the entry holds.
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-scope
+    read:
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261117T010941Z-d7ea213a.yaml
+    revalidated:
+      at: 2026-11-18T09:38:12Z
+      outcome: unchanged
+      unchanged-because: The entry cites DEC-059 point 7 for what a scope names and which ready Tasks an agent takes. DEC-076's line atop DEC-059 leaves point 7 as it is, so the entry holds.
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-seat
+    read:
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261112T135407Z-115865f2.yaml
+      - 20261112T235648Z-31cd7a21.yaml
+      - 20261113T222453Z-06dececb.yaml
+    revalidated:
+      at: 2026-11-18T09:38:20Z
+      outcome: unchanged
+      unchanged-because: The entry cites DEC-059 points 1, 2 and 6 for a seat in the committed configuration and a clone's identity being its seat's name. DEC-076's edit of DEC-059 point 4, not built, has a clone under a credential that names no user's account take no seat that builds; the entry defines a seat and what its agent is, which that leaves as it is.
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-state-issue
+    read:
+      - 20261102T131450Z-cd4d7951.yaml
+    revalidated:
+      at: 2026-11-18T09:38:29Z
+      outcome: unchanged
+      unchanged-because: The entry cites DEC-058 for a state issue holding no work and changing data, and DEC-043 points 3 and 4 for the comment log it shares. ADR-094's edit of DEC-058 point 4, DEC-076's of point 5 and DEC-079's of DEC-043 point 3 narrow whose comments count and who claims, which the entry does not describe, so it holds.
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-topology
+    read:
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261109T194840Z-39b3598b.yaml
+    revalidated:
+      at: 2026-11-18T09:38:36Z
+      outcome: unchanged
+      unchanged-because: The entry cites DEC-059 points 1, 2 and 4 for the topology as committed configuration, a seat held by at most one clone, and a clone taking a seat. DEC-076's line atop DEC-059 and its edit of point 4 decide only what a clone does under a credential that names no user's account, which leaves those distinctions as they are.
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-verdict
+    read:
+      - 20261026T145234Z-564794a2.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261116T223146Z-fdad67d7.yaml
+      - 20261116T232343Z-e53423de.yaml
+    revalidated:
+      at: 2026-11-18T09:38:44Z
+      outcome: unchanged
+      unchanged-because: The entry cites DEC-028 for the verdict, its findings and the native review review-pr posts beside it, and DEC-027 for a person's approving review counting in human mode. DEC-079's edits, not built, count a human-mode approving review only from a user's account other than the author's and never one that carries the verdict marker, which keeps the native review out of a person's approval, so the entry holds.
+  - artefact: tech-docs/analysis/project-management/requirements/functional/040-work-in-parallel/REQ-061-one-owner-per-issue.md
+    read:
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261113T222453Z-06dececb.yaml
+    revalidated:
+      at: 2026-11-18T09:38:52Z
+      outcome: unchanged
+      unchanged-because: The requirement cites DEC-035 and its points 3 and 6 for no instance acting on another of the same person's instances' issue and a clash caught rather than prevented, and DEC-043 point 3 for the comments keeping the tie-break. DEC-076's line atop DEC-035 takes a clone under a credential that names no user's account out of instance ownership, and DEC-079's edit of DEC-043 point 3 trusts a marker only from the assignee's own account; both leave the statement, the measure and the tie-break as they are.
+  - artefact: tech-docs/analysis/project-management/requirements/functional/040-work-in-parallel/REQ-062-work-found-from-tracker.md
+    read:
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T225009Z-4b2ffcb8.yaml
+    revalidated:
+      at: 2026-11-18T09:39:01Z
+      outcome: unchanged
+      unchanged-because: The requirement cites DEC-035 and its points 1 and 7, and DEC-059 point 9, for an instance's work in flight found again from GitHub, its number and its clone key. DEC-076's lines atop DEC-035 and DEC-059 take a clone under a credential that names no user's account out of instance ownership, which leaves what an instance finds again, so the statement and measure hold.
+  - artefact: tech-docs/analysis/project-management/requirements/functional/REQ-042-held-moves-authorised.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T221030Z-aedda51f.yaml
+      - 20261105T225036Z-926c13c5.yaml
+      - 20261106T000405Z-f16023ec.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261114T201720Z-021bd185.yaml
+      - 20261115T103656Z-b7cfd657.yaml
+      - 20261115T180458Z-4e13664f.yaml
+      - 20261115T215333Z-1b18b920.yaml
+      - 20261115T223351Z-f0ef2d62.yaml
+      - 20261115T225419Z-956603ce.yaml
+      - 20261116T033725Z-695e2785.yaml
+      - 20261116T095840Z-547638af.yaml
+      - 20261116T112808Z-198ad446.yaml
+      - 20261117T113804Z-95a59178.yaml
+    revalidated:
+      at: 2026-11-18T09:39:09Z
+      outcome: unchanged
+      unchanged-because: "The requirement cites DEC-014 for a bypass with no reason refused and a retried bypass posting its audit comment once. DEC-078's line atop DEC-014 changes what the comment names beside its poster, `Bypassed: <reason>`, and leaves both, so the statement, the measure and the tests hold."
+  - artefact: tech-docs/analysis/project-management/requirements/functional/REQ-041-gates-before-writing.md
+    read:
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T233254Z-07e46ecd.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T215333Z-1b18b920.yaml
+      - 20261116T223221Z-8a885d2a.yaml
+      - 20261117T010941Z-d7ea213a.yaml
+      - 20261117T163349Z-7822125e.yaml
+    revalidated:
+      deferred:
+        - anchor:
+            kind: record
+            value: project-management:DEC-021
+          reason: "DEC-076's line atop DEC-021, accepted in this change and not built, has the membership gate match, where the service does not answer that a credential acts as a user's account, only the bot's account the backbone's reading names, by its own login, and nothing where it names none, so neither git's email nor PM_INVOKER_LOGIN passes; ADR-094's edit has a match set case and surrounding whitespace aside. The statement holds of that account as whoever runs the command, and 'Verified by''s tests that find whoever runs it 'from a login or an email' change with the build, #3171."
+  - artefact: tech-docs/analysis/project-management/use-case-model/actors/ACT-lead-agent.md
+    read:
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261112T135407Z-115865f2.yaml
+      - 20261112T235648Z-31cd7a21.yaml
+    revalidated:
+      at: 2026-11-18T09:39:21Z
+      outcome: unchanged
+      unchanged-because: The actor cites DEC-035 point 3 for the lead's instance owning the work it files, and DEC-059 points 2 and 6 for its seat. DEC-076's lines atop DEC-035 and DEC-059 and its edit of DEC-059 point 4, not built, take a clone under a credential that names no user's account out of instance ownership and out of every seat that builds, so a lead agent, which builds, holds its seat only under a user's account, where the actor's statements hold.
+  - artefact: tech-docs/analysis/project-management/use-case-model/actors/ACT-planner.md
+    read:
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261112T135407Z-115865f2.yaml
+      - 20261112T235648Z-31cd7a21.yaml
+      - 20261115T215333Z-1b18b920.yaml
+      - 20261117T010941Z-d7ea213a.yaml
+    revalidated:
+      at: 2026-11-18T09:39:28Z
+      outcome: unchanged
+      unchanged-because: The actor cites DEC-059 point 7 for several agents working on the project at once. DEC-076's line atop DEC-059 leaves point 7 as it is, and the planner is a person, whom none of this change's edits concern, so the actor holds.
+  - artefact: tech-docs/analysis/project-management/use-case-model/actors/ACT-planning-agent.md
+    read:
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261112T135407Z-115865f2.yaml
+      - 20261112T235648Z-31cd7a21.yaml
+      - 20261115T101625Z-39c9fced.yaml
+      - 20261115T215333Z-1b18b920.yaml
+      - 20261115T224755Z-89ab25f5.yaml
+    revalidated:
+      at: 2026-11-18T09:39:37Z
+      outcome: unchanged
+      unchanged-because: The actor cites DEC-059 points 2 and 7 for the planning agent filing work with no owner into the ready Tasks every seat shares. DEC-076's edit of DEC-059 point 4, not built, lets a clone under a credential that names no user's account take a planner's seat only where its claim on the seat's state issue may stand, and its line atop DEC-059 leaves points 2 and 7, so the actor holds.
+  - artefact: tech-docs/analysis/project-management/use-case-model/actors/ACT-worker-agent.md
+    read:
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261112T135407Z-115865f2.yaml
+      - 20261112T235648Z-31cd7a21.yaml
+      - 20261116T223146Z-fdad67d7.yaml
+      - 20261116T232343Z-e53423de.yaml
+    revalidated:
+      at: 2026-11-18T09:39:45Z
+      outcome: unchanged
+      unchanged-because: The actor cites DEC-026 for the developer's commands, and DEC-035 point 3 and DEC-059 points 2 and 8 for its seat. DEC-076's edits of DEC-026's start-work rows and DEC-059 point 4, not built, have a clone under a credential that names no user's account take no seat that builds, so a worker holds its seat only under a user's account, where the actor's statements hold.
+  - artefact: tech-docs/analysis/project-management/use-case-model/journeys/JRN-004-set-up-and-adjust-topology.md
+    read:
+      - 20261029T002130Z-82af462f.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T131440Z-90d45a35.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T221030Z-aedda51f.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T144714Z-e8754301.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T101625Z-39c9fced.yaml
+      - 20261115T175013Z-4c973ec1.yaml
+      - 20261115T202513Z-2d70bae9.yaml
+      - 20261115T222227Z-a8c41e80.yaml
+      - 20261116T223146Z-fdad67d7.yaml
+      - 20261116T232343Z-e53423de.yaml
+    revalidated:
+      at: 2026-11-18T09:39:53Z
+      outcome: unchanged
+      unchanged-because: The journey cites DEC-028 for each review round's verdict naming its head, and DEC-035 points 1 and 8 and DEC-059 for the topology, its seats and the owner as no input to a move. This change's edits of DEC-028 and DEC-059, and DEC-076's line atop DEC-035, decide how accounts are read and what a clone does under a credential that names no user's account, none built, and leave each step and guarantee of the journey as it is.
+  - artefact: tech-docs/analysis/project-management/use-case-model/journeys/JRN-012-take-up-and-land-task.md
+    read:
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T214054Z-3ec700bc.yaml
+      - 20261105T215849Z-25d2581b.yaml
+      - 20261105T220122Z-9823200c.yaml
+      - 20261105T221030Z-aedda51f.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T234348Z-1f64d843.yaml
+      - 20261106T000405Z-f16023ec.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T123620Z-3d057b1b.yaml
+      - 20261107T125436Z-9442a4b6.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T163133Z-be7e7e83.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261109T083359Z-579a84ef.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T030556Z-b31ada15.yaml
+      - 20261115T103656Z-b7cfd657.yaml
+      - 20261115T215333Z-1b18b920.yaml
+      - 20261115T223351Z-f0ef2d62.yaml
+      - 20261115T224755Z-89ab25f5.yaml
+      - 20261115T225419Z-956603ce.yaml
+      - 20261116T095840Z-547638af.yaml
+      - 20261116T112808Z-198ad446.yaml
+      - 20261116T223146Z-fdad67d7.yaml
+      - 20261116T232343Z-e53423de.yaml
+      - 20261117T113804Z-95a59178.yaml
+    revalidated:
+      at: 2026-11-18T09:40:01Z
+      outcome: unchanged
+      unchanged-because: The journey cites DEC-026, DEC-028 and DEC-050 for the path to a merge with a standing approval from each required reviewer, a bypass whose reason is posted first, and a merge queue's later head. This change's edits of those records read human-mode approvals by account and kind, spell remote entries, name the account that runs review-pr and have DEC-050's comment name nobody beside its poster, none built, and leave each step and guarantee as it is.
+  - artefact: tech-docs/analysis/project-management/use-case-model/journeys/JRN-013-build-and-land-next-task.md
+    read:
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T131440Z-90d45a35.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T214054Z-3ec700bc.yaml
+      - 20261105T215849Z-25d2581b.yaml
+      - 20261105T220122Z-9823200c.yaml
+      - 20261105T221030Z-aedda51f.yaml
+      - 20261106T000405Z-f16023ec.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T123620Z-3d057b1b.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T125436Z-9442a4b6.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261107T163133Z-be7e7e83.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T101625Z-39c9fced.yaml
+      - 20261115T175013Z-4c973ec1.yaml
+      - 20261115T202513Z-2d70bae9.yaml
+      - 20261115T223351Z-f0ef2d62.yaml
+      - 20261116T095840Z-547638af.yaml
+      - 20261116T223146Z-fdad67d7.yaml
+      - 20261116T232343Z-e53423de.yaml
+    revalidated:
+      at: 2026-11-18T09:40:09Z
+      outcome: unchanged
+      unchanged-because: The journey cites DEC-026 for the merge and DEC-059 point 7 for the next Task. DEC-076's edit of DEC-026's start-work rows decides only a credential that names no user's account, under which a worker takes no seat that builds, and its line atop DEC-059 leaves point 7, so the journey holds.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/010-plan/UC-063-plan-intent.md
+    read:
+      - 20261029T002130Z-82af462f.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261108T213649Z-c363a042.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T175333Z-b0d8bc0a.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261112T135407Z-115865f2.yaml
+      - 20261112T235648Z-31cd7a21.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T104927Z-f6afe126.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261114T135441Z-fd5c2dc0.yaml
+      - 20261114T140804Z-6f794478.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T090812Z-225d76fb.yaml
+      - 20261115T101625Z-39c9fced.yaml
+      - 20261115T162304Z-326cf373.yaml
+      - 20261115T180458Z-4e13664f.yaml
+      - 20261115T202513Z-2d70bae9.yaml
+      - 20261115T215333Z-1b18b920.yaml
+      - 20261115T224755Z-89ab25f5.yaml
+      - 20261116T071501Z-ef7c72db.yaml
+      - 20261116T072033Z-1fa3401d.yaml
+      - 20261116T094702Z-8f6ea845.yaml
+      - 20261116T095840Z-547638af.yaml
+      - 20261116T103723Z-5450c4f7.yaml
+      - 20261117T113804Z-95a59178.yaml
+    revalidated:
+      at: 2026-11-18T09:40:17Z
+      outcome: unchanged
+      unchanged-because: The use case cites DEC-014 for no issue left half filed. DEC-078's line atop DEC-014 changes only what a bypass's audit comment names beside its poster, so the use case holds.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/010-plan/UC-064-define-milestones-and-workstreams.md
+    read:
+      - 20261026T145234Z-564794a2.yaml
+      - 20261029T010917Z-565aa9b8.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261107T144714Z-e8754301.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T104927Z-f6afe126.yaml
+      - 20261113T221227Z-8ea6b98a.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261114T123314Z-f9bc9653.yaml
+      - 20261114T135441Z-fd5c2dc0.yaml
+      - 20261114T140804Z-6f794478.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T010054Z-99f01df7.yaml
+      - 20261115T101625Z-39c9fced.yaml
+      - 20261115T103656Z-b7cfd657.yaml
+      - 20261115T180458Z-4e13664f.yaml
+      - 20261115T202513Z-2d70bae9.yaml
+      - 20261115T222227Z-a8c41e80.yaml
+      - 20261115T224856Z-cb4ecf23.yaml
+      - 20261116T095840Z-547638af.yaml
+      - 20261116T112808Z-198ad446.yaml
+      - 20261116T225513Z-0d37c985.yaml
+      - 20261117T010941Z-d7ea213a.yaml
+      - 20261117T115722Z-5da8fae5.yaml
+      - 20261117T163349Z-7822125e.yaml
+    revalidated:
+      at: 2026-11-18T09:40:25Z
+      outcome: unchanged
+      unchanged-because: Step 3 and variant 3a rest on DEC-021, through REQ-041, for the membership check, and say that wherever GitHub names a user's account the command runs as, that account is whoever runs it. DEC-076's line atop DEC-021 decides only a credential that names no user's account, where the gate matches the bot's account the reading names, and ADR-094's edit sets case and surrounding whitespace aside; neither is built, and the step's words hold of both.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/020-file-and-move/UC-060-file-task.md
+    read:
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T221030Z-aedda51f.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T104927Z-f6afe126.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261114T135441Z-fd5c2dc0.yaml
+      - 20261114T140804Z-6f794478.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T005305Z-e801f465.yaml
+      - 20261115T090812Z-225d76fb.yaml
+      - 20261115T101625Z-39c9fced.yaml
+      - 20261115T103656Z-b7cfd657.yaml
+      - 20261115T162304Z-326cf373.yaml
+      - 20261115T180458Z-4e13664f.yaml
+      - 20261115T202513Z-2d70bae9.yaml
+      - 20261115T215333Z-1b18b920.yaml
+      - 20261115T224755Z-89ab25f5.yaml
+      - 20261115T224856Z-cb4ecf23.yaml
+      - 20261116T033725Z-695e2785.yaml
+      - 20261116T071501Z-ef7c72db.yaml
+      - 20261116T072033Z-1fa3401d.yaml
+      - 20261116T073934Z-de939802.yaml
+      - 20261116T094702Z-8f6ea845.yaml
+      - 20261116T095840Z-547638af.yaml
+      - 20261116T103723Z-5450c4f7.yaml
+      - 20261117T010941Z-d7ea213a.yaml
+      - 20261117T163349Z-7822125e.yaml
+    revalidated:
+      at: 2026-11-18T09:50:03Z
+      outcome: unchanged
+      unchanged-because: "Step 4 and variant 4a rest on DEC-021 for the membership check, which DEC-076's line and ADR-094's edit narrow for a credential that names no user's account and for how a value matches an entry, and which the step states in words both keep. The audit comment of variant 11b rests on DEC-014, whose line atop it changes only what a bypass's comment names beside its poster. Step 12 files the Task 'with its labels and its assignee', which holds of create-issue as it ships; DEC-076's and DEC-079's edits of DEC-019, not built, refuse a filing that names no assignee under a credential that names no user's account and no person, a bot's account as an assignee, and a bare login the service does not answer as a user's, which the use case gains as variants with the build, #3171."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/020-file-and-move/UC-061-move-issue.md
+    read:
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261031T010527Z-8e577440.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T214054Z-3ec700bc.yaml
+      - 20261105T215849Z-25d2581b.yaml
+      - 20261105T221030Z-aedda51f.yaml
+      - 20261106T000405Z-f16023ec.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T123620Z-3d057b1b.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T125436Z-9442a4b6.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T132338Z-3c4c3246.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T104927Z-f6afe126.yaml
+      - 20261113T220619Z-6d103fc1.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261114T113546Z-35debc4d.yaml
+      - 20261114T123314Z-f9bc9653.yaml
+      - 20261114T135441Z-fd5c2dc0.yaml
+      - 20261114T140804Z-6f794478.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T010054Z-99f01df7.yaml
+      - 20261115T030556Z-b31ada15.yaml
+      - 20261115T101625Z-39c9fced.yaml
+      - 20261115T103656Z-b7cfd657.yaml
+      - 20261115T180458Z-4e13664f.yaml
+      - 20261115T202513Z-2d70bae9.yaml
+      - 20261115T215333Z-1b18b920.yaml
+      - 20261115T223351Z-f0ef2d62.yaml
+      - 20261115T224856Z-cb4ecf23.yaml
+      - 20261115T225419Z-956603ce.yaml
+      - 20261116T033725Z-695e2785.yaml
+      - 20261116T060759Z-75e99435.yaml
+      - 20261116T095840Z-547638af.yaml
+      - 20261116T112808Z-198ad446.yaml
+      - 20261116T223146Z-fdad67d7.yaml
+      - 20261116T232343Z-e53423de.yaml
+      - 20261117T010941Z-d7ea213a.yaml
+      - 20261117T113804Z-95a59178.yaml
+      - 20261117T163349Z-7822125e.yaml
+    revalidated:
+      at: 2026-11-18T09:50:07Z
+      outcome: unchanged
+      unchanged-because: "Step 2 and variant 6k rest on DEC-021 for the membership check and a user's account other than the developer's; the hooks of variant 1a on DEC-024; the engine's checks and journal on DEC-033 and DEC-049; variant 6i on DEC-035 point 4; and variant 7b on DEC-067 points 1, 3 and 4. This change's edits of those records decide a credential that names no user's account, the after-move hook's stamp, a move with no known actor, and the comment and prompt of a head named at a terminal, none built, and none changes what those steps say. DEC-078's line atop DEC-052 drops the authoriser beside a comment's poster, and leaves the note's naming of the move to #756 as it was. The note under step 4, that 'the audit comment says who bypassed the check and why', and step 6's 'assigns the developer' with variant 6k, hold of the commands as they ship; DEC-078's line atop DEC-014 and DEC-076's edits of DEC-026's start-work rows, not built, have the comment name no authoriser beside its poster, and start-work under a credential that names no user's account assign the person the agent works for or refuse, which the use case gains with the build, #3171."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/030-review-and-land/UC-062-review-and-land.md
+    read:
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T214054Z-3ec700bc.yaml
+      - 20261105T215849Z-25d2581b.yaml
+      - 20261105T221030Z-aedda51f.yaml
+      - 20261106T000405Z-f16023ec.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T123620Z-3d057b1b.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T125436Z-9442a4b6.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T134817Z-fbfbe8a0.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261107T163133Z-be7e7e83.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261109T083359Z-579a84ef.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261112T135407Z-115865f2.yaml
+      - 20261112T142151Z-09f16c62.yaml
+      - 20261112T235648Z-31cd7a21.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T104927Z-f6afe126.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261114T135441Z-fd5c2dc0.yaml
+      - 20261114T140804Z-6f794478.yaml
+      - 20261114T201720Z-021bd185.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T103656Z-b7cfd657.yaml
+      - 20261115T180458Z-4e13664f.yaml
+      - 20261115T215333Z-1b18b920.yaml
+      - 20261115T223351Z-f0ef2d62.yaml
+      - 20261116T033725Z-695e2785.yaml
+      - 20261116T060759Z-75e99435.yaml
+      - 20261116T094702Z-8f6ea845.yaml
+      - 20261116T095840Z-547638af.yaml
+      - 20261116T103723Z-5450c4f7.yaml
+      - 20261116T223146Z-fdad67d7.yaml
+      - 20261116T232343Z-e53423de.yaml
+      - 20261117T010941Z-d7ea213a.yaml
+      - 20261117T163349Z-7822125e.yaml
+      - 20261117T173731Z-08ffa252.yaml
+    revalidated:
+      at: 2026-11-18T09:50:11Z
+      outcome: unchanged
+      unchanged-because: "Step 2 and variant 3c rest on DEC-021 and DEC-067 point 1 for the membership check and two pull requests that share a branch's name, and variant 13c on DEC-050 for a per-reviewer bypass with its reason in an audit comment. DEC-076's line atop DEC-021, DEC-078's atop DEC-050 and DEC-067, and DEC-076's edit of DEC-067 point 4 decide a credential that names no user's account, an override comment that names nobody beside its poster, and a head's comment that names no person, none built, and none changes those steps. Variant 13d, 'an approving review, a comment opening with Approved, or a bypass', holds of done-work as it ships; DEC-079's edits of DEC-026, DEC-027 and DEC-028, not built, count a human-mode approval only from an account read as a user's, not a registered reviewer agent's and another than the author, count no review that carries the verdict marker, and assign no member whose entry names a bot's account or a reviewer agent's, which the variant gains with the build, #3171."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-082-set-up-topology.md
+    read:
+      - 20261029T002130Z-82af462f.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T104927Z-f6afe126.yaml
+      - 20261114T135441Z-fd5c2dc0.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T215333Z-1b18b920.yaml
+      - 20261117T010941Z-d7ea213a.yaml
+    revalidated:
+      at: 2026-11-18T09:50:16Z
+      outcome: unchanged
+      unchanged-because: "The use case rests on DEC-059 points 1, 2, 3, 7 and 9 for the topology in committed configuration, its seats and their state issues, scopes and warnings, and on ADR-071 point 5 for how a seat's claim is written. DEC-076's line atop DEC-059 and its edit of ADR-071 point 5, not built, decide only a clone under a credential that names no user's account, which leaves every step of setting the topology up. Variant 2a, whose clone that holds no seat 'is guarded by nothing', holds of the commands as they ship; DEC-076's line atop DEC-059, not built, overturns that under a credential that names no user's account, where such a clone starts no Task, which the variant gains with the build, #3171."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-083-plan-across-scopes.md
+    read:
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261112T135407Z-115865f2.yaml
+      - 20261112T235648Z-31cd7a21.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T104927Z-f6afe126.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261114T135441Z-fd5c2dc0.yaml
+      - 20261114T140804Z-6f794478.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T090812Z-225d76fb.yaml
+      - 20261115T101625Z-39c9fced.yaml
+      - 20261115T162304Z-326cf373.yaml
+      - 20261115T180458Z-4e13664f.yaml
+      - 20261115T202513Z-2d70bae9.yaml
+      - 20261115T215333Z-1b18b920.yaml
+      - 20261115T224755Z-89ab25f5.yaml
+      - 20261116T072033Z-1fa3401d.yaml
+      - 20261116T095840Z-547638af.yaml
+      - 20261116T103723Z-5450c4f7.yaml
+      - 20261117T010941Z-d7ea213a.yaml
+    revalidated:
+      at: 2026-11-18T09:41:36Z
+      outcome: unchanged
+      unchanged-because: The use case rests on DEC-035 point 3 for a clone owning what it files, and DEC-059 points 1, 2, 6 and 7 for the planning agent's seat and a clone holding no seat that files with no owner. DEC-076's lines atop DEC-035 and DEC-059, not built, take a clone under a credential that names no user's account out of instance ownership, so it files with no owner as variant 8a's clone does, and leave every step as it is.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-084-take-next-task.md
+    read:
+      - 20261029T002130Z-82af462f.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T214054Z-3ec700bc.yaml
+      - 20261105T215849Z-25d2581b.yaml
+      - 20261105T221030Z-aedda51f.yaml
+      - 20261106T000405Z-f16023ec.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261107T123620Z-3d057b1b.yaml
+      - 20261107T125436Z-9442a4b6.yaml
+      - 20261107T132338Z-3c4c3246.yaml
+      - 20261107T144714Z-e8754301.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261112T135407Z-115865f2.yaml
+      - 20261112T235648Z-31cd7a21.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T104927Z-f6afe126.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261114T135441Z-fd5c2dc0.yaml
+      - 20261114T140804Z-6f794478.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T010054Z-99f01df7.yaml
+      - 20261115T112500Z-53d20551.yaml
+      - 20261115T180458Z-4e13664f.yaml
+      - 20261115T202513Z-2d70bae9.yaml
+      - 20261115T224856Z-cb4ecf23.yaml
+      - 20261116T095840Z-547638af.yaml
+      - 20261116T223146Z-fdad67d7.yaml
+      - 20261116T232343Z-e53423de.yaml
+      - 20261117T010941Z-d7ea213a.yaml
+      - 20261117T115722Z-5da8fae5.yaml
+      - 20261117T163349Z-7822125e.yaml
+    revalidated:
+      at: 2026-11-18T09:41:46Z
+      outcome: unchanged
+      unchanged-because: The use case rests on DEC-026 for start-work assigning the worker's account and refusing another's Task, on ADR-041 point 1, DEC-021 and DEC-035 for the owner read and the gate, and on DEC-059 for the worker's seat and the ready Tasks. DEC-076's edits, not built, have a clone under a credential that names no user's account take no seat that builds, so a worker reaches this use case only under a user's account, where start-work assigns that account. ADR-094's edit of ADR-041 point 1 has the fold return a claim it cannot judge, which no consumer treats as free, and leaves each step as it is.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-085-leave-task-to-its-owner.md
+    read:
+      - 20261029T002130Z-82af462f.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T021311Z-6bc15d0b.yaml
+      - 20261107T125436Z-9442a4b6.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T132338Z-3c4c3246.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T104927Z-f6afe126.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261114T201720Z-021bd185.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T180458Z-4e13664f.yaml
+      - 20261115T215333Z-1b18b920.yaml
+      - 20261115T223351Z-f0ef2d62.yaml
+      - 20261115T225419Z-956603ce.yaml
+      - 20261116T033725Z-695e2785.yaml
+      - 20261116T095840Z-547638af.yaml
+      - 20261116T112808Z-198ad446.yaml
+      - 20261116T223146Z-fdad67d7.yaml
+      - 20261116T232343Z-e53423de.yaml
+      - 20261117T010941Z-d7ea213a.yaml
+      - 20261117T163349Z-7822125e.yaml
+      - 20261117T173731Z-08ffa252.yaml
+    revalidated:
+      at: 2026-11-18T09:41:55Z
+      outcome: unchanged
+      unchanged-because: "The use case rests on DEC-035 points 3, 4, 6 and 8, DEC-043 point 3 and ADR-041 for the owner read before a start and a clash the lower number wins, DEC-026 and DEC-021 for start-work's refusals, DEC-014 for a bypass's reason, and DEC-059 for the seat confirmed first. This change's edits, none built, take a clone under a credential that names no user's account out of instance ownership and every seat that builds, trust a marker only from the assignee's own account, and have the fold return a claim it cannot judge, which no consumer treats as free. A worker builds only under a user's account, and the open item on agents with accounts of their own stays open: DEC-076 decides that such an agent takes no part, not how accounts would tell agents apart."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-086-resume-after-session-died.md
+    read:
+      - 20261029T002130Z-82af462f.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261107T132338Z-3c4c3246.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261116T223146Z-fdad67d7.yaml
+      - 20261116T232343Z-e53423de.yaml
+    revalidated:
+      at: 2026-11-18T09:42:05Z
+      outcome: unchanged
+      unchanged-because: The use case rests on DEC-035, DEC-058 point 5 and DEC-059 for a new session taking up its clone's seat by the clone key and finding its work from GitHub, on DEC-026 for its commands, and on ADR-041 point 1 for the owner read. DEC-076's edits, not built, decide only a clone under a credential that names no user's account, which takes no seat that builds, and ADR-094's edit of ADR-041 point 1 returns a claim the fold cannot judge; neither changes how a session resumes its seat and its work.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-087-hand-over-to-next-scope.md
+    read:
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261113T104927Z-f6afe126.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T101625Z-39c9fced.yaml
+      - 20261115T202513Z-2d70bae9.yaml
+      - 20261115T224755Z-89ab25f5.yaml
+      - 20261116T223146Z-fdad67d7.yaml
+      - 20261116T232343Z-e53423de.yaml
+    revalidated:
+      at: 2026-11-18T09:42:13Z
+      outcome: unchanged
+      unchanged-because: The use case rests on DEC-026, DEC-035 points 3 and 4, and DEC-059 point 7 for handing a piece of work on through the ready Tasks. DEC-076's edits decide only a clone under a credential that names no user's account, none built, and leave each step as it is.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-088-delegate-to-agent.md
+    read:
+      - 20261029T002130Z-82af462f.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261107T132338Z-3c4c3246.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261112T135407Z-115865f2.yaml
+      - 20261112T235648Z-31cd7a21.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261116T223146Z-fdad67d7.yaml
+      - 20261116T232343Z-e53423de.yaml
+    revalidated:
+      at: 2026-11-18T09:42:23Z
+      outcome: unchanged
+      unchanged-because: The use case rests on DEC-026, DEC-035 point 3 and DEC-059 points 4, 6 and 7 for a lead's instance owning the Task its helper agent builds. DEC-076's edits, not built, keep a clone under a credential that names no user's account out of instance ownership and every seat that builds, so a lead holds its seat under a user's account, where each step holds.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-089-land-alongside-others.md
+    read:
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T131440Z-90d45a35.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T220122Z-9823200c.yaml
+      - 20261105T221030Z-aedda51f.yaml
+      - 20261105T225036Z-926c13c5.yaml
+      - 20261106T000405Z-f16023ec.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T123620Z-3d057b1b.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T125436Z-9442a4b6.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261107T163133Z-be7e7e83.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261109T083359Z-579a84ef.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T104927Z-f6afe126.yaml
+      - 20261113T220619Z-6d103fc1.yaml
+      - 20261114T135441Z-fd5c2dc0.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T215333Z-1b18b920.yaml
+      - 20261115T223351Z-f0ef2d62.yaml
+      - 20261116T095840Z-547638af.yaml
+      - 20261116T112808Z-198ad446.yaml
+      - 20261116T223146Z-fdad67d7.yaml
+      - 20261116T232343Z-e53423de.yaml
+    revalidated:
+      at: 2026-11-18T09:42:33Z
+      outcome: unchanged
+      unchanged-because: The use case rests on DEC-026 and DEC-028 for landing at an authorised head among other merges. This change's edits of those records read human-mode approvals by account and kind, spell the remote entries and name the account that runs review-pr, none built, and leave each step as it is.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-090-see-who-works-on-what.md
+    read:
+      - 20261029T002130Z-82af462f.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T221030Z-aedda51f.yaml
+      - 20261106T000405Z-f16023ec.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T123620Z-3d057b1b.yaml
+      - 20261107T125436Z-9442a4b6.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T163133Z-be7e7e83.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261112T235648Z-31cd7a21.yaml
+      - 20261115T010054Z-99f01df7.yaml
+      - 20261115T223351Z-f0ef2d62.yaml
+      - 20261115T224856Z-cb4ecf23.yaml
+      - 20261116T095840Z-547638af.yaml
+      - 20261116T112808Z-198ad446.yaml
+      - 20261117T113804Z-95a59178.yaml
+    revalidated:
+      at: 2026-11-18T09:42:42Z
+      outcome: unchanged
+      unchanged-because: The use case rests on ADR-041 point 1, ADR-071, DEC-035 points 1 and 7, DEC-058 point 4 and DEC-059 points 3, 4 and 6 for listing seats from their state issues and a listing only an instance signs. ADR-094's edits of ADR-071 point 3 and DEC-058 point 4 count a comment only from an author who is one account with a member's entry, the read left incomplete where a kind or a spelling is missing, and DEC-076's lines decide a clone under a credential that names no user's account; none is built, and each step holds.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-091-measure-topologies.md
+    read:
+      - 20261029T002130Z-82af462f.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261116T223146Z-fdad67d7.yaml
+      - 20261116T232343Z-e53423de.yaml
+    revalidated:
+      at: 2026-11-18T09:42:51Z
+      outcome: unchanged
+      unchanged-because: The use case rests on DEC-028 for each review round's verdict and DEC-059 point 9. This change's edits of DEC-028 and the line atop DEC-059 leave verdicts naming the head they reviewed, and ownerships lapsing, as they were, so the measurement holds.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-092-take-seat.md
+    read:
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261107T125436Z-9442a4b6.yaml
+      - 20261108T213649Z-c363a042.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T175333Z-b0d8bc0a.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261112T135407Z-115865f2.yaml
+      - 20261112T235648Z-31cd7a21.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T222453Z-06dececb.yaml
+    revalidated:
+      at: 2026-11-18T09:50:22Z
+      outcome: unchanged
+      unchanged-because: "Steps 1 to 6 rest on DEC-059 points 1, 3, 5 and 8, DEC-058 point 5, DEC-035 point 1 and ADR-071 for reading the topology, claiming the seat on its state issue, and the first claim holding. DEC-076's edits of DEC-058 point 5 and ADR-071 point 5, not built, have a clone under a credential that names no user's account claim only where the gate is closed and its account is a member, which the steps leave open. Step 2's 'only a free seat whose agent definition is the definition the session follows', and variant 1c's clone with no seat that 'is guarded by nothing', hold of take-seat as it ships; DEC-076's edit of DEC-059 point 4 and its line atop DEC-059, not built, have such a clone take no seat that builds and, holding no seat, start no Task, which the use case gains with the build, #3171."
+  - artefact: tech-docs/analysis/software-engineering/glossary.md#TERM-code-review-panel
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+      - 20261107T194026Z-d540372c.yaml
+      - 20261108T223323Z-d168f4f5.yaml
+      - 20261108T231918Z-ee80c064.yaml
+      - 20261109T095138Z-4bf93c42.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T212240Z-c6177e80.yaml
+    revalidated:
+      at: 2026-11-18T09:43:18Z
+      outcome: unchanged
+      unchanged-because: The entry's example needs the panel's approval on a pull request, under the review modes of DEC-027 its anchor rests on. DEC-079's edits of DEC-027 read human-mode approvals and reviewer assignment by account and kind, which leave the panel and its distinctions as they are.
+  - artefact: tech-docs/analysis/software-engineering/use-case-model/use-cases/010-build/UC-001-build-under-conventions.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T235716Z-019daf66.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T145723Z-19f805b0.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+      - 20261106T003428Z-6de85d99.yaml
+      - 20261107T194026Z-d540372c.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261109T095138Z-4bf93c42.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T145230Z-c78b596e.yaml
+      - 20261111T211406Z-59d1a8df.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261112T094911Z-6ef4bac4.yaml
+      - 20261112T163411Z-b652b29d.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261114T220627Z-1363207d.yaml
+      - 20261115T215333Z-1b18b920.yaml
+      - 20261116T223146Z-fdad67d7.yaml
+      - 20261116T232343Z-e53423de.yaml
+      - 20261117T222004Z-7a8ddb3a.yaml
+    revalidated:
+      at: 2026-11-18T09:43:27Z
+      outcome: unchanged
+      unchanged-because: The use case cites DEC-028 for the passage a person settles before authorising the merge, which the gate leaves to the merge authoriser. This change's edits of DEC-028 spell remote entries, name the account that runs review-pr on the local path and read human-mode approvals, none built, and leave the findings' tags and the person's passage as they are.
+  - artefact: tech-docs/analysis/software-engineering/use-case-model/use-cases/020-review/UC-080-check-answers.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261101T145723Z-19f805b0.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+      - 20261105T225036Z-926c13c5.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T012936Z-26005889.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T194026Z-d540372c.yaml
+      - 20261108T223323Z-d168f4f5.yaml
+      - 20261108T231918Z-ee80c064.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261109T095138Z-4bf93c42.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261115T215333Z-1b18b920.yaml
+      - 20261116T223146Z-fdad67d7.yaml
+      - 20261116T232343Z-e53423de.yaml
+      - 20261117T001230Z-ded9fa7f.yaml
+    revalidated:
+      at: 2026-11-18T09:43:37Z
+      outcome: unchanged
+      unchanged-because: The use case cites DEC-028 for project-management running the docs-reviewer and posting and counting its verdict, and DEC-050 for a bypass on record with a reason. ADR-094's, DEC-076's and DEC-079's edits of DEC-028 and DEC-078's line atop DEC-050, none built, change how remote entries are spelt, which account posts a local verdict, what counts in human mode and what the override comment names beside its poster, and leave each step as it is.
+  - artefact: tech-docs/analysis/software-engineering/use-case-model/use-cases/020-review/UC-112-review-code.md
+    read:
+      - 20261111T221925Z-a0e54751.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261115T215333Z-1b18b920.yaml
+      - 20261116T223146Z-fdad67d7.yaml
+      - 20261116T232343Z-e53423de.yaml
+    revalidated:
+      at: 2026-11-18T09:43:45Z
+      outcome: unchanged
+      unchanged-because: The use case cites DEC-028 for verdicts and findings, DEC-027 and DEC-032 for both verdicts only advising in human mode, where a person's approval satisfies the gate, and DEC-050 for a bypass with a reason. DEC-079's edits, not built, count a human-mode approval only from a user's account other than the author's and never a verdict-marked review, which keeps the verdicts advisory there, and the other edits leave each step as it is.

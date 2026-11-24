@@ -1,0 +1,9 @@
+component: project-management
+kind: none
+body: >
+  DEC-071 and DEC-072, accepted with this change (#3241), decide that filing
+  refuses a board option naming a board other than the configured one in
+  every project, and that sync-board gives each open issue its missing card
+  in every project with a board. DEC-019 and DEC-070 are partially
+  superseded, and DEC-062 point 5 is refined in place. No command changes
+  until the changes that build them (#3300, #3301), so no surface moves.

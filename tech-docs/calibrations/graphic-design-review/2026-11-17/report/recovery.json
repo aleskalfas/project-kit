@@ -1,0 +1,133 @@
+{
+  "unparsed-reports": [
+    ".agent-workspace/calibration/reports/run-1/SXXN.md",
+    ".agent-workspace/calibration/reports/run-1/TPJC.md",
+    ".agent-workspace/calibration/reports/run-1/WTKF.md",
+    ".agent-workspace/calibration/reports/run-2/CHLT.md",
+    ".agent-workspace/calibration/reports/run-2/MSRP.md",
+    ".agent-workspace/calibration/reports/run-2/PWCH.md",
+    ".agent-workspace/calibration/reports/run-2/RWLW.md",
+    ".agent-workspace/calibration/reports/run-3/CKRT.md",
+    ".agent-workspace/calibration/reports/run-3/FTJK.md",
+    ".agent-workspace/calibration/reports/run-3/KHXK.md",
+    ".agent-workspace/calibration/reports/run-3/KLBH.md",
+    ".agent-workspace/calibration/reports/run-3/LWWT.md",
+    ".agent-workspace/calibration/reports/run-3/WCKR.md",
+    ".agent-workspace/calibration/reports/run-3/XHGX.md",
+    ".agent-workspace/calibration/reports/run-3/XVXL.md"
+  ],
+  "lines-read-as-quoted": [
+    {
+      "report": ".agent-workspace/calibration/reports/run-1/SXXN.md",
+      "line": 188,
+      "error": "mapping values are not allowed here",
+      "was": "    evidence: The green line \"color: brand.color.felt\" is seen first, and it is the read the title asks for.",
+      "read-as": "    evidence: 'The green line \"color: brand.color.felt\" is seen first, and it is the read the title asks for.'"
+    },
+    {
+      "report": ".agent-workspace/calibration/reports/run-1/TPJC.md",
+      "line": 95,
+      "error": "expected <block end>, but found '<scalar>'",
+      "was": "    evidence: \"Textured plane\" and \"3D model (glTF)\" are terms a developer knows or can look up, each beside its plain counterpart on a real table.",
+      "read-as": "    evidence: '\"Textured plane\" and \"3D model (glTF)\" are terms a developer knows or can look up, each beside its plain counterpart on a real table.'"
+    },
+    {
+      "report": ".agent-workspace/calibration/reports/run-1/WTKF.md",
+      "line": 100,
+      "error": "expected <block end>, but found ','",
+      "was": "    evidence: \"Textured plane\", \"3D model\" and \"glTF\" are terms a developer knows or can look up, and the lead says the first in plain words.",
+      "read-as": "    evidence: '\"Textured plane\", \"3D model\" and \"glTF\" are terms a developer knows or can look up, and the lead says the first in plain words.'"
+    },
+    {
+      "report": ".agent-workspace/calibration/reports/run-2/PWCH.md",
+      "line": 92,
+      "error": "expected <block end>, but found ','",
+      "was": "    evidence: \"Textured plane\", \"3D model\" and glTF are terms a developer knows. The lead's chain of commas is a note.",
+      "read-as": "    evidence: '\"Textured plane\", \"3D model\" and glTF are terms a developer knows. The lead''s chain of commas is a note.'"
+    },
+    {
+      "report": ".agent-workspace/calibration/reports/run-2/MSRP.md",
+      "line": 104,
+      "error": "mapping values are not allowed here",
+      "was": "    evidence: The green band on the line \"color: brand.color.felt\" is seen first in both modes, and it is the page's point.",
+      "read-as": "    evidence: 'The green band on the line \"color: brand.color.felt\" is seen first in both modes, and it is the page''s point.'"
+    },
+    {
+      "report": ".agent-workspace/calibration/reports/run-2/RWLW.md",
+      "line": 151,
+      "error": "expected <block end>, but found '<scalar>'",
+      "was": "    evidence: \"The 3D table - your scene\" keeps the green accent it has on page made-of, and the grey step numbers match those on page read.",
+      "read-as": "    evidence: '\"The 3D table - your scene\" keeps the green accent it has on page made-of, and the grey step numbers match those on page read.'"
+    },
+    {
+      "report": ".agent-workspace/calibration/reports/run-2/CHLT.md",
+      "line": 242,
+      "error": "expected <block end>, but found '<scalar>'",
+      "was": "    evidence: \"Your scene\" is marked green on made-of and filled orange on reaches. The frame, the type and the numbers keep one look on all four pages.",
+      "read-as": "    evidence: '\"Your scene\" is marked green on made-of and filled orange on reaches. The frame, the type and the numbers keep one look on all four pages.'"
+    },
+    {
+      "report": ".agent-workspace/calibration/reports/run-3/KHXK.md",
+      "line": 98,
+      "error": "expected <block end>, but found '<scalar>'",
+      "was": "    evidence: \"A textured plane\" and \"a 3D model (glTF)\" are terms a developer knows, and the lead says the first in plain words.",
+      "read-as": "    evidence: '\"A textured plane\" and \"a 3D model (glTF)\" are terms a developer knows, and the lead says the first in plain words.'"
+    },
+    {
+      "report": ".agent-workspace/calibration/reports/run-3/LWWT.md",
+      "line": 145,
+      "error": "expected <block end>, but found '<scalar>'",
+      "was": "    evidence: \"your scene\" takes the accent as on page made-of, and the steps share one form.",
+      "read-as": "    evidence: '\"your scene\" takes the accent as on page made-of, and the steps share one form.'"
+    },
+    {
+      "report": ".agent-workspace/calibration/reports/run-3/XHGX.md",
+      "line": 94,
+      "error": "expected <block end>, but found '<scalar>'",
+      "was": "    evidence: \"Flat piece\" is explained in the lead, and glTF and three.js are terms developers know.",
+      "read-as": "    evidence: '\"Flat piece\" is explained in the lead, and glTF and three.js are terms developers know.'"
+    },
+    {
+      "report": ".agent-workspace/calibration/reports/run-3/XHGX.md",
+      "line": 192,
+      "error": "mapping values are not allowed here",
+      "was": "    evidence: The green band on the line \"color: brand.color.felt\" is seen first, and it is the page's point.",
+      "read-as": "    evidence: 'The green band on the line \"color: brand.color.felt\" is seen first, and it is the page''s point.'"
+    },
+    {
+      "report": ".agent-workspace/calibration/reports/run-3/WCKR.md",
+      "line": 185,
+      "error": "mapping values are not allowed here",
+      "was": "    evidence: The highlighted line \"color: brand.color.felt\" is seen first in the lower block, and is the point; the command's heavier weight ranks second, in both modes.",
+      "read-as": "    evidence: 'The highlighted line \"color: brand.color.felt\" is seen first in the lower block, and is the point; the command''s heavier weight ranks second, in both modes.'"
+    },
+    {
+      "report": ".agent-workspace/calibration/reports/run-3/FTJK.md",
+      "line": 90,
+      "error": "expected <block end>, but found '<scalar>'",
+      "was": "    evidence: \"Flat piece\" and \"figure\" are explained in the lead, and glTF and three.js are terms a developer knows.",
+      "read-as": "    evidence: '\"Flat piece\" and \"figure\" are explained in the lead, and glTF and three.js are terms a developer knows.'"
+    },
+    {
+      "report": ".agent-workspace/calibration/reports/run-3/KLBH.md",
+      "line": 80,
+      "error": "expected <block end>, but found '<scalar>'",
+      "was": "    evidence: \"Textured plane\" and \"3D model (glTF)\" are terms a developer knows, set beside everyday examples.",
+      "read-as": "    evidence: '\"Textured plane\" and \"3D model (glTF)\" are terms a developer knows, set beside everyday examples.'"
+    },
+    {
+      "report": ".agent-workspace/calibration/reports/run-3/XVXL.md",
+      "line": 204,
+      "error": "mapping values are not allowed here",
+      "was": "    evidence: The green band on \"color: brand.color.felt\" is seen first in both modes, and it is the line the title's point rests on.",
+      "read-as": "    evidence: 'The green band on \"color: brand.color.felt\" is seen first in both modes, and it is the line the title''s point rests on.'"
+    },
+    {
+      "report": ".agent-workspace/calibration/reports/run-3/CKRT.md",
+      "line": 148,
+      "error": "mapping values are not allowed here",
+      "was": "    evidence: Plain words; \"Hand-over: accepted\" is terse but reads.",
+      "read-as": "    evidence: 'Plain words; \"Hand-over: accepted\" is terse but reads.'"
+    }
+  ]
+}

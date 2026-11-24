@@ -28,6 +28,7 @@ pkit:
         - project-management:DEC-059
         - project-management:DEC-061
         - project-management:DEC-063
+        - project-management:DEC-076
       artefact:
         - TERM-topology
         - TERM-seat
@@ -341,6 +342,7 @@ A clone is a working copy of a [project](../../core/glossary.md#term-project--pr
 **Always true:**
 
 - In a project with a topology, a clone that holds no seat marks no [issue](../glossary.md#term-issue--issue), and is guarded by nothing (DEC-059 point 6).
+- Under a credential that names no user's account, such as a GitHub App's, a clone claims no issue, whatever its number. The system still reads the [owner](../glossary.md#term-owner--owner) for such a clone. So the system refuses a [Task](../glossary.md#term-task--task) an instance owns, unless a [bypass](../glossary.md#term-bypass--bypass) gives a reason ([DEC-076 point 4](../../../../.pkit/capabilities/project-management/decisions/DEC-076-app-credentials.md#4-start-work-keeps-its-refusal-against-the-person-the-agent-works-for)). In a project with a topology, such a clone takes no seat that builds, and starts no Task ([DEC-076 point 6](../../../../.pkit/capabilities/project-management/decisions/DEC-076-app-credentials.md#6-in-a-project-with-a-topology-a-clone-under-such-a-credential-builds-nothing)).
 
 ## Clone key
 
@@ -641,6 +643,7 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 
 **State issue:**
 
+- [UC-064 — Define the Milestones and workstreams the work falls into, and roll a date-based Milestone forward](../use-case-model/use-cases/010-plan/UC-064-define-milestones-and-workstreams.md)
 - [UC-082 — Set up my project's topology in the project's committed configuration, so that every clone reads the same seats](../use-case-model/use-cases/040-work-in-parallel/UC-082-set-up-topology.md)
 - [UC-085 — Never work on a Task another agent already works on](../use-case-model/use-cases/040-work-in-parallel/UC-085-leave-task-to-its-owner.md)
 - [UC-090 — See which agent works on which issue, without visiting each agent](../use-case-model/use-cases/040-work-in-parallel/UC-090-see-who-works-on-what.md)

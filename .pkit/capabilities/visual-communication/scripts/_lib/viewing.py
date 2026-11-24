@@ -52,6 +52,20 @@ is read, and none is used up (DEC-016 point 5).
   run gives the page files and a report that says what stopped it, and no image (DEC-020
   point 8). Every refusal comes before that. The report names the ways on, in the order of
   DEC-024 point 4 (`ways_on`), and what an agent does where it stops (DEC-024 point 6).
+- **What the checks found** (DEC-062). The step computes the scene findings by the code a
+  render runs (`checks.found_in`), over scenes it computes itself under the lock, filled as
+  its images are: each key over the size axes of each language it draws, and of every
+  language where a check compares languages (`measured`). It still draws only what was
+  asked. The report gives each image the findings that hold on it, a band as its page, and
+  lists apart those it gives to no image drawn. For each image it names, by their ids, the
+  checks that state a reach and measured it, and each such check that did not, with why: a
+  check of colour measures no forced image, and none measures an image where the checks'
+  code stopped on its scene, or on a scene a check compares with it. It carries each
+  check's reach as the code that ran states it, and the capability's version. Each finding
+  is read as validation reads it where it lies, its level by whether its version is released,
+  save that every overlap reads as `box-overlap`, whatever names the pair (`checks.Reading`,
+  DEC-066 point 2). A loss the report lists in its own list is not given again. The findings
+  record is not read, and none is kept (`_Made.checked`).
 - **A run replaces** what an earlier run left in its renderer's folder, as one change
   (`write`), and leaves the other renderer's folder where it lies.
 """
@@ -83,8 +97,9 @@ from _lib.checks import draws_ground
 from _lib.env import MissingFont
 from _lib.plugins import seam
 from _lib.reading import ReadError, read_yaml
-from _lib.root import CONFIG, LOCAL
+from _lib.root import CAPABILITY, CONFIG, LOCAL
 from _lib.scene import SceneResult
+from _lib.scene_checks import LANGUAGES, SIZES, Found, SceneCheck
 
 #: Where the images of each piece lie, relative to the project root.
 FOLDER = f"{LOCAL}/look"
@@ -228,6 +243,60 @@ def scenes(
         return project.scenes(languages, keys, facts=facts)
     except MissingFont as exc:
         raise pl.Refused(f"`{project.piece.name}` cannot be drawn: {exc}") from exc
+
+
+@dataclass(frozen=True)
+class Measured:
+    """What the scene checks found over the scenes a run computes for them (DEC-062 point 1):
+    each finding as its check gives it, scene by scene; each scene that could not be
+    computed, by its language and its key over the size axes, with why; each scene the
+    checks' code stopped on, the same way; and the capability's version that ran."""
+
+    found: tuple[Found, ...]
+    uncomputed: Mapping[tuple[str, str], str]
+    stopped: Mapping[tuple[str, str], str]
+    version: str
+
+
+def measured(
+    project: pl.Project, wanted: Asked, *, facts: layout.Facts
+) -> tuple[list[tuple[str, SceneResult]], Measured]:
+    """The scenes a run draws, and what the scene checks find over the scenes the step
+    computes for them (DEC-062 point 1). It computes each key over the size axes of each
+    language it draws, as a render does, since a check may compare a piece's sizes, and of
+    every language where a check compares languages (`SceneCheck.compares`), each filled by
+    `facts` as its images are. The checks run as a render runs them (`checks.found_in`). A
+    scene it computes only for the findings that cannot be computed, and a scene the checks'
+    code stops on, stop no image of the keys asked for. Raises Refused where a font cannot
+    measure the text of a scene it draws."""
+    compared = {axis for check in checks.SCENE_CHECKS for axis in check.compares}
+    piece = project.piece
+    languages = [
+        language
+        for language in piece.languages
+        if language in wanted.languages or LANGUAGES in compared
+    ]
+    drawn_sizes = {project.size_key(key) for key in wanted.keys}
+    results: list[tuple[str, SceneResult]] = []
+    uncomputed: dict[tuple[str, str], str] = {}
+    for language in languages:
+        for size in project.size_keys:
+            serving = next(key for key in project.keys if project.size_key(key) == size)
+            try:
+                results.extend(project.scenes([language], [serving], facts=facts))
+            except MissingFont as exc:
+                if language in wanted.languages and size in drawn_sizes:
+                    raise pl.Refused(f"`{piece.name}` cannot be drawn: {exc}") from exc
+                uncomputed[language, size] = str(exc)
+    stopped: dict[tuple[str, str], str] = {}
+    found = checks.found_in(project, results, stopped)
+    drawn = [
+        (language, result)
+        for language, result in results
+        if language in wanted.languages and result.scene.size_key in drawn_sizes
+    ]
+    version = ".".join(str(part) for part in libraries.installed_release())
+    return drawn, Measured(tuple(found), uncomputed, stopped, version)
 
 
 def first_key(project: pl.Project) -> str:
@@ -378,12 +447,13 @@ def _numbers(scene: Mapping[str, Any], named: Sequence[str]) -> list[int]:
     return sorted(chosen)
 
 
-def view(project: pl.Project, results: Results, wanted: Asked) -> Viewed:
-    """The images, the frames and the report of a run, through the renderer `wanted` names.
-    Writes only transient files, in a temporary folder of the clone's local folder, which it
-    removes: the SVG renderer's faces (DEC-015 point 2), or the HTML renderer's page files and
-    the browser's profile (DEC-020 point 5). Raises Refused for a page the scene does not
-    hold, or that cannot be drawn."""
+def view(project: pl.Project, results: Results, wanted: Asked, found: Measured) -> Viewed:
+    """The images, the frames and the report of a run, through the renderer `wanted` names,
+    the report giving each image what the checks `found` that holds on it. Writes only
+    transient files, in a temporary folder of the clone's local folder, which it removes: the
+    SVG renderer's faces (DEC-015 point 2), or the HTML renderer's page files and the
+    browser's profile (DEC-020 point 5). Raises Refused for a page the scene does not hold,
+    or that cannot be drawn."""
     shown = {
         (language, result.scene.size_key): (
             scene := result.scene.to_dict(),
@@ -393,9 +463,9 @@ def view(project: pl.Project, results: Results, wanted: Asked) -> Viewed:
     }
     local = project.root / LOCAL
     if wanted.renderer == HTML:
-        return _through_a_browser(project, results, wanted, shown, local)
+        return _through_a_browser(project, results, wanted, shown, local, found)
     local.mkdir(parents=True, exist_ok=True)
-    made = _Made(project, SVG)
+    made = _Made(project, SVG, found)
     with tempfile.TemporaryDirectory(prefix="faces-", dir=local) as faces:
         for language, (key,), drawn in pl.drawn(project, results, SVG, wanted.keys):
             scene, numbers = shown[language, project.size_key(key)]
@@ -432,13 +502,18 @@ class _PageFile:
 
 
 def _through_a_browser(
-    project: pl.Project, results: Results, wanted: Asked, shown: _Shown, local: Path
+    project: pl.Project,
+    results: Results,
+    wanted: Asked,
+    shown: _Shown,
+    local: Path,
+    found: Measured,
 ) -> Viewed:
     """The HTML renderer's page files, each drawn as it was written, in one browser start, and
     where the caller asks, in a second start in the browser's forced palettes (DEC-020 points 5
     and 8, DEC-027 point 3). Every refusal comes before a file is written. A stop of either
     start gives the page files and a report that says what stopped it, and no image."""
-    made = _Made(project, HTML, wanted.forced)
+    made = _Made(project, HTML, found, wanted.forced)
     declared = seam.declaration(HTML, seam.RENDERER)
     combinations = dict(zip(project.keys, project.combinations, strict=True))
     planned = []
@@ -608,12 +683,15 @@ def _cannot_draw(project: pl.Project, page: Mapping[str, Any], tool: str, said: 
 
 
 class _Made:
-    """What a run has drawn so far, through `renderer`, and whether it asks for the browser's
-    forced palettes too."""
+    """What a run has drawn so far, through `renderer`, what the checks `found`, and whether
+    it asks for the browser's forced palettes too."""
 
-    def __init__(self, project: pl.Project, renderer: str, forced: bool = False) -> None:
+    def __init__(
+        self, project: pl.Project, renderer: str, found: Measured, forced: bool = False
+    ) -> None:
         self.project = project
         self.renderer = renderer
+        self.found = found
         self.forced = forced
         self.document = project.values()
         self.files: dict[str, bytes] = {}
@@ -870,6 +948,7 @@ class _Made:
             "lock": self.project.lock,
             "renderer": {"name": self.renderer, "version": declared["version"]},
             "tool": self.tool,
+            **self.checked(),
         }
         if self.renderer == SVG:
             report.update(images=self.images, dropped=self.dropped)
@@ -892,6 +971,82 @@ class _Made:
         report["refused"] = self.refused
         return Viewed({**self.files, REPORT: _json(report)}, report, self.stop is not None)
 
+    def checked(self) -> dict[str, Any]:
+        """What the report says of the checks (DEC-062 points 1 and 2): the capability's
+        version that ran, and the reach of each check that states one, by its id, as the code
+        that ran states it; each image's findings, the checks that measured it and those
+        that did not, with why, written into its entry; and the findings it gives to no
+        image drawn, `on-no-image`, each once for each key it holds for."""
+        reaching = [check for check in checks.SCENE_CHECKS if check.reach is not None]
+        reading = checks.Reading(self.project.held)
+        given: dict[int, set[str]] = {}
+        for image in self.images:
+            held: list[dict[str, Any]] = []
+            for index, each in enumerate(self.found.found):
+                key = _holds_on(self.project, each, image)
+                if key is None:
+                    continue
+                given.setdefault(index, set()).add(key)
+                if not self._listed(each, image):
+                    held.append(_said_found(self.project, reading, each, key))
+            image["findings"] = held
+            unmeasured = {check.id: self._unmeasured(check, image) for check in reaching}
+            image["measured-by"] = [check.id for check in reaching if not unmeasured[check.id]]
+            image["not-measured"] = [
+                {"check": id_, "why": why} for id_, why in unmeasured.items() if why
+            ]
+        apart = [
+            _said_found(self.project, reading, each, key)
+            for index, each in enumerate(self.found.found)
+            for key in each.combinations or (each.size or "",)
+            if key not in given.get(index, set())
+        ]
+        return {
+            "capability": {"name": CAPABILITY, "version": self.found.version},
+            "reaches": {check.id: check.reach_said() for check in reaching},
+            "on-no-image": apart,
+        }
+
+    def _listed(self, found: Found, image: Mapping[str, Any]) -> bool:
+        """Whether the report lists `found` on `image` in an entry of its own, as a loss in
+        its list of losses, so it is not given again (DEC-062 point 1)."""
+        extra = found.finding.extra
+        return found.check is checks.LOSSES and any(
+            entry["plugin"] == extra.get("plugin")
+            and entry["what"] == extra.get("what")
+            and all(entry.get(at) == image.get(at) for at in ("language", "key", "page", FORCED))
+            for entry in self.losses
+        )
+
+    def _unmeasured(self, check: SceneCheck, image: Mapping[str, Any]) -> str:
+        """Why `check` did not measure `image`, or "" where it did (DEC-062 point 2): the
+        checks' code stopped on the image's scene, or on a scene the check compares with it,
+        or a scene it compares could not be computed; or it is a check of colour, and the
+        image a forced one."""
+        language, size = image["language"], self.project.size_key(image["key"])
+        stopped, uncomputed = self.found.stopped, self.found.uncomputed
+        if (language, size) in stopped:
+            return f"the checks' code stopped on this image's scene: {stopped[language, size]}"
+        compared = [
+            scene
+            for scene in [*stopped, *uncomputed]
+            if (SIZES in check.compares and scene[0] == language)
+            or (LANGUAGES in check.compares and scene[1] == size)
+        ]
+        if compared:
+            other, at = compared[0]
+            if (other, at) in stopped:
+                what = f"the checks' code stopped on it: {stopped[other, at]}"
+            else:
+                what = f"it could not be computed: {uncomputed[other, at]}"
+            return f"it compares this image's scene with that of `{other}` at `{at}`, and {what}"
+        if check.colour and image.get(FORCED):
+            return (
+                "it is a check of colour, and a forced image shows the browser's palette, which "
+                "no check of colour measures"
+            )
+        return ""
+
     def _forced_said(self) -> dict[str, Any] | None:
         """What the report says of the forced palettes a run asks for: each one, the browser's
         flag that forced them, the folder of each, and what their images do not show (DEC-027
@@ -906,6 +1061,47 @@ class _Made:
             "folders": {name: f"{FORCED_FOLDER.format(name)}/" for name in names},
             "does-not-show": f"each forced image shows {tool}'s own {FORCED_UNSHOWN}",
         }
+
+
+def _holds_on(project: pl.Project, found: Found, image: Mapping[str, Any]) -> str | None:
+    """The key `found` holds for on `image`, where it holds on it (DEC-062 point 1): the
+    image's whole key for a finding of a check of colour that names its combination, else
+    the key over the size axes it was found at, "" where its check gives it for every key.
+    None where it holds in another language, at another key or on another page, and for a
+    finding of colour that names a combination, on a forced image. A band is read as its
+    page."""
+    language, key, page = image["language"], image["key"], image["page"]
+    if found.language not in (None, language):
+        return None
+    if found.size not in (None, project.size_key(key)) or found.page not in (None, page):
+        return None
+    if not found.combinations:
+        return found.size or ""
+    if image.get(FORCED) or key not in found.combinations:
+        return None
+    return key
+
+
+def _said_found(
+    project: pl.Project, reading: checks.Reading, found: Found, key: str
+) -> dict[str, Any]:
+    """A finding as the report gives it (DEC-062 point 1): its check's id where the check
+    states a reach, else None; its label, level, location and message, as the viewing step
+    reads it where it lies (`checks.Reading`), so every overlap as `box-overlap`, with nothing
+    of a part's `lies-over` (DEC-066 point 2); its language, None where it holds in every
+    language; the key it holds for, None where it holds at every key; and its page, None where
+    its place lies on no page."""
+    finding, level = reading.read(checks.rooted(found.finding, project.piece), validation=False)
+    return {
+        "check": found.check.id or None,
+        "label": finding.code,
+        "level": level,
+        "location": checks.place(finding),
+        "message": finding.message,
+        "language": found.language,
+        "key": key or None,
+        "page": found.page,
+    }
 
 
 #: What an agent does where a look stops: it opens no way out of the sandbox itself (DEC-024

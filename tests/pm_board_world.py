@@ -25,12 +25,17 @@ import json
 import subprocess
 from typing import Any
 
-from tests.pm_board_archive import reads_archived
+from tests.pm_board_graphql import GraphBoard, is_seam_read
 from tests.pm_lifecycle_world import Tracker
 
 PROJECT_ID = "PVT_board4"
 STATUS_FIELD_ID = "PVTSSF_status"
 REPOSITORY = "acme/repo"
+#: The node id of this repository, by which a read of the board tells its issues.
+REPOSITORY_ID = "R_repo"
+#: The node id of the repository's old issue on the board, which only the
+#: page of recent issues shows.
+WITNESS_ID = "I_witness"
 #: Who runs `gh`, and so the owner a `gh project` call with no `--owner` reads.
 VIEWER = "octocat"
 FIVE = ("Todo", "Backlog", "In Progress", "Review", "Done")
@@ -90,8 +95,22 @@ class BoardTracker(Tracker):
     option name)`.
     `fail_reads` names the board reads that fail (`fields`, `items`, `card`),
     `fail_edits` the issues whose Status write fails, and `fail_adds` those whose
-    card cannot be added. `repository` is this repository's `owner/name`, and
-    `owner` the board's owner, the repository's unless a test sets another."""
+    card cannot be added. `automation` is the Status the board's own automation
+    sets on a card when it is added, None for none. `repository` is this
+    repository's `owner/name`, and `owner` the board's owner, the repository's
+    unless a test sets another.
+
+    The board answers the seam's GraphQL reads through `graph`
+    (`tests/pm_board_graphql.py`), reading the cards held here: an issue's own
+    cards, its repository, and the page of the repository's recent issues by
+    number, highest first. `graph.placed` places an error on one part of a
+    read, such as the page.
+
+    As on a board in use, the repository holds one more issue on the board, an
+    old one no test lists (`WITNESS_ID`): it falls last in the page of recent
+    issues and shows a card, so a read sees that the board answers it, and an
+    issue with no card is told as such (ADR-096 point 1). `graph.witness =
+    False` takes it away, for a board whose cards the credential cannot see."""
 
     def __init__(self, options: tuple[str, ...] = FIVE, *, field: str = "Status") -> None:
         super().__init__()
@@ -107,6 +126,8 @@ class BoardTracker(Tracker):
         self.fail_reads: set[str] = set()
         self.fail_edits: set[int] = set()
         self.fail_adds: set[int] = set()
+        self.automation: str | None = None
+        self.graph = _TrackerBoard(self)
 
     # --- what a test sets up ------------------------------------------------
 
@@ -157,18 +178,8 @@ class BoardTracker(Tracker):
             stderr = f"GraphQL: Could not resolve to a ProjectV2 with the number {number}."
             return _done(argv, 1, stderr=stderr)
         if verb == "view":
-            return _done(argv, stdout=json.dumps({"id": PROJECT_ID, "number": 4}))
-        if verb == "field-list":
-            if "fields" in self.fail_reads:
-                return _done(argv, 1, stderr="missing required scopes [read:project]")
-            status = {
-                "id": STATUS_FIELD_ID,
-                "name": self.field_name,
-                "type": self.field_type,
-                "options": [{"id": oid, "name": name} for name, oid in self.options.items()],
-            }
-            title = {"id": "PVTF_title", "name": "Title", "type": "ProjectV2Field"}
-            return _done(argv, stdout=json.dumps({"fields": [title, status]}))
+            identity = {"id": PROJECT_ID, "number": 4, "owner": {"login": self.owner}}
+            return _done(argv, stdout=json.dumps(identity))
         if verb == "item-edit":
             return self._edit_card(argv)
         if verb == "item-add":
@@ -176,7 +187,7 @@ class BoardTracker(Tracker):
             if number in self.fail_adds:
                 return _done(argv, 1, stderr="HTTP 502: Bad Gateway")
             self.adds.append(number)
-            self.card(number)
+            self.card(number, self.automation)
             return _done(argv, stdout=json.dumps({"id": self.cards[number]["id"]}))
         raise AssertionError(f"unexpected gh project call: {argv}")
 
@@ -194,55 +205,18 @@ class BoardTracker(Tracker):
         return _done(argv)
 
     def _graphql(self, argv: list[str]) -> subprocess.CompletedProcess[str]:
-        query = str(_field(argv, "query"))
-        if "nodes(ids:" in query:
-            if "card" in self.fail_reads:
-                return _done(argv, 1, stderr="HTTP 502: Bad Gateway")
-            nodes = [self._issue_node(issue_id, query) for issue_id in _fields(argv, "ids[]")]
-            return _done(argv, stdout=json.dumps({"data": {"nodes": nodes}}))
-        if "projectItems" in query:
-            if "card" in self.fail_reads:
-                return _done(argv, 1, stderr="HTTP 502: Bad Gateway")
-            number = int(str(_field(argv, "issue")).removeprefix("I_"))
-            nodes = []
-            if number in self.cards:
-                node: dict[str, Any] = {
-                    "id": self.cards[number]["id"],
-                    "project": {"id": PROJECT_ID},
-                }
-                if "fieldValueByName" in query:
-                    node["fieldValueByName"] = self._value(number)
-                nodes.append(node)
-            return _done(
-                argv, stdout=json.dumps({"data": {"node": {"projectItems": {"nodes": nodes}}}})
-            )
-        if "items(first" in query:
-            if "items" in self.fail_reads:
-                return _done(argv, 1, stderr="missing required scopes [read:project]")
-            walked = [
-                number
-                for number in sorted(self.cards)
-                if reads_archived(query) or not self.cards[number]["archived"]
-            ]
-            nodes = [self._card_node(n) for n in walked] + self.foreign_cards
-            page = {"pageInfo": {"hasNextPage": False, "endCursor": None}, "nodes": nodes}
-            return _done(argv, stdout=json.dumps({"data": {"node": {"items": page}}}))
+        if is_seam_read(argv):
+            self.graph.failing = {
+                part: words
+                for read, part, words in (
+                    ("fields", "fields", "missing required scopes [read:project]"),
+                    ("card", "cards", "HTTP 502: Bad Gateway"),
+                    ("items", "items", "missing required scopes [read:project]"),
+                )
+                if read in self.fail_reads
+            }
+            return self.graph.reply(argv)
         raise AssertionError(f"unexpected gh api graphql call: {argv}")
-
-    def _issue_node(self, issue_id: str, query: str) -> dict[str, Any] | None:
-        """The issue a node id names, with its cards, as `nodes(ids:)` gives it;
-        None for an id that names no issue."""
-        number = int(issue_id.removeprefix("I_"))
-        if number not in self.issues:
-            return None
-        cards = []
-        if number in self.cards:
-            card: dict[str, Any] = {"id": self.cards[number]["id"], "project": {"id": PROJECT_ID}}
-            if "fieldValueByName" in query:
-                card["fieldValueByName"] = self._value(number)
-            cards.append(card)
-        page = {"pageInfo": {"hasNextPage": False}, "nodes": cards}
-        return {"id": issue_id, "projectItems": page}
 
     def _value(self, number: int) -> dict[str, Any] | None:
         """The Status the issue's card holds, as GraphQL gives a single-select's
@@ -256,6 +230,8 @@ class BoardTracker(Tracker):
         value = self._value(number)
         return {
             "id": card["id"],
+            "type": "ISSUE",
+            "isArchived": card["archived"],
             "content": {
                 "__typename": "Issue",
                 "id": f"I_{number}",
@@ -298,4 +274,111 @@ def foreign_card(item_id: str, kind: str, number: int | None, repository: str = 
         content["number"] = number
     if kind == "Issue":
         content.update(state="OPEN", body="", repository={"nameWithOwner": repository})
-    return {"id": item_id, "content": content, "fieldValueByName": None}
+    kinds = {"Issue": "ISSUE", "PullRequest": "PULL_REQUEST", "DraftIssue": "DRAFT_ISSUE"}
+    return {
+        "id": item_id,
+        "type": kinds[kind],
+        "isArchived": False,
+        "content": content,
+        "fieldValueByName": None,
+    }
+
+
+def withheld_card(item_id: str) -> dict:
+    """A card whose issue lies in a repository the credential may not read: the
+    board returns it with nothing of its issue (ADR-096 point 2)."""
+    return {
+        "id": item_id,
+        "type": "REDACTED",
+        "isArchived": False,
+        "content": None,
+        "fieldValueByName": None,
+    }
+
+
+class _TrackerBoard(GraphBoard):
+    """Board #4 as the tracker's cards make it, answering the seam's reads."""
+
+    def __init__(self, tracker: BoardTracker) -> None:
+        super().__init__(node=PROJECT_ID, number=4, owner=tracker.owner)
+        self.tracker = tracker
+        self.witness = True
+
+    def identity(self) -> dict[str, Any]:
+        self.owner = self.tracker.owner
+        return super().identity()
+
+    def reply(self, argv: list[str]) -> subprocess.CompletedProcess[str]:
+        self.owner = self.tracker.owner
+        return super().reply(argv)
+
+    def fields(self) -> list[dict[str, Any]]:
+        tracker = self.tracker
+        status = {
+            "id": STATUS_FIELD_ID,
+            "name": tracker.field_name,
+            "type": tracker.field_type,
+            "options": [{"id": oid, "name": name} for name, oid in tracker.options.items()],
+        }
+        return [{"id": "PVTF_title", "name": "Title", "type": "ProjectV2Field"}, status]
+
+    def own_cards(self, issue_id: str, value_field: str | None) -> list[dict[str, Any]] | None:
+        if issue_id == WITNESS_ID:
+            return [{"id": "PVTI_witness", "project": {"id": PROJECT_ID}}] if self.witness else []
+        number = _number(issue_id)
+        if number is None or number not in self.tracker.issues:
+            return None
+        if number not in self.tracker.cards:
+            return []
+        card: dict[str, Any] = {
+            "id": self.tracker.cards[number]["id"],
+            "project": {"id": PROJECT_ID},
+        }
+        if value_field is not None:
+            card["fieldValueByName"] = self.tracker._value(number)
+        return [card]
+
+    def repository_of(self, issue_id: str) -> str | None:
+        if issue_id == WITNESS_ID:
+            return REPOSITORY_ID
+        number = _number(issue_id)
+        return REPOSITORY_ID if number is not None and number in self.tracker.issues else None
+
+    def recent_issues(self, repository_id: str, order: str) -> list[str]:
+        if repository_id != REPOSITORY_ID:
+            return []
+        numbers = sorted(self.tracker.issues, reverse=True)
+        if order == "updated":
+            numbers = [n for n in numbers if self.tracker.issues[n]["state"] == "OPEN"]
+            return [f"I_{n}" for n in numbers]
+        # The old issue is closed, so only the page's created order shows it.
+        return [f"I_{n}" for n in numbers] + [WITNESS_ID]
+
+    def walk(self, value_field: str | None, archived: bool) -> list[dict[str, Any]]:
+        tracker = self.tracker
+        walked = [
+            number
+            for number in sorted(tracker.cards)
+            if archived or not tracker.cards[number]["archived"]
+        ]
+        return [tracker._card_node(n) for n in walked] + tracker.foreign_cards
+
+    def card_by_id(self, item_id: str, value_field: str | None) -> dict[str, Any] | None:
+        tracker = self.tracker
+        number = next((n for n, card in tracker.cards.items() if card["id"] == item_id), None)
+        if number is None:
+            return None
+        card: dict[str, Any] = {
+            "id": item_id,
+            "isArchived": tracker.cards[number]["archived"],
+            "project": {"id": PROJECT_ID},
+        }
+        if value_field is not None:
+            card["fieldValueByName"] = tracker._value(number)
+        return card
+
+
+def _number(issue_id: str) -> int | None:
+    """The issue number a fake node id `I_<n>` names."""
+    tail = issue_id.removeprefix("I_")
+    return int(tail) if tail.isdigit() else None

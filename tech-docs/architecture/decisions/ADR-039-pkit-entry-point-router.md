@@ -6,6 +6,8 @@ date: 2026-07-03
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
+> **Partially superseded by [ADR-095](ADR-095-hook-out-of-reach.md).** The permission commands that report the hook's verdict or the model it judges by, realize the permission model, make the hook's copy, turn the permission hook on or off, or name or remove a folder where the hook puts no ask ([ADR-093](ADR-093-writes-outside-the-repository.md) point 4), as their own work or as a step of it, are served from the installed release where the machine holds one, whatever the checkout or its pin say. There, for them, neither the routing by the checkout and the pin, in the Summary and the Decision, nor D1's lock holds. Their code is the installed release's while the content they read is the checkout's at its pin, the mismatch the rejected alternative of re-execing only the code names, so each reads only what its release reads whole, and writes only in the layout it read. On a machine that holds no installed release, those that report the verdict or the model are routed by the checkout and the pin, as the Summary and the Decision say, and the others refuse. Everything else stands: the three routes and their order, D1, D2 and D3, for every other command.
+
 ## Summary
 
 **In plain terms:** the installed `pkit` binary becomes aware of both *where it is
@@ -13,8 +15,8 @@ run* and *what version the project pins*, and picks one of three routes cheaply 
 before any heavy import — on every invocation. (1) Inside a project-kit source
 checkout it execs that checkout's in-tree dispatcher (`.pkit/cli/pkit`), so the
 working tree runs and the deploy-primitive bypass survives. (2) When the project
-pins a version different from the running binary, it re-execs `uvx
-project-kit@<pin>`. (3) Otherwise it runs itself. This folds the logic of today's
+pins a version different from the running binary, it re-execs `uvx --from
+<distribution URL>@v<pin> pkit`. (3) Otherwise it runs itself. This folds the logic of today's
 separate `pkit-router` shim into the tool, so adopters and developers share **one**
 install. It is only sound because [ADR-033](ADR-033-official-install-bundles-content.md)
 version-locks bundled content to the binary: re-execing to `@<pin>` brings CLI code
@@ -65,11 +67,11 @@ inside a project-kit source checkout, exec that checkout's `.pkit/cli/pkit`,
 running the working tree. This preserves the deploy-primitive bypass the shim's
 route delivers today.
 
-### 2. Project pins a version ≠ me → re-exec `uvx project-kit@<pin>`
+### 2. Project pins a version ≠ me → re-exec `pkit` at the pin through `uvx`
 
 When the
 enclosing project pins a version that differs from the running binary's,
-re-exec `uvx project-kit@<pin>` and let that process serve the command.
+re-exec `uvx --from <distribution URL>@v<pin> pkit` and let that process serve the command.
 
 ### 3. Match, or no pin → run self
 
@@ -78,8 +80,8 @@ project pins nothing, run in-process.
 
 ### D1 — Version-lock soundness rests on ADR-033
 
-Re-execing to `uvx
-project-kit@<pin>` brings CLI code *and* bundled content *from the same wheel*:
+Re-execing to `uvx --from
+<distribution URL>@v<pin> pkit` brings CLI code *and* bundled content *from the same wheel*:
 `find_source_kit()` keys off the installed package location
 ([ADR-033](ADR-033-official-install-bundles-content.md)), so the re-exec'd process
 falls through to that pin's bundled `_kit/`. Code-at-pin and content-at-pin cannot
@@ -96,8 +98,8 @@ degraded-but-running command beats a broken one.
 
 ### D3 — Pin correspondence assumes disciplined tagging
 
-`uvx
-project-kit@vX.Y.Z` resolves the git tag `vX.Y.Z`, so route 2 assumes total
+`uvx --from
+<distribution URL>@vX.Y.Z pkit` resolves the git tag `vX.Y.Z`, so route 2 assumes total
 tag⟺`.pkit/VERSION` correspondence. That correspondence is a release-discipline
 property, owned by #464 (and already mandated in spirit by PRJ-004, which cuts
 annotated tags matching `.pkit/VERSION`). The resolver depends on it; it does not
@@ -124,8 +126,8 @@ should serve the command; making it after paying Python cold-start would tax eve
 fast-path invocation (route 3 match, route 1 checkout exec) for a cost only route
 2's minority pays. Cheap-first keeps the common case cheap.
 
-**Why the accepted tradeoff is worth recording honestly.** Route 2's `uvx
-project-kit@<pin>` reintroduces **on-demand fetch/build at command time** —
+**Why the accepted tradeoff is worth recording honestly.** Route 2's `uvx --from
+<distribution URL>@v<pin> pkit` reintroduces **on-demand fetch/build at command time** —
 precisely the hazard ADR-033 rejected for *upgrade* time. It is bounded and cached
 per version, but real on first use of a pin. This is a deliberate, eyes-open
 tradeoff: the alternative (no pin honouring) leaves ADR-033's version-lock
@@ -174,8 +176,8 @@ single-binary status quo it replaces.
   reintroducing command-time fetch/build on route 2, this decision makes #359 the
   near-term mitigation that turns build→pull. Its priority is now coupled to this
   resolver's rollout.
-- **Depends on disciplined release tagging (#464).** Route 2's `uvx
-  project-kit@vX.Y.Z` → tag `vX.Y.Z` resolution assumes total
+- **Depends on disciplined release tagging (#464).** Route 2's `uvx --from
+  <distribution URL>@vX.Y.Z pkit` → tag `vX.Y.Z` resolution assumes total
   tag⟺`.pkit/VERSION` correspondence; #464 owns that discipline, PRJ-004 already
   mandates matching annotated tags.
 - **Stands on** ADR-033 (version-locked bundled content — the soundness

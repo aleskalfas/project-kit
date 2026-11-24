@@ -1,0 +1,14 @@
+component: visual-communication
+kind: patch
+custom:
+  category: Fixed
+body: >
+  The check of contrast as drawn, `contrast-drawn`, measures two kinds of
+  place it left out before (DEC-004 point 8, #3354). Where one span of a text
+  lies over a picture, it measures each other span of that text against what
+  lies under it, and leaves only the span over the picture to the reviewer.
+  A path's fill, such as a sign's, now lies under each span and sign drawn
+  after it whose middle its outline fills by its fill rule, as a box's fill
+  does. A piece may now fail on a text or a sign over a path's fill, or
+  beside a picture, where it passed before. The check's reach,
+  `contrast-as-drawn`, no longer names either place.

@@ -1,0 +1,8 @@
+component: project-management
+kind: patch
+body: >
+  An ownership marker from an account spelled as a bot's, `<name>[bot]` or
+  `app/<name>`, never counts, even on an issue GitHub let be assigned to
+  that account (DEC-079 point 2). Such an issue reads as unclaimed. A
+  marker from a bot's account that GitHub gives with no suffix still counts
+  where it is the assignee, until the reading of an account's kind is built.

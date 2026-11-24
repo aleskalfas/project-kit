@@ -1,0 +1,12 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  Body validation no longer crashes on a `pkit connections resolve --json`
+  document whose `outcome` is a list or a mapping. `create-issue`,
+  `edit-issue` and `validate-issue` read such a use-case point as one they
+  could not check, under `body.use-cases-unchecked`, with the reason that the
+  backbone's document gives the point no outcome this reading can read
+  (DEC-054 point 3; ADR-097 point 3). Before, they stopped with a traceback.
+  No backbone released so far prints such an outcome.

@@ -1,0 +1,8 @@
+component: project-management
+kind: none
+body: >
+  Internal. DEC-084 decides that a worker knows its directing seat's session
+  by the messaging address and process each seat's state issue records,
+  replacing DEC-081's check against the listing of sessions, which the
+  measurements on #3461 show cannot pass. DEC-081, ADR-071 and ADR-100 take
+  the edits it names. Nothing is built, so no command changes.

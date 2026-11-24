@@ -8,7 +8,7 @@ pkit:
         - src/project_kit/process.py
         - src/project_kit/process_health.py
         - src/project_kit/cli.py
-      record: [COR-032, COR-033, COR-034, COR-035, COR-042, ADR-020]
+      record: [COR-032, COR-033, COR-034, COR-035, COR-042, ADR-020, ADR-098]
 ---
 
 # The engine
@@ -34,7 +34,23 @@ The backbone exposes the engine as the `process` command group of `pkit`. Each c
 - **`health`** takes no subject. It runs outside the engine's runtime, reports only, and is deterministic. It prints narrative or `--json`, and exits non-zero on any miss or any indeterminate finding.
   - Its flags are the CLI reference's.
 - **`cascade`** exits 1 when the fold is not open, or when the process declares none.
-- **`--actor <login>`** names the actor whose gates are checked. `status` and `can-move` take `operator` without it, and `move` takes the caller's `gh` login. A wrapper names one actor on each call, or a sign-off gate can give two verdicts.
+- **`--actor <name>`** names the actor whose gates are checked, in the binding's terms. That is the authority the move is made by, as the binding's records name it ([the process README, "Gate-checkability"](README.md#gate-checkability-the-load-bearing-rule)).
+  - **From the caller alone.** The engine asks no service for the actor, and takes no default. No fixed value stands for an actor nobody named. An actor given blank names none.
+  - **One actor on each call.** `status`, `can-move` and `move` each judge a gate for the actor named, or for none. So a wrapper names the same actor on each call, or a sign-off gate can give two verdicts.
+  - **By hand.** A person names the actor as the binding's reference says. The engine takes the person's word, so a misspelt actor is a false one.
+- **With no actor named,** a cross-authority gate whose authorisation exists and names its producer is not judged. Its predicate runs, and its reason gives what the predicate answered, the producer included.
+  - **`move` and `can-move` refuse the move.** The refusal says that no actor was named. It asks the caller to name the authority the move is made by, in the binding's terms.
+  - **`status` marks the move `?`,** with the reason that no actor was named. For a wait, the engine reads the gate as one that may be open. So the missing actor makes no wait.
+  - **Every other gate is judged as for any actor.** A gate whose authorisation does not exist, or names no producer, is shut.
+  - **A move none of whose gates compares the actor goes on.** Its journal entry records the actor as empty. `status` shows such a move as made "by no named actor".
+- **The structured status.** Each entry of `legal_moves[]` in `status --json` carries two keys about its move's verdict.
+  - **`legal_moves[].indeterminate`:** true where the engine can give the move's gate no verdict. Such a move fails closed, and its `reason` says why. The engine gives it for these:
+    - a predicate that gave no answer
+    - a gate with no predicate, or of a kind the engine does not know
+    - a keyed inner process with no subject
+    - a cross-authority gate not judged for want of an actor
+    - every move from an indeterminate position, where no gate runs
+  - **`legal_moves[].needs_actor`:** true only on an entry not judged for want of an actor, whose `indeterminate` is true. It is false on every other entry, another indeterminate one among them. A caller acts on it only by naming the actor and asking again. A document without the key reads as false.
 - **A transition's `authorisation`** names who may take the move. The engine does not enforce it, and the caller does. The engine reads it only to tell an `awaiting-human` wait, and where a `prompt` goes.
 
 **The engine is content-free.** It reads any capability's process definition and the subject's reality, and resolves and validates against them.

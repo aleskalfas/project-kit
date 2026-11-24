@@ -1,0 +1,26 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  Project-management's merge-queue and friction-answer readings read the
+  backbone's documents by their keys, as ADR-097 point 3 says: where a pull
+  request stands, the squash-commit defaults, what a merge, an enqueue or a
+  dequeue came to, each line of a wait, what a branch's deletion came to, the
+  change check, `pkit friction since`, and the answers' folder the
+  whole-repository check gives. A key pm reads that is missing, null where the
+  CLI reference does not print it null, or of another type, a value of a set it
+  decides on that it does not know, and a version other than the one it reads
+  are an answer it cannot tell anything from, never a default, so nothing
+  merges on them. Before, a reading without `unreadable` was read as readable,
+  a reading's optional fields left out as empty or false, a wait's line
+  without `event` as its end, a request without `reason_kind`, `reason` or
+  `guard` as having none, a `reason_kind` pm does not know as one it need not
+  act on, a change check without `failed` or `base.outdated` as a check that did not
+  fail on a base that had not moved, an answer without `kept` or `asked` as
+  keeping nothing and not asked for, a `friction since` change without `why`
+  as "None", and a version of `true` as version 1. A word of GitHub's that pm
+  decides nothing on, such as the pull request's state, is still passed on as
+  GitHub gives it, and a finding of a kind pm does not know still refuses the
+  merge through the check's `failed`. A deferral a revalidation kept with no
+  anchor is told without one, never as "None:None".

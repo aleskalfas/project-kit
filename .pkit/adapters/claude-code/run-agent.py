@@ -1030,7 +1030,18 @@ def picked_source(
             "the deploy's resolver gave no answer which definition of the agent is the agent: "
             + (first.strip() or f"it exited with {done.returncode}")
         )
-    if picked.get("shipped") is False:
+    return pick_of(picked, agent)
+
+
+def pick_of(picked: dict, agent: str) -> Path | None:
+    """The file the resolver's pick names for *agent*, read by its keys (ADR-097 point
+    3): None where it says no place ships the name. Refuses where it says why the name
+    has no agent the runner may run, and where it does not say whether a place ships the
+    name, or which file is the agent's: never a pick it did not make."""
+    shipped = picked.get("shipped")
+    if not isinstance(shipped, bool):
+        raise Refused("the deploy's resolver did not say whether a place ships the agent")
+    if not shipped:
         return None
     for key, says in (
         ("untold", "the runner cannot tell which definition of {agent} is the agent: {why}"),
