@@ -390,7 +390,7 @@ A concept that a piece shows by its colour shows a sign beside it too, so colour
 | `field` | in the box, before the text |
 | `header`, `title` | before the title |
 | `section` | before the head |
-| `connector` | on the line, halfway along the stretch its tie alone runs: halfway along the line, where its tie shares no trunk |
+| `connector` | on the line, where [`connector`](#connector) places it |
 
 - **Its size** is the starter's own role `starter.sign`, the side of a square the sign fills whole. A web part's or a web block's sign is no wider than the room it gets: a header's than the room inside its insets, a title's than its words, a section's than its text, a field's than the field, and a button's than its label.
 - **Its paint** is its family's text, the member a brand makes legible, since a sign, as a connector's line, needs a contrast of 3 to 1 against what it lies on (visual-communication DEC-036 point 8). A state changes its paint, never its sign.
