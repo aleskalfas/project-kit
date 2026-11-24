@@ -1,5 +1,5 @@
 ---
-id: ADR-093
+id: ADR-103
 title: project-kit keeps its visual identity in libraries of its own, and its brand builds on the foundations with no base
 status: proposed
 date: 2026-11-13
@@ -73,7 +73,7 @@ No record says where project-kit's brand and component library lie, who owns the
 ### 3. Nothing the capability ships takes anything from project-kit's identity
 
 - **Its libraries,** the neutral brand among them, receive nothing of project-kit's visual identity. None receives a value, concept, form or name that makes project-kit's pieces its own, if it was made for them or taken from them. That holds in a version being built or a released one, whoever writes the change (DEC-001 point 9). A value both hold by coincidence, such as a font, breaks nothing.
-- **Any change a shipped library would need** to serve one of project-kit's pieces reaches it only as a stated need. That holds for a new form, a new option or state on an existing form, and a fix. The need is a request to the library's owner (DEC-030 point 4), judged by the bar that owner keeps, as any project's is. That way the owner shapes each change and judges whether it is generic, not a designer working for one piece.
+- **Any change a shipped library would need** to serve one of project-kit's pieces reaches it only as a request to the library's owner (DEC-030 point 4). That holds for a new form, a new option or state on an existing form, and a fix. The owner judges each request by the bar it keeps, as it judges any project's. That way the owner shapes each change and judges whether it is generic, not a designer working for one piece.
 - **Its rule sets and design knowledge.** A lesson from project-kit's pieces may confirm a rule or a practice taken from the field's named sources. The lesson is never their source (DEC-028 point 1, DEC-030 point 8). project-kit's own taste goes into its own libraries and rule sets.
 - **Its agents' instructions.** They serve every project, so nothing of project-kit's taste goes into them (COR-014, DEC-001 point 9).
 
@@ -115,7 +115,7 @@ The costs:
 
 **Point 3, the shipped libraries.** A shipped library serves every project, and one project's identity goes into that project's own libraries (DEC-030 point 4). Where the capability is authored, the designer may change a shipped library's version being built (DEC-030 point 4). Identity written there would reach every project that brings in that library's next release ([visual-communication:DEC-013-shipped-library-releases] point 5).
 
-**Point 3, a generic form.** Whether a form is generic, or carries something of project-kit's identity, is a judgement. A form, option or fix drawn for one of project-kit's pieces is shaped by that piece's needs, and may carry some of project-kit's identity unseen. Sent as a stated need, it reaches the library's owner as any project's need does, and the owner decides what serves every project. Written into the library by project-kit's designer, it would take a path no other project has (PRJ-012 point 2).
+**Point 3, a generic form.** Whether a form is generic, or carries something of project-kit's identity, is a judgement. A form, option or fix drawn for one of project-kit's pieces is shaped by that piece's needs, and may carry some of project-kit's identity unseen. Sent as a request, it reaches the library's owner as any project's request does, and the owner decides what serves every project. Written into the library by project-kit's designer, it would take a path no other project has (PRJ-012 point 2).
 
 **Point 3, by origin and beyond libraries.** The rule names where a thing came from, not what it is, so a value both hold by coincidence breaks nothing. The capability's rule sets and design knowledge are taken from the field's named sources (DEC-028 point 1, DEC-030 point 8). A project's work confirms what they hold, and never supplies it. The capability's agents serve every project too, so one project's taste stays out of their instructions (COR-014).
 
@@ -129,7 +129,7 @@ The costs:
 - **No brand of project-kit's, its look kept in local components.** Rejected: only a brand holds a raw value (DEC-001 point 5), so a local component cannot carry a look.
 - **project-kit's libraries in a repository of their own, fetched into the location.** Rejected: a fetched version is released, so the designer could change none of it (DEC-003 points 4 and 6). It would also add a repository and its releases for one user (COR-007).
 - **project-kit's libraries in the capability's folder, kept out of what ships.** Rejected: a project's work never lies there (DEC-001 point 11), and the designer's grant names nothing there (DEC-030 point 5).
-- **A generic form drawn for project-kit's pieces, written into a shipped library's version being built.** Where the capability is authored, DEC-030 point 4 allows that change. Rejected: a designer working for one of project-kit's pieces would shape the form, and judge it generic. Sent as a stated need, the form is shaped and judged by the library's owner (Rationale, "Point 3, a generic form").
+- **A generic form drawn for project-kit's pieces, written into a shipped library's version being built.** Where the capability is authored, DEC-030 point 4 allows that change. Rejected: a designer working for one of project-kit's pieces would shape the form, and judge it generic. Sent as a request, the form is shaped and judged by the library's owner (Rationale, "Point 3, a generic form").
 - **Forms of project-kit's identity kept as parts of its brand, with no component library.** A brand's own parts are the few no shared component has (DEC-001 point 5). The designer puts a reusable form in a component library (DEC-030 point 3). If every piece of project-kit's moves onto the brand, though, a form that brand alone uses could be its part ([visual-communication:DEC-007-starter-library] point 4). So this is left to whether project-kit's pieces must move onto the brand (Implications).
 - **A command of the capability that starts a project's brand from neutral's values.** Not taken here: it is the capability's to build, and worth it only if projects show that setup recurs (COR-007).
 
@@ -139,6 +139,9 @@ The costs:
   - PRJ-012 points 2 and 3, which this record follows for project-kit's brand and component library
   - DEC-030 points 4 and 5. Where the capability is authored, the designer may still change a shipped library's version being built for what serves every project. A change one of project-kit's pieces needs reaches that version only as a request (point 3).
   - DEC-004 point 6, and the neutral brand's open roles, which this record leaves as they are
+  - [visual-communication:DEC-070-ship-call-and-one-round], since nothing here rests on the review. The bar point 3 names is the one a library's owner keeps for what the library takes (DEC-030 point 4), not a bar for the review's verdict, which DEC-070 removes.
+  - [visual-communication:DEC-071-sketch-and-rebuild] points 4 and 5. A rebuild of one of project-kit's pieces extends no shipped library, by point 3. What a shipped library lacks for it reaches that library's owner as a request, and the rebuild draws a local component or a stand-in meanwhile.
+  - [visual-communication:DEC-072-shared-type-roles], whose new shared type has a default. project-kit's brand gives it a value or draws it at the body, as Rationale point 2's upkeep has it.
 - **project-kit's own libraries need no more than an adopter's powers.** Every file of their versions not yet released lies within the designer's grant over the location (DEC-030 point 5). The brand's base needs no change to a shipped library, and no decision of whoever maintains the capability. As in any project, the designer leaves three things to a person:
   - each font a brand names, committed with its licence where the licence allows (DEC-004 point 9)
   - any logo, since making the art lies outside the capability (DEC-001 point 9)
@@ -154,7 +157,7 @@ The costs:
 - **Left open for project-kit's maintainer,** each with what holds until it is decided:
   - **The libraries' names.** Until they are decided, the change that makes a library gives it a name that keeps to the rules on their names above. A person accepts each name before that library's first release (Rationale, "The names"). Before that release, renaming a library, the notation included, changes only project-kit's own files.
   - **Whether project-kit's pieces must move onto the brand.** Until it is decided, a piece moves onto the brand only in a change that moves its lock onto it (DEC-001 point 3). No piece moves because of this record. The answer also says whether a form of project-kit's identity may be a part of the brand (Alternatives considered).
-  - **Where a generic form that two of project-kit's pieces share is kept, while no shipped library holds one.** Two places are weighed: each piece's local component, or project-kit's component library. Held in either, the form stays generic, and reaches a shipped library only as a stated need to whoever maintains the capability (point 3). Until it is decided, each piece that needs the form goes on with a local component, or waits (DEC-030 point 4).
+  - **Where a generic form that two of project-kit's pieces share is kept, while no shipped library holds one.** Two places are weighed: each piece's local component, or project-kit's component library. Held in either, the form stays generic, and reaches a shipped library only as a request to whoever maintains the capability (point 3). Until it is decided, each piece that needs the form goes on with a local component, or waits (DEC-030 point 4).
 - **Left open for whoever maintains the capability.** A follow-up issue, #3169, asks what a project's brand built on the neutral brand may make its own. Four questions decide it:
   - which roles neutral opens, `picture.logo` among them (DEC-004 point 6, DEC-025 point 4)
   - whether neutral names the starter, so that a brand built on it reaches the starter's roles. Every project that uses neutral would then hold and lock the starter (DEC-008 point 4).
