@@ -382,7 +382,7 @@ def on_each_foundations(
 
 #: The shared roles the foundations being built add to their release 1.0.0, each by the role
 #: its default aliases (DEC-004 point 7, DEC-032 point 1, DEC-036 point 3), the type of a
-#: page's title among them (DEC-008 point 2).
+#: page's title and the lead type among them (DEC-008 point 2, DEC-072 point 1).
 ADDED_ROLES = {
     "size.site": "size.slide",
     "size.line": "size.figure",
@@ -393,13 +393,16 @@ ADDED_ROLES = {
     "family.order.last": "family.neutral.fill",
     "family.order.text": "family.neutral.text",
     "type.title": "type.heading",
+    "type.lead": "type.body",
 }
 
 #: The tokens the deck of the foundations being built declares, each by the shared type its
-#: default aliases, the type their release 1.0.0 draws its part in (DEC-035 point 4).
+#: default aliases (DEC-035 point 4): its title's, the type their release 1.0.0 draws it in,
+#: and its lead's, the lead type, whose own default is the type that release draws the lead
+#: in (DEC-072 point 3).
 DECK_TOKENS = {
     "component.foundations.deck.title": "type.heading",
-    "component.foundations.deck.lead": "type.body",
+    "component.foundations.deck.lead": "type.lead",
 }
 
 #: Where the deck of the foundations being built places its parts other than their release
@@ -464,14 +467,15 @@ def test_each_reference_render_draws_on_the_foundations_being_built_as_on_their_
 ) -> None:
     """The foundations being built add the size axis `device`, the roles `size.site`,
     `size.line`, those of a run's sign and ground and an order's, the type of a page's title,
-    and their deck's tokens to their release 1.0.0, and the test brand 1.0.0 gives no size
-    (DEC-021 points 2 and 9, DEC-022 point 3, DEC-035 point 4, DEC-036 point 3). Their deck
-    places its lead and its visual otherwise, which the comparison takes back
-    (`DECK_PLACES`). So each reference piece of a component the starter's release holds,
-    drawn with that release, draws on them as on their release, byte for byte: each preview,
-    but for the foundations' version they name, and its values, but for the roles and the
-    tokens they add. The starter being built reads roles their release does not declare,
-    and its web parts name the sizes, which that release does not declare either."""
+    the lead type and their deck's tokens to their release 1.0.0, and the test brand 1.0.0
+    gives no size (DEC-021 points 2 and 9, DEC-022 point 3, DEC-035 point 4, DEC-036 point 3,
+    DEC-072 point 3). Their deck places its lead and its visual otherwise, which the
+    comparison takes back (`DECK_PLACES`). So each reference piece of a component the
+    starter's release holds, drawn with that release, draws on them as on their release,
+    byte for byte: each preview, but for the foundations' version they name, and its
+    values, but for the roles and the tokens they add. The starter being built reads roles
+    their release does not declare, and its web parts name the sizes, which that release
+    does not declare either."""
     importable(monkeypatch, svg)
     root = reference_location(project(tmp_path))
     hold_shipped(root, "foundations", version="1.0.0")
