@@ -279,7 +279,7 @@
   },
   "$defs": {
     "field-schema": {
-      "description": "The subset of JSON Schema 2020-12 a component's `fields` takes in format 1 (v3 of the walking skeleton's design): `type`, `properties`, `required`, `items`, `minItems`, `maxItems`, `enum`, `const`, `description`, `x-pkit-prose`, `x-pkit-pages`, `x-pkit-runs`, a local `$ref`, and `additionalProperties` only as `false`, which its absence means too. No property takes a reserved key's name.",
+      "description": "The subset of JSON Schema 2020-12 a component's `fields` takes in format 1 (v3 of the walking skeleton's design): `type`, `properties`, `required`, `items`, `minItems`, `maxItems`, `enum`, `const`, `description`, `x-pkit-prose`, `x-pkit-pages`, `x-pkit-runs`, `x-pkit-paths`, a local `$ref`, and `additionalProperties` only as `false`, which its absence means too. No property takes a reserved key's name.",
       "type": "object",
       "additionalProperties": false,
       "properties": {
@@ -405,6 +405,10 @@
               }
             ]
           }
+        },
+        "x-pkit-paths": {
+          "description": "The field holds a path, or a list of paths, each naming one file of the repository from its root, which the check finds (visual-communication DEC-056 points 1 and 2). Only one of the component's own fields, or a slot of a layout that draws a page, takes it, and only where its `type` is `string` alone, or `array` alone with `items` of `type: string` alone, neither holding `enum`, `const` or `$ref`, and it takes no runs.",
+          "const": true
         },
         "$ref": {
           "type": "string",
@@ -1134,7 +1138,7 @@
       }
     },
     "layout": {
-      "description": "A layout of a top component. In format 1 its slots name the top's fields. In a layout that is a page's form, each slot is the schema of a field the page fills, which `x-pkit-runs` may mark as a field of runs, `required` names the slots a page must fill, `preferred` the height of its page by a formula on its parts, which it says where the top asks for no height and never a width (DEC-022 point 3), `lists` declares the fields of each list among its slots that its parts repeat over, as a pattern does, and `parts` draw the page.",
+      "description": "A layout of a top component. In format 1 its slots name the top's fields. In a layout that is a page's form, each slot is the schema of a field the page fills, which `x-pkit-runs` may mark as a field of runs, and `x-pkit-paths` as a field of paths, `required` names the slots a page must fill, `preferred` the height of its page by a formula on its parts, which it says where the top asks for no height and never a width (DEC-022 point 3), `lists` declares the fields of each list among its slots that its parts repeat over, as a pattern does, and `parts` draw the page.",
       "type": "object",
       "required": [
         "slots"

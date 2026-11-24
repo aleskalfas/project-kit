@@ -1,6 +1,6 @@
 """The release's comparison of two versions of one library (visual-communication DEC-003
-points 6 and 7, DEC-004 point 5, DEC-008 to DEC-013): each break and addition it names,
-the segment it finds, and what it refuses to compare.
+points 6 and 7, DEC-004 point 5, DEC-008 to DEC-013, DEC-056 point 6): each break and
+addition it names, the segment it finds, and what it refuses to compare.
 
 Each test builds a location in its own folder that holds both versions, and the shipped
 foundations they build on, and reads each version in full (`full_read.read`) before it
@@ -746,6 +746,24 @@ CASES: dict[str, tuple[Change, list[str], str | None]] = {
         lambda s: put(slots_of(s)["title"], "x-pkit-runs", ["plain"]),
         [],
         "`parts/slides`, layout `cover`, slot `title`: comes to take runs (DEC-012 point 6)",
+    ),
+    # DEC-056 point 6: fields of paths.
+    "a field that comes to hold paths": (
+        lambda s: put(fields_of(s)["title"], "x-pkit-paths", True),
+        ["`parts/card`, field `title`: comes to hold paths (DEC-056 point 6)"],
+        None,
+    ),
+    "a slot that comes to hold paths": (
+        lambda s: put(slots_of(s)["title"], "x-pkit-paths", True),
+        ["`parts/slides`, layout `cover`, slot `title`: comes to hold paths (DEC-056 point 6)"],
+        None,
+    ),
+    "a new optional field of paths": (
+        lambda s: fields_of(s).update(
+            sources={"type": "array", "items": {"type": "string"}, "x-pkit-paths": True}
+        ),
+        [],
+        "`parts/card`, field `sources`: is new (DEC-009 point 7)",
     ),
     # DEC-008 point 7: the library's own roles, and its pairs.
     "a role a stable component reads removed": (
