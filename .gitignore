@@ -31,8 +31,3 @@ build/
 # root. `pkit sync` excludes it per clone through `.git/info/exclude`; this line
 # covers every clone, including one that never ran it.
 /.agent-workspace/
-
-# A contributor's switch for the mise task runner (#3471): the link to
-# `mise.dev.toml` that mise loads. No commit holds it, so a copy of the
-# repository that uv downloads holds no configuration mise loads on its own.
-mise.local.toml

@@ -19,7 +19,7 @@ from typing import Any
 import pytest
 
 from tests.document_contracts import Contract, Form, check
-from tests.in_process import load, run_main
+from tests.in_process import run_main
 from tests.test_visual_communication_checks import deck_project
 from tests.test_visual_communication_intent import PIECE as BRIEFED
 from tests.test_visual_communication_intent import intent, write_brief
@@ -30,10 +30,6 @@ from tests.test_visual_communication_look import (
     starter_project,
     write_program,
 )
-from tests.test_visual_communication_verdict import COVERS, Copy, configured, grade, kept
-from tests.visual_communication_project import project
-
-(verdicts,) = load("visual-communication", "verdicts")
 
 
 def _printed(script: ModuleType, root: Path, *args: str) -> dict[str, Any]:
@@ -148,111 +144,9 @@ def test_the_pages_document_holds_its_contract(
     check(VISUAL_PAGES, {"answer": printed}, enumerations={"renderer": ("svg", "html")})
 
 
-# --- `pkit visual verdict --json` ----------------------------------------------------------
-
-VISUAL_VERDICT = Contract(
-    name="pkit visual verdict --json",
-    forms={
-        "answer": Form(
-            keys={
-                "piece": "str",
-                "round": "int",
-                "report": "str",
-                "bar": "object|null",
-                "rules": "list",
-                "rules[]": "str",
-                "verdict": "object|null",
-                "verdict.meets": "bool",
-                "verdict.pages": "list",
-                "verdict.pages[]": "object",
-                "verdict.pages[].page": "str",
-                "verdict.pages[].meets": "bool",
-                "verdict.pages[].failing": "list",
-                "verdict.pages[].failing[]": "object",
-                "verdict.piece": "object",
-                "verdict.piece.meets": "bool",
-                "verdict.piece.failing": "list",
-                "verdict.piece.failing[]": "object",
-                "verdict.marked": "list",
-                "verdict.marked[]": "object",
-                "ends-the-loop": "bool",
-                "why": "list",
-                "why[]": "str",
-                "reading": "object|null",
-                "reading.rules": "object",
-                "reading.rules{}": "object",
-                "reading.rules{}.major": "int",
-                "reading.rules{}.text": "str",
-                "reading.reviewer": "str|null",
-                "reading.design-knowledge": "str",
-                "reading.code": "str",
-                "reading.checks": "str|null",
-                "reading.model": "object",
-                "reading.model.name": "str",
-                "reading.model.effort": "str",
-            }
-        )
-    },
-    shapes={
-        "grade": Form(
-            keys={
-                "rule": "str",
-                "on": "object",
-                "on.page": "str",
-                "on.piece": "bool",
-                "grade": "str",
-                "evidence": "str",
-                "mark": "str",
-            }
-        )
-    },
-    refs={
-        "verdict.pages[].failing[]": "grade",
-        "verdict.piece.failing[]": "grade",
-        "verdict.marked[]": "grade",
-    },
-    sets={
-        "grade:grade": frozenset({"below competent", "competent", "professional", "excellent"}),
-        "grade:mark": frozenset({"need", "asker"}),
-    },
-    data=frozenset({"reading.rules"}),
-    payloads=frozenset({"bar"}),
-)
-
-
-def test_the_verdict_document_holds_its_contract(tmp_path: Path) -> None:
-    given = Copy(project(tmp_path / "given"))
-    configured(given, *COVERS)
-    kept(
-        given,
-        [
-            grade("RS-GRAPHIC-001", page="cover", grade="excellent"),
-            grade("RS-GRAPHIC-001", page="layers", grade="competent"),
-            grade("RS-GRAPHIC-001", "need", page="layers", grade="below competent"),
-            grade("RS-COMM-003", grade="professional"),
-            grade("RS-COMM-003", "asker", grade="below competent"),
-        ],
-    )
-    whole = Copy(project(tmp_path / "whole"))
-    configured(whole, *COVERS)
-    kept(whole, [grade("RS-GRAPHIC-001", page="cover"), grade("RS-COMM-003", grade="competent")])
-    no_bar = Copy(project(tmp_path / "no-bar"))
-    kept(no_bar, [grade("RS-GRAPHIC-001", page="cover")])
-    left_out = Copy(project(tmp_path / "left-out"))
-    configured(left_out, *COVERS)
-    kept(left_out, [grade("RS-GRAPHIC-001", page="cover")])
-    printed = [copy.answered("deck") for copy in (given, whole, no_bar, left_out)]
-    check(
-        VISUAL_VERDICT,
-        {"answer": printed},
-        enumerations={"grade:grade": verdicts.GRADES},
-    )
-
-
 #: The contracts of each visual-communication command that prints a document for a
 #: program, by the command's words.
 CONTRACTS: Mapping[str, tuple[Contract, ...]] = {
     "visual-communication intent": (VISUAL_INTENT,),
     "visual-communication pages": (VISUAL_PAGES,),
-    "visual-communication verdict": (VISUAL_VERDICT,),
 }

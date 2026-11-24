@@ -6,32 +6,28 @@ body: >
   The rule set `GRAPHIC` gains the rule `RS-GRAPHIC-009`, "A leader ends at
   what it explains, by a course the eye can follow" (#3342, DEC-069 point 1).
   A leader is the line that ties a note or a label to what it explains or
-  names. Each leader ends at one thing its note or label explains or names,
-  so that a reader tells at once what it joins, or forks to each thing it
+  names. Each leader ends at one thing its note or label explains or names, so
+  that a reader tells at once what it joins, or forks to each thing it
   explains or names alike. The page's leaders cross each other no more often
   than they must in an arrangement of the notes and labels that counts, each
   at a clear angle, and a leader crosses any other line only at a clear angle
-  and runs along no line that is no leader. A page with no leader takes no
-  grade on it. With it the set rises to 4.0.0, a new major. The
-  graphic-design reviewer grades the rule on each page, and a join that
-  misses between a leader and its thing, a leader that ends at another thing
-  than the one the content ties it to, or at none near enough to point at
-  any, or runs on past its thing, now cites it. The reviewer reads
-  `RS-GRAPHIC-002` on a page drawn in layers, where layers that share a place
-  read apart and a note or a label stands no farther from its thing than it
-  need be, and `RS-GRAPHIC-007` on a leader, which takes no look by which the
-  page draws its base's relations. The design knowledge gains a topic,
-  "Working in layers", and the designer names a page's layers as a reason of
-  structure and chooses how each note or label is attached as a reason of
-  form. A project's set that inherits an earlier major of `GRAPHIC` fails
-  validation, and no rule of `GRAPHIC` binds through it, until the project
-  moves its pin: read `RS-GRAPHIC-009` in `rule-sets/graphic.md`, then write
-  `GRAPHIC@4` in the set's `inherits`. A bar that names an earlier major of
-  `GRAPHIC`, or a rule of the set at such a major, fails the capability's
-  check (`bar-major`) until the project names `@4` in the configuration's
-  `bar`, and decides whether it covers `RS-GRAPHIC-009`. Where the same
-  release raises the set to 3.0.0 too, `GRAPHIC@3` never ships, so a project
-  writes `GRAPHIC@4` wherever another note of the release says `GRAPHIC@3`,
-  and reads the reworded rules beside `RS-GRAPHIC-009`. A new major of a set
-  a bar covers lapses the hold. No migration moves a pin or a bar, since the
-  project's own reading of the new rule is what each waits for.
+  and runs along no line that is no leader. It does not judge a page with no
+  leader. With it the set rises to 4.0.0, a new major. The graphic-design
+  reviewer reads the rule on each page, and a join that misses between a
+  leader and its thing, a leader that ends at another thing than the one the
+  content ties it to, or at none near enough to point at any, or runs on past
+  its thing, now cites it. The reviewer reads `RS-GRAPHIC-002` on a page drawn
+  in layers, where layers that share a place read apart and a note or a label
+  stands no farther from its thing than it need be, and `RS-GRAPHIC-007` on a
+  leader, which takes no look by which the page draws its base's relations.
+  The design knowledge gains a topic, "Working in layers", and the designer
+  names a page's layers as a reason of structure and chooses how each note or
+  label is attached as a reason of form. A project's set that inherits an
+  earlier major of `GRAPHIC` fails validation, and no rule of `GRAPHIC` binds
+  through it, until the project moves its pin: read `RS-GRAPHIC-009` in
+  `rule-sets/graphic.md`, then write `GRAPHIC@4` in the set's `inherits`.
+  Where the same release raises the set to 3.0.0 too, `GRAPHIC@3` never ships,
+  so a project writes `GRAPHIC@4` wherever another note of the release says
+  `GRAPHIC@3`, and reads the reworded rules beside `RS-GRAPHIC-009`. No
+  migration moves a pin, since the project's own reading of the new rule is
+  what it waits for.
