@@ -7,9 +7,12 @@ state issue records. It rests on facts of Claude Code's messaging between sessio
 harness's documentation leaves unconfirmed, so its build measures them before it rests anything
 on them. DEC-084 decides again on what they found: a seat records its session's messaging
 address and process, and a message's reply address is checked against them. Its build measures
-four more facts first. This probe takes both sets of measurements. It runs headless what a
-session started with `-p` can show, walks the person through each step that needs a session at a
-terminal, and writes the harness's version and each measurement's result to one file.
+four more facts first. ADR-103 has the backbone alone read whether a recorded process runs, by
+a name that holds the process's space, its id and its start time, and its build measures first
+what that reading rests on, on each platform the adapter supports. This probe takes the three
+sets of measurements. It runs headless what a session started with `-p` can show, walks the
+person through each step that needs a session at a terminal, and writes the harness's version
+and each measurement's result to one file.
 
 A person runs it, never a test: it starts real Claude Code sessions, which sign in and spend.
 So it refuses to start unless given `--start-claude`, and it refuses inside an agent's run.
@@ -19,8 +22,9 @@ git repository with a linked worktree, and a folder for each other session. Each
 settings make a probe agent, whose definition withholds neither messaging tool, the session's
 agent through the `agent` setting, and register a hook that appends each event it sees to
 `evidence/hooks.jsonl`. The hook is this script, copied into the scratch folder (`--capture`),
-and so is the scan of a session's environment and processes its shell runs (`--scan-env`), and
-the check of another session's process (`--check-process`). The results go to
+and so is the scan of a session's environment and processes its shell runs (`--scan-env`), the
+check of another session's process (`--check-process`), and the reading of a process space and
+of processes' start times from the operating system (`--read-processes`). The results go to
 `results.md` there, or to `--out`. In them, `<scratch>` stands for the scratch folder and `~`
 for the home folder, and each listing leaves out the rows of sessions outside the probe. The
 scratch folder is kept, with the raw evidence, for the person to read and then remove.
@@ -29,28 +33,37 @@ Usage:
     python3 .pkit/adapters/claude-code/probe-messaging.py --start-claude
     python3 .pkit/adapters/claude-code/probe-messaging.py --start-claude --part headless
     python3 .pkit/adapters/claude-code/probe-messaging.py --start-claude --part address
+    python3 .pkit/adapters/claude-code/probe-messaging.py --start-claude --part process
 """
 
 from __future__ import annotations
 
 import argparse
 import contextlib
+import ctypes
+import ctypes.util
 import datetime
+import errno
+import functools
 import getpass
+import hashlib
 import json
 import os
 import platform
 import re
+import secrets
 import shlex
 import shutil
 import signal
 import socket
+import struct
 import subprocess
 import sys
 import tempfile
 import textwrap
 import threading
 import time
+import uuid
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -73,6 +86,10 @@ SCAN_FLAG = "--scan-env"
 
 #: The shell's entry: whether a process another session recorded runs, as seen from here.
 CHECK_FLAG = "--check-process"
+
+#: The shell's entry: the process space this runs in and the start times of processes, as the
+#: operating system gives them from here (ADR-103's Implications).
+READ_FLAG = "--read-processes"
 
 #: A second copy of this script, which the sandboxed session runs with the sandbox disabled for
 #: that one call, so one check runs inside the sandbox and one outside, as the methodology's
@@ -129,6 +146,7 @@ SESSION_REMOTE = "pkit-probe-remote"
 SESSION_SINK = "pkit-probe-sink"
 SESSION_BUILD = "pkit-probe-build"
 SESSION_HEADLESS = "pkit-probe-headless"
+SESSION_PROCESS = "pkit-probe-process"
 NOBODY = "pkit-probe-nobody"
 
 #: The scratch folder's parts.
@@ -143,6 +161,8 @@ SINK = "sink"
 BUILD = "build"
 #: Another clone, a git repository of its own, whose session runs its shell in the sandbox.
 OTHER = "other"
+#: The folder of the process part's session, whose shell runs in the sandbox.
+PROCESS = "process"
 EVIDENCE = "evidence"
 HOOK_LOG = "hooks.jsonl"
 RESULTS = "results.md"
@@ -194,21 +214,29 @@ TITLES = {
     10: "The session's process and its address",
     11: "A subagent's reply address",
     12: "Another clone's process",
+    13: "The process space and the start time",
+    14: "The source of the machine's identity",
+    15: "A process space for each command",
+    16: "Inside the macOS sandbox",
 }
 
-#: The measurements each part takes: DEC-081's first eight, and DEC-084's four, with a
-#: session's own name read again.
+#: The measurements each part takes: DEC-081's first eight, DEC-084's four, with a session's
+#: own name read again, and the four ADR-103's Implications list.
 PART_MEASUREMENTS = {
     "headless": (1, 5, 6, 8),
     "terminal": (1, 2, 3, 4, 5, 7, 8),
     "address": (2, 9, 10, 11, 12),
+    "process": (13, 14, 15, 16),
 }
 PARTS = {
-    "all": ("headless", "terminal", "address"),
+    "all": ("headless", "terminal", "address", "process"),
     "headless": ("headless",),
     "terminal": ("terminal",),
     "address": ("address",),
+    "process": ("process",),
 }
+#: The parts that need a person at a terminal.
+AT_A_TERMINAL = ("terminal", "address")
 
 ANSWERS = {"y": "yes", "n": "no", "?": "could not tell"}
 
@@ -366,29 +394,321 @@ def scan_processes(root: Path, env: Mapping[str, str], shell: int) -> dict[str, 
     }
 
 
+def null_signal(pid: int) -> str:
+    """What a signal of nothing, which only tests whether a process with an id exists, says of
+    an id from where this runs."""
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return "no such process"
+    except PermissionError:
+        return "not permitted"
+    except OSError as exc:
+        return type(exc).__name__
+    return "exists"
+
+
 def check_process(root: Path, pid: int, start: str) -> dict[str, Any]:
     """Whether a process another session recorded runs, as seen from where this runs: what a
     signal of nothing says of it, when `ps` says it started, and whether this check ran
     confined. The copy that ran names whether the session's settings excluded it from the
     sandbox."""
-    try:
-        os.kill(pid, 0)
-        signalled = "exists"
-    except ProcessLookupError:
-        signalled = "no such process"
-    except PermissionError:
-        signalled = "not permitted"
-    except OSError as exc:
-        signalled = type(exc).__name__
     seen, why = ps_field(pid, "lstart")
     return {
         "copy": Path(__file__).name,
         "pid": pid,
         "recorded_start": start,
-        "signal": signalled,
+        "signal": null_signal(pid),
         "start": seen,
         "start_unread": why,
         "confined": confined(root),
+    }
+
+
+# --- the reading of a process space and of start times, run inside the sessions (ADR-103) ---
+
+#: macOS's `sysctl` names for one process's entry in the kernel's process table (`kern.proc.
+#: pid.<id>`), and where its `struct kinfo_proc` holds the start time the kernel fixed when it
+#: made the process (`p_starttime`, a `struct timeval`), the process's state (`p_stat`) and its
+#: id (`p_pid`), on a 64-bit machine. The id is read back, so an entry of another layout is
+#: never misread.
+CTL_KERN, KERN_PROC, KERN_PROC_PID = 1, 14, 1
+KINFO_STAT_OFFSET = 36
+KINFO_PID_OFFSET = 40
+#: A process that has exited and waits only to be collected (`SZOMB`).
+MACOS_ZOMBIE = 5
+
+#: libproc's entry for one process (`proc_pidinfo` with `PROC_PIDTBSDINFO`), a second way into
+#: the same table: its `struct proc_bsdinfo`'s size, and where it holds the state
+#: (`pbi_status`), the id (`pbi_pid`) and the start time (`pbi_start_tvsec`, `_tvusec`).
+PROC_PIDTBSDINFO = 3
+BSDINFO_SIZE = 136
+BSDINFO_STATUS_OFFSET = 4
+BSDINFO_PID_OFFSET = 12
+BSDINFO_START_OFFSET = 120
+
+#: Where Linux keeps what ADR-103 point 2's name holds. A process's `stat` holds, after its
+#: command's name in parentheses, its state (field 3) and its start time in clock ticks after
+#: the boot (field 22), which the kernel fixes when it makes the process.
+PROC = Path("/proc")
+LINUX_MACHINE_SOURCES = (Path("/etc/machine-id"), Path("/var/lib/dbus/machine-id"))
+LINUX_BOOT_SOURCE = "sys/kernel/random/boot_id"
+LINUX_NAMESPACE_SOURCE = "self/ns/pid"
+LINUX_STATE_FIELD, LINUX_START_FIELD = 3, 22
+LINUX_EXITED = ("Z", "X", "x")
+#: What marks a Linux machine as virtual, or as a container.
+LINUX_CONTAINER_MARKS = (Path("/.dockerenv"), Path("/run/.containerenv"))
+
+
+def digest(salt: str, value: str) -> str:
+    """A value the results may hold in its place: one run's reads of one value give one
+    digest, and the digest tells nothing of the value, nor links it to another run's."""
+    return hashlib.sha256(f"{salt}:{value}".encode()).hexdigest()[:16]
+
+
+@functools.lru_cache(maxsize=1)
+def _libc() -> Any:
+    return ctypes.CDLL(ctypes.util.find_library("c") or "libc.dylib", use_errno=True)
+
+
+def _errno_text() -> str:
+    return os.strerror(ctypes.get_errno())
+
+
+def sysctl_raw(libc: Any, mib: Iterable[int]) -> tuple[bytes | None, str | None]:
+    """One `sysctl` entry's bytes, b'' where it holds none, or None with why it could not be
+    read."""
+    names = list(mib)
+    array = (ctypes.c_int * len(names))(*names)
+    size = ctypes.c_size_t(0)
+    if libc.sysctl(array, len(names), None, ctypes.byref(size), None, 0) != 0:
+        return None, _errno_text()
+    buffer = ctypes.create_string_buffer(max(size.value, 1))
+    if libc.sysctl(array, len(names), buffer, ctypes.byref(size), None, 0) != 0:
+        return None, _errno_text()
+    return buffer.raw[: size.value], None
+
+
+def sysctl_named(libc: Any, name: str) -> tuple[bytes | None, str | None]:
+    """One `sysctl` entry by its name, or None with why it could not be read."""
+    size = ctypes.c_size_t(0)
+    if libc.sysctlbyname(name.encode("ascii"), None, ctypes.byref(size), None, 0) != 0:
+        return None, _errno_text()
+    buffer = ctypes.create_string_buffer(max(size.value, 1))
+    if libc.sysctlbyname(name.encode("ascii"), buffer, ctypes.byref(size), None, 0) != 0:
+        return None, _errno_text()
+    return buffer.raw[: size.value], None
+
+
+def table_entry(start: str | None, exited: bool | None, unread: str | None) -> dict[str, Any]:
+    """What one read of a process's entry found: its start time and whether it has exited, or
+    why it could not be read. No start and no reason mean the table holds no process under
+    the id."""
+    return {"start": start, "exited": exited, "unread": unread}
+
+
+def kinfo_entry(raw: bytes, pid: int) -> dict[str, Any]:
+    """A `struct kinfo_proc` read for an id: b'' is no process under it."""
+    if not raw:
+        return table_entry(None, None, None)
+    if len(raw) < KINFO_PID_OFFSET + 4 or struct.unpack_from("=i", raw, KINFO_PID_OFFSET)[0] != pid:
+        return table_entry(None, None, "the entry has a layout the probe does not know")
+    seconds, micros = struct.unpack_from("=qi", raw, 0)
+    return table_entry(f"{seconds}.{micros:06d}", raw[KINFO_STAT_OFFSET] == MACOS_ZOMBIE, None)
+
+
+def bsdinfo_entry(raw: bytes, pid: int) -> dict[str, Any]:
+    """A `struct proc_bsdinfo` read for an id."""
+    if len(raw) < BSDINFO_SIZE or struct.unpack_from("=I", raw, BSDINFO_PID_OFFSET)[0] != pid:
+        return table_entry(None, None, "the entry has a layout the probe does not know")
+    seconds, micros = struct.unpack_from("=QQ", raw, BSDINFO_START_OFFSET)
+    status = struct.unpack_from("=I", raw, BSDINFO_STATUS_OFFSET)[0]
+    return table_entry(f"{seconds}.{micros:06d}", status == MACOS_ZOMBIE, None)
+
+
+def macos_table(pid: int) -> dict[str, Any]:
+    """A process's entry in macOS's process table, the one `ps` reads, through `sysctl`."""
+    try:
+        raw, why = sysctl_raw(_libc(), (CTL_KERN, KERN_PROC, KERN_PROC_PID, pid))
+    except (OSError, AttributeError) as exc:
+        return table_entry(None, None, f"it could not be called ({type(exc).__name__})")
+    if raw is None:
+        return table_entry(None, None, why)
+    return kinfo_entry(raw, pid)
+
+
+def macos_info(pid: int) -> dict[str, Any]:
+    """The same process's entry through libproc."""
+    try:
+        libc = _libc()
+        buffer = ctypes.create_string_buffer(BSDINFO_SIZE)
+        size = libc.proc_pidinfo(pid, PROC_PIDTBSDINFO, ctypes.c_uint64(0), buffer, BSDINFO_SIZE)
+    except (OSError, AttributeError) as exc:
+        return table_entry(None, None, f"it could not be called ({type(exc).__name__})")
+    if size <= 0:
+        if ctypes.get_errno() == errno.ESRCH:  # no process under the id
+            return table_entry(None, None, None)
+        return table_entry(None, None, _errno_text())
+    return bsdinfo_entry(buffer.raw[:size], pid)
+
+
+def linux_stat(pid: int, proc: Path = PROC) -> dict[str, Any]:
+    """A process's entry in Linux's process table, through its `stat` under `/proc`."""
+    try:
+        text = (proc / str(pid) / "stat").read_text(encoding="utf-8", errors="replace")
+    except FileNotFoundError:
+        return table_entry(None, None, None)
+    except OSError as exc:
+        return table_entry(None, None, exc.strerror or type(exc).__name__)
+    fields = text.rpartition(")")[2].split()
+    # The fields after the command's name start at field 3.
+    state, start = LINUX_STATE_FIELD - 3, LINUX_START_FIELD - 3
+    if len(fields) <= start or not fields[start].isdigit():
+        return table_entry(None, None, "its stat has a layout the probe does not know")
+    return table_entry(fields[start], fields[state] in LINUX_EXITED, None)
+
+
+def space_part(source: str, value: str | None, unread: str | None, salt: str) -> dict[str, Any]:
+    """One part of a process space as a read found it: where it was read, its digest, or why
+    it could not be read."""
+    if value is None:
+        return {"source": source, "value": None, "unread": unread or "it reads as empty"}
+    return {"source": source, "value": digest(salt, value), "unread": None}
+
+
+def macos_machine(salt: str) -> dict[str, Any]:
+    """The platform's UUID, which `gethostuuid` gives and macOS keeps for the machine."""
+    source = "the platform's UUID, through gethostuuid"
+    try:
+        buffer = ctypes.create_string_buffer(16)
+        # A `struct timespec` of two seconds: one of zero would wait for good.
+        wait = (ctypes.c_long * 2)(2, 0)
+        if _libc().gethostuuid(buffer, wait) != 0:
+            return space_part(source, None, _errno_text(), salt)
+    except (OSError, AttributeError) as exc:
+        return space_part(source, None, f"it could not be called ({type(exc).__name__})", salt)
+    return space_part(source, str(uuid.UUID(bytes=buffer.raw)), None, salt)
+
+
+def macos_sysctl_text(name: str) -> tuple[str | None, str | None]:
+    try:
+        raw, why = sysctl_named(_libc(), name)
+    except (OSError, AttributeError) as exc:
+        return None, f"sysctl could not be called ({type(exc).__name__})"
+    if raw is None:
+        return None, why
+    return raw.rstrip(b"\0").decode("ascii", errors="replace").strip() or None, None
+
+
+def macos_virtual() -> str:
+    """Whether macOS runs as a virtual machine (`kern.hv_vmm_present`)."""
+    try:
+        raw, why = sysctl_named(_libc(), "kern.hv_vmm_present")
+    except (OSError, AttributeError) as exc:
+        return f"cannot tell: sysctl could not be called ({type(exc).__name__})"
+    if raw is None or len(raw) < 4:
+        return f"cannot tell: kern.hv_vmm_present: {why or 'it holds no number'}"
+    return "yes" if struct.unpack_from("=i", raw, 0)[0] else "no"
+
+
+def read_text(path: Path) -> tuple[str | None, str | None]:
+    try:
+        return path.read_text(encoding="utf-8").strip() or None, None
+    except OSError as exc:
+        return None, exc.strerror or type(exc).__name__
+
+
+def linux_machine(salt: str) -> dict[str, Any]:
+    """The machine's id, which systemd or D-Bus keep for the machine."""
+    why: str | None = None
+    for path in LINUX_MACHINE_SOURCES:
+        value, why = read_text(path)
+        if value is not None:
+            return space_part(str(path), value, None, salt)
+    return space_part(" or ".join(str(path) for path in LINUX_MACHINE_SOURCES), None, why, salt)
+
+
+def linux_virtual(proc: Path = PROC) -> str:
+    """Whether Linux runs on a hypervisor, as the processor's flags say, or in a container."""
+    marks = [str(path) for path in LINUX_CONTAINER_MARKS if path.exists()]
+    if marks:
+        return f"a container: {', '.join(marks)} exists"
+    text, why = read_text(proc / "cpuinfo")
+    if text is None:
+        return f"cannot tell: {proc / 'cpuinfo'}: {why}"
+    flags = [line for line in text.splitlines() if line.startswith("flags")]
+    if not flags:
+        return f"cannot tell: {proc / 'cpuinfo'} names no flags"
+    return "yes" if "hypervisor" in flags[0].split() else "no"
+
+
+def process_space(salt: str, proc: Path = PROC, system: str = sys.platform) -> dict[str, Any]:
+    """The process space this runs in, in ADR-103 point 2's three parts, as the operating
+    system gives them from here, each part as its digest, and whether the machine runs
+    virtual. macOS has no process namespaces."""
+    if system == "darwin":
+        boot, why = macos_sysctl_text("kern.bootsessionuuid")
+        return {
+            "machine": macos_machine(salt),
+            "boot": space_part("kern.bootsessionuuid", boot, why, salt),
+            "namespace": {"source": None, "value": None, "unread": None},
+            "virtual": macos_virtual(),
+        }
+    if system.startswith("linux"):
+        boot, why = read_text(proc / LINUX_BOOT_SOURCE)
+        try:
+            namespace: str | None = os.readlink(proc / LINUX_NAMESPACE_SOURCE)
+            unread: str | None = None
+        except OSError as exc:
+            namespace, unread = None, exc.strerror or type(exc).__name__
+        return {
+            "machine": linux_machine(salt),
+            "boot": space_part(str(proc / LINUX_BOOT_SOURCE), boot, why, salt),
+            # A namespace's identity names no person or machine, so it is kept as it reads.
+            "namespace": {
+                "source": str(proc / LINUX_NAMESPACE_SOURCE),
+                "value": namespace,
+                "unread": unread,
+            },
+            "virtual": linux_virtual(proc),
+        }
+    unknown = f"the probe reads no process space on {system}"
+    return {
+        "machine": {"source": None, "value": None, "unread": unknown},
+        "boot": {"source": None, "value": None, "unread": unknown},
+        "namespace": {"source": None, "value": None, "unread": unknown},
+        "virtual": f"cannot tell: {unknown}",
+    }
+
+
+def process_entries(pid: int, proc: Path = PROC) -> dict[str, Any]:
+    """One process as the operating system's table gives it from here, through each way the
+    probe knows, and as `ps` prints its start time."""
+    entries: dict[str, Any] = {"pid": pid, "signal": null_signal(pid)}
+    if sys.platform == "darwin":
+        entries["sysctl"] = macos_table(pid)
+        entries["libproc"] = macos_info(pid)
+    elif sys.platform.startswith("linux"):
+        entries["proc"] = linux_stat(pid, proc)
+    printed, why = ps_field(pid, "lstart")
+    entries["ps"] = table_entry(printed, None, why)
+    return entries
+
+
+def read_processes(
+    root: Path, salt: str, pids: Iterable[int], env: Mapping[str, str], proc: Path = PROC
+) -> dict[str, Any]:
+    """What a command reads from where it runs: its process space, the session's process that
+    `CLAUDE_PID` names, and each process it is given, and whether it runs confined."""
+    session = as_pid(env.get("CLAUDE_PID"))
+    return {
+        "copy": Path(__file__).name,
+        "platform": sys.platform,
+        "pid": os.getpid(),
+        "confined": confined(root),
+        "space": process_space(salt, proc),
+        "session": process_entries(session, proc) if session is not None else None,
+        "targets": [process_entries(pid, proc) for pid in pids],
     }
 
 
@@ -496,6 +816,8 @@ def folder_settings(root: Path, inbound: str | None = None) -> dict[str, Any]:
                 f"Bash(python3 {root / COPY} {SCAN_FLAG}:*)",
                 f"Bash(python3 {root / COPY} {CHECK_FLAG}:*)",
                 f"Bash(python3 {root / OUTSIDE_COPY} {CHECK_FLAG}:*)",
+                f"Bash(python3 {root / COPY} {READ_FLAG}:*)",
+                f"Bash(python3 {root / OUTSIDE_COPY} {READ_FLAG}:*)",
                 "Bash(sleep:*)",
                 "Bash(cd:*)",
                 "Bash(pwd)",
@@ -632,8 +954,8 @@ def make_repository(folder: Path) -> None:
 
 def make_scratch(root: Path, source: Path = HERE) -> None:
     """The scratch folder: this script's two copies, the clone with its linked worktree,
-    another clone whose shell runs in the sandbox, a folder for each other session, and the
-    evidence folder."""
+    another clone whose shell runs in the sandbox, the process part's folder, whose shell runs
+    there too, a folder for each other session, and the evidence folder."""
     shutil.copy2(source, root / COPY)
     shutil.copy2(source, root / OUTSIDE_COPY)
     (root / EVIDENCE).mkdir()
@@ -646,6 +968,7 @@ def make_scratch(root: Path, source: Path = HERE) -> None:
     git("-C", str(clone), "worktree", "add", "-q", "-b", "probe-worktree", str(root / WORKTREE))
     write_folder(root / OTHER, sandboxed_settings(root))
     make_repository(root / OTHER)
+    write_folder(root / PROCESS, sandboxed_settings(root))
     for name in (TWIN, HELD, SENDER, REMOTE, SINK):
         write_folder(root / name, settings)
     (root / BUILD).mkdir()
@@ -2657,6 +2980,409 @@ def address_part(probe: Probe) -> None:
     say(f"Close every probe session: type /exit in {SESSION_A} and {SESSION_B}.")
 
 
+# --- the process part -----------------------------------------------------------------------
+
+PROCESS_BRIEF = (
+    "Probe: run each of these shell commands, each as a call of its own, one after the other, "
+    "and do nothing else. Run the one marked outside the sandbox with the sandbox disabled for "
+    "that call, through the Bash tool's " + ESCAPE + " set to true, and the others as they are. "
+    "{commands} Then answer with the one word done."
+)
+
+#: Where the probe's own reads run.
+AT_THE_TERMINAL = "the person's terminal, outside the sandbox"
+
+#: The ways into a process table a read may hold, and how the results name each.
+TABLE_WAYS = {"sysctl": "sysctl", "libproc": "libproc", "proc": "/proc"}
+
+#: The parts of a process space, as the results name them.
+SPACE_PARTS = (("machine", "the machine"), ("boot", "the boot"), ("namespace", "the namespace"))
+
+
+def read_command(root: Path, copy: str, salt: str, pids: Iterable[int]) -> str:
+    """The shell command that reads the process space and the given processes, through one copy
+    of the probe."""
+    ids = " ".join(str(pid) for pid in pids)
+    script, folder = shlex.quote(str(root / copy)), shlex.quote(str(root))
+    return f"python3 {script} {READ_FLAG} {folder} {salt} {ids}"
+
+
+def printed_reads(text: str) -> list[dict[str, Any]]:
+    found: list[dict[str, Any]] = []
+    for line in text.splitlines():
+        with contextlib.suppress(ValueError):
+            data = json.loads(line)
+            if isinstance(data, dict) and isinstance(data.get("probe_read"), dict):
+                found.append(data["probe_read"])
+    return found
+
+
+def stream_reads(events: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
+    """What the session's own agent's shell commands printed of their reads, in order."""
+    listed = list(events)
+    reads: list[dict[str, Any]] = []
+    for use in tool_uses(listed):
+        if use["name"] == "Bash" and use["parent"] is None:
+            reads += printed_reads(tool_result(listed, use["id"]) or "")
+    return [{**read, "by": "session"} for read in reads]
+
+
+def ended_process() -> tuple[int, dict[str, Any]]:
+    """A process the probe starts and ends, so its id is free, with what the operating system
+    gave of it while it ran."""
+    child = subprocess.Popen(["sleep", "60"], stdin=subprocess.DEVNULL)
+    try:
+        seen = process_entries(child.pid)
+    finally:
+        child.kill()
+        child.wait()
+    return child.pid, seen
+
+
+def read_at_terminal(
+    probe: Probe, salt: str, pids: Iterable[int], env: Mapping[str, str]
+) -> dict[str, Any] | None:
+    """A read by a second process at the person's terminal: the outside copy, run by the
+    probe itself."""
+    command = [sys.executable, str(probe.path(OUTSIDE_COPY)), READ_FLAG, str(probe.root), salt]
+    try:
+        done = subprocess.run(
+            [*command, *(str(pid) for pid in pids)],
+            env=dict(env),
+            stdin=subprocess.DEVNULL,
+            capture_output=True,
+            timeout=60,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    found = printed_reads(done.stdout.decode("utf-8", errors="replace"))
+    return found[-1] if found else None
+
+
+def where_read(read: Mapping[str, Any]) -> str:
+    """Where one read ran: at the person's terminal, or a command of the session's, inside the
+    sandbox or out."""
+    if read.get("by") == "terminal":
+        return AT_THE_TERMINAL
+    return where_checked(read) + ", in the session"
+
+
+def space_reading(read: Mapping[str, Any] | None) -> str:
+    """Measurements 13 and 16: which parts of its process space a read could read, and from
+    where."""
+    if not read:
+        return "not read"
+    space = read.get("space") if isinstance(read.get("space"), dict) else {}
+    said: list[str] = []
+    whole = True
+    for key, label in SPACE_PARTS:
+        part = space.get(key) if isinstance(space.get(key), dict) else {}
+        if key == "namespace" and part.get("source") is None and part.get("unread") is None:
+            said.append("no namespaces on this platform")
+        elif part.get("value") is None:
+            whole = False
+            said.append(f"not {label} ({part.get('unread') or 'not read'})")
+        else:
+            said.append(f"{label} from {part.get('source')}")
+    return ("read whole: " if whole else "not read whole: ") + ", ".join(said)
+
+
+def plural(count: int, noun: str) -> str:
+    return f"{count} {noun}{'' if count == 1 else 's'}"
+
+
+def entry_for(read: Mapping[str, Any], pid: int | None) -> Mapping[str, Any] | None:
+    """What one read found of one process, the session's or one it was given."""
+    targets = read.get("targets") if isinstance(read.get("targets"), list) else []
+    for entry in [read.get("session"), *targets]:
+        if isinstance(entry, dict) and pid is not None and entry.get("pid") == pid:
+            return entry
+    return None
+
+
+def table_reading(reads: Iterable[Mapping[str, Any]], pid: int | None) -> str:
+    """Measurements 13 and 16: what the reads found of one process through the operating
+    system's table: how many start times they gave and whether they agree, how many found no
+    process under its id, and why any could not read it."""
+    if pid is None:
+        return "no id to read"
+    values: set[str] = set()
+    ways: list[str] = []
+    found = absent = exited = 0
+    unread: set[str] = set()
+    for read in reads:
+        entry = entry_for(read, pid) or {}
+        starts: set[str] = set()
+        none_under = gone = False
+        for way, label in TABLE_WAYS.items():
+            seen = entry.get(way)
+            if not isinstance(seen, dict):
+                continue
+            if seen.get("start"):
+                starts.add(str(seen["start"]))
+                ways += [label] if label not in ways else []
+                gone = gone or seen.get("exited") is True
+            elif seen.get("unread"):
+                unread.add(f"through {label} ({seen['unread']})")
+            else:
+                none_under = True
+        found += bool(starts)
+        absent += none_under and not starts
+        exited += gone
+        values |= starts
+    said: list[str] = []
+    through = f", through {' and '.join(ways)}," if ways else ""
+    if len(values) == 1:
+        said.append(f"{plural(found, 'read')}{through} gave one start time")
+    elif values:
+        listed = ", ".join(sorted(values))
+        said.append(f"{plural(found, 'read')}{through} gave {len(values)} start times, {listed}")
+    if exited:
+        said.append(f"{plural(exited, 'read')} found it exited")
+    if absent:
+        said.append(f"{plural(absent, 'read')} found no process under its id")
+    if unread:
+        said.append("not read " + "; ".join(sorted(unread)))
+    return ", ".join(said) or "not read"
+
+
+def entry_line(entry: Mapping[str, Any]) -> str:
+    """One process as one read found it, on one line of the evidence."""
+    said = [f"process {entry.get('pid')}: signal {entry.get('signal')}"]
+    for way, label in (*TABLE_WAYS.items(), ("ps", "ps")):
+        seen = entry.get(way)
+        if not isinstance(seen, dict):
+            continue
+        if seen.get("start"):
+            state = ", exited" if seen.get("exited") else ""
+            said.append(f"{label} {seen['start']}{state}")
+        elif seen.get("unread"):
+            said.append(f"{label} not read: {seen['unread']}")
+        else:
+            said.append(f"{label} no process")
+    return "; ".join(said)
+
+
+def read_lines(read: Mapping[str, Any]) -> str:
+    """One read, in the few lines the evidence keeps of it."""
+    space = read.get("space") if isinstance(read.get("space"), dict) else {}
+    parts: list[str] = []
+    for key, _ in SPACE_PARTS:
+        part = space.get(key) if isinstance(space.get(key), dict) else {}
+        if part.get("value") is not None:
+            parts.append(f"{key} {part['value']} ({part.get('source')})")
+        elif part.get("unread"):
+            parts.append(f"{key} not read: {part['unread']} ({part.get('source')})")
+        else:
+            parts.append(f"{key} none")
+    lines = [
+        f"{read.get('copy')} on {read.get('platform')}, process {read.get('pid')}, confined: "
+        f"{read.get('confined')}",
+        f"space: {'; '.join(parts)}; virtual: {space.get('virtual')}",
+    ]
+    targets = read.get("targets") if isinstance(read.get("targets"), list) else []
+    if isinstance(read.get("session"), dict):
+        lines.append("the session's, " + entry_line(read["session"]))
+    lines += [entry_line(entry) for entry in targets if isinstance(entry, dict)]
+    return "\n".join(lines)
+
+
+def signal_reading(reads: Iterable[Mapping[str, Any]], pid: int | None) -> str:
+    """What a null signal said of one process, from each read."""
+    said = sorted({str((entry_for(read, pid) or {}).get("signal")) for read in reads} - {"None"})
+    return " or ".join(f"“{text}”" for text in said) or "nothing"
+
+
+def ps_reading(reads: Iterable[Mapping[str, Any]]) -> str:
+    """Whether `ps` ran where the reads ran."""
+    whys = set()
+    for read in reads:
+        for entry in [read.get("session"), *(read.get("targets") or [])]:
+            printed = entry.get("ps") if isinstance(entry, dict) else None
+            if isinstance(printed, dict) and printed.get("unread"):
+                whys.add(str(printed["unread"]))
+    return f"ps did not run ({'; '.join(sorted(whys))})" if whys else "ps ran"
+
+
+def part_values(reads: Iterable[Mapping[str, Any]], key: str) -> list[str]:
+    values: list[str] = []
+    for read in reads:
+        space = read.get("space") if isinstance(read.get("space"), dict) else {}
+        part = space.get(key) if isinstance(space.get(key), dict) else {}
+        if part.get("value") is not None:
+            values.append(str(part["value"]))
+    return values
+
+
+def namespace_reading(inside: list[Mapping[str, Any]], terminal: list[Mapping[str, Any]]) -> str:
+    """Measurement 15: whether the sandbox gives each command a process space of its own, from
+    the namespace each command read."""
+    if not inside:
+        return "not measured: no command ran in the sandbox"
+    platforms = {str(read.get("platform")) for read in inside}
+    if platforms == {"darwin"}:
+        return "macOS has no process namespaces, so each command runs in the machine's one space"
+    ours = part_values(inside, "namespace")
+    theirs = set(part_values(terminal, "namespace"))
+    if len(ours) < len(inside):
+        return "cannot tell: a command in the sandbox could not read its namespace"
+    if len(set(ours)) == len(ours) and len(ours) > 1:
+        return f"each command in the sandbox reads a namespace of its own: {', '.join(ours)}"
+    if theirs and set(ours) <= theirs:
+        return f"the commands in the sandbox read the terminal's namespace, {ours[0]}"
+    return (
+        f"the commands in the sandbox share one namespace, {ours[0]}, which is not the "
+        f"terminal's{' (' + ', '.join(sorted(theirs)) + ')' if theirs else ''}"
+    )
+
+
+def machine_reading(reads: list[Mapping[str, Any]]) -> str:
+    """Measurement 14: the source of the machine's identity, whether every read that read it
+    read one value, and whether the machine runs virtual, where its source may come from the
+    virtual machine's configuration."""
+    sources = sorted(
+        {
+            str(read["space"]["machine"].get("source"))
+            for read in reads
+            if isinstance(read.get("space"), dict)
+            and isinstance(read["space"].get("machine"), dict)
+        }
+        - {"None"}
+    )
+    values = part_values(reads, "machine")
+    if not values:
+        return f"not read from {' or '.join(sources) or 'any source'}"
+    agree = "one value" if len(set(values)) == 1 else f"{len(set(values))} values"
+    virtual = sorted(
+        {str(read["space"].get("virtual")) for read in reads if isinstance(read.get("space"), dict)}
+    )
+    return (
+        f"{' and '.join(sources)}: {len(values)} reads gave {agree}; the machine runs virtual: "
+        f"{' or '.join(virtual)}"
+    )
+
+
+def report_reads(
+    probe: Probe,
+    terminal: list[dict[str, Any]],
+    session: list[dict[str, Any]],
+    ids: Mapping[str, int | None],
+) -> None:
+    """Measurements 13 to 16, from the reads at the person's terminal and the session's."""
+    report = probe.report
+    inside = [read for read in session if read.get("confined") is True]
+    outside = [read for read in session if read.get("confined") is not True]
+    processes = (
+        ("the probe's process", ids.get("probe")),
+        ("the session's process", ids.get("session")),
+        ("an ended process", ids.get("ended")),
+    )
+    for reads in (terminal, outside, inside):
+        if not reads:
+            continue
+        place = where_read(reads[0])
+        report.result(13, f"{place}: the space {space_reading(reads[0])}")
+        for label, pid in processes:
+            report.finding(13, f"{place}, {label} ({pid}): {table_reading(reads, pid)}.")
+    every = terminal + session
+    for label, pid in processes[:2]:
+        report.result(13, f"{label}, across every read: {table_reading(every, pid)}")
+    if not session:
+        report.result(13, "in the session: not measured, its commands printed no reading")
+    report.result(14, machine_reading(every))
+    report.result(15, namespace_reading(inside, terminal))
+    if inside:
+        report.result(
+            15,
+            f"from the sandbox, a null signal to the probe's process said "
+            f"{signal_reading(inside, ids.get('probe'))}, to the session's said "
+            f"{signal_reading(inside, ids.get('session'))}, and to an ended process's id said "
+            f"{signal_reading(inside, ids.get('ended'))}",
+        )
+    platforms = {str(read.get("platform")) for read in inside}
+    if not inside:
+        report.result(16, "not measured: no command ran in the sandbox")
+    elif platforms != {"darwin"}:
+        report.result(16, f"not measured: the sandbox's commands ran on {', '.join(platforms)}")
+    else:
+        report.result(16, f"the space {space_reading(inside[0])}")
+        report.result(
+            16,
+            f"{ps_reading(inside)}; the session's process: "
+            f"{table_reading(inside, ids.get('session'))}; the probe's process: "
+            f"{table_reading(inside, ids.get('probe'))}",
+        )
+    report.finding(
+        13,
+        "In the evidence, each part of a process space but a namespace stands as a digest, the "
+        "same for one value within this run, which tells nothing of the value.",
+    )
+    for read in every:
+        report.attach(13, f"a read at {where_read(read)}", read_lines(read))
+
+
+def process_part(probe: Probe) -> None:
+    say(
+        "The process part takes ADR-103's measurements. It starts one run of `claude -p`, whose "
+        "shell runs in the sandbox, and needs nothing of you: it takes a minute or two, and "
+        "signs in and spends a little. Run it on each platform the adapter supports."
+    )
+    salt = secrets.token_hex(8)
+    ended, while_running = ended_process()
+    targets = (os.getpid(), ended)
+    inside = read_command(probe.root, COPY, salt, targets)
+    outside = read_command(probe.root, OUTSIDE_COPY, salt, targets)
+    run = probe.start(
+        "m13-process",
+        headless_command(
+            probe.harness, SESSION_PROCESS, bypass=False, settings=sandboxed_settings(probe.root)
+        ),
+        probe.path(PROCESS),
+        PROCESS_BRIEF.format(
+            commands=f"(1) {inside} (2) {inside} (3, outside the sandbox) {outside}"
+        ),
+    )
+    # The terminal reads the session's process while the session runs.
+    run.wait_until(lambda events: bool(stream_reads(events)), READY_SECONDS)
+    first = stream_reads(run.events)
+    session_pid = next(
+        (
+            read["session"]["pid"]
+            for read in first
+            if isinstance(read.get("session"), dict) and read["session"].get("pid")
+        ),
+        None,
+    )
+    looked = (*targets, session_pid) if session_pid is not None else targets
+    # A terminal in a session of the person's own names that session's process; the probe's
+    # reads there name only the processes it looks at.
+    env = {key: value for key, value in probe.env.items() if key != "CLAUDE_PID"}
+    terminal = [{**read_processes(probe.root, salt, looked, env), "by": "terminal"}]
+    second = read_at_terminal(probe, salt, looked, env)
+    if second is not None:
+        terminal.append({**second, "by": "terminal"})
+    run.finish()
+    session = stream_reads(run.events)
+    ids = {"probe": os.getpid(), "session": session_pid, "ended": ended}
+    report_reads(probe, terminal, session, ids)
+    report = probe.report
+    report.finding(
+        13,
+        f"The ended process ran as {ended}, and the probe ended it before the session started. "
+        f"While it ran, the probe read {entry_line(while_running)}.",
+    )
+    if not any(read.get("copy") == OUTSIDE_COPY for read in session):
+        result = next((e for e in run.events if e.get("type") == "result"), None)
+        refused = result.get("permission_denials") if result else None
+        report.finding(
+            13,
+            "The session's command outside the sandbox printed no reading"
+            + (f"; the run refused {json.dumps(refused)}" if refused else f"; {run.ending()}")
+            + ".",
+        )
+
+
 # --- the entry ------------------------------------------------------------------------------
 
 
@@ -2675,6 +3401,8 @@ def heading(version: tuple[int, int, int], part: str, now: datetime.datetime) ->
             "9 to 12 are those DEC-084's Implications list, with a session's own name (2) read "
             "again"
         )
+    if "process" in PARTS[part]:
+        sources.append("13 to 16 are those ADR-103's Implications list")
     return [
         f"Claude Code {dotted(version)} on {platform.platform(terse=True)} ({sys.platform}), "
         f"{now:%Y-%m-%d %H:%M} UTC; parts run: {parts}.",
@@ -2704,6 +3432,10 @@ def main(argv: list[str] | None = None) -> int:
     if args[:1] == [CHECK_FLAG] and len(args) == 4 and args[2].isdigit():
         print(json.dumps({"probe_check": check_process(Path(args[1]), int(args[2]), args[3])}))
         return 0
+    if args[:1] == [READ_FLAG] and len(args) >= 3 and all(arg.isdigit() for arg in args[3:]):
+        pids = [int(arg) for arg in args[3:]]
+        print(json.dumps({"probe_read": read_processes(Path(args[1]), args[2], pids, os.environ)}))
+        return 0
     parser = argparse.ArgumentParser(description=(__doc__ or "").split("\n\n")[0])
     parser.add_argument(START_FLAG, action="store_true", help="start real Claude Code sessions")
     parser.add_argument("--part", choices=tuple(PARTS), default="all", help="what to run")
@@ -2714,12 +3446,14 @@ def main(argv: list[str] | None = None) -> int:
         return refuse(
             "the probe starts real Claude Code sessions, which sign in and spend. Pass "
             f"{START_FLAG} to start them (project-management DEC-081, Context, and DEC-084, "
-            "Implications)."
+            "Implications, and ADR-103, Implications)."
         )
     if RUN_MARKER in os.environ:
         return refuse("an agent's run starts no session; a person runs the probe at a terminal")
-    if parsed.part != "headless" and not sys.stdin.isatty():
-        return refuse("the terminal part needs a person at a terminal; pass --part headless")
+    if set(PARTS[parsed.part]) & set(AT_A_TERMINAL) and not sys.stdin.isatty():
+        return refuse(
+            "the terminal part needs a person at a terminal; pass --part headless or --part process"
+        )
     harness = shutil.which(HARNESS)
     if harness is None:
         return refuse(f"the `{HARNESS}` command line is not on PATH")
@@ -2750,7 +3484,12 @@ def main(argv: list[str] | None = None) -> int:
     if {"headless", "terminal"} & set(PARTS[parsed.part]):
         measure_settings(probe, home)
     stopped = False
-    runs = {"headless": headless_part, "terminal": terminal_part, "address": address_part}
+    runs = {
+        "headless": headless_part,
+        "terminal": terminal_part,
+        "address": address_part,
+        "process": process_part,
+    }
     try:
         for name in PARTS[parsed.part]:
             runs[name](probe)

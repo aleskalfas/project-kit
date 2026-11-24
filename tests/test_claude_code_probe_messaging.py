@@ -1,8 +1,10 @@
 """The Claude Code adapter's probe of messaging between sessions (project-management DEC-081,
-Context, and DEC-084, Implications; #3461).
+Context, and DEC-084, Implications), and of what ADR-103's reading of a process rests on (its
+Implications; #3461).
 
 - the probe starts nothing without its flag, nor inside an agent's run, nor its terminal part
-  without a terminal, and refuses a harness older than messaging;
+  without a terminal, which its process part does not need, and refuses a harness older than
+  messaging;
 - it runs under the bare `python3`, as its own hook does;
 - the probe agent withholds neither messaging tool, and each folder's settings make it the
   session's agent and register the hook on every event the probe reads;
@@ -12,15 +14,19 @@ Context, and DEC-084, Implications; #3461).
 - the hook appends each event less the transcripts' paths, prints nothing and never fails; the
   scan names variables, never a value but the inbox's path and the session's id, and reads the
   session's process; the check tells a running process from an ended one;
+- the read gives the process space as digests and each process's start time from the
+  operating system's table, reads a table's entry only in the layout it knows, and says why
+  it could not read a part;
 - the results name no scratch, temp or home folder, no user and no machine, and each listing
   keeps only the probe's rows;
 - what the evidence says: the tools an agent holds, whether a message was delivered, the
   folder a row shows, a session's own name from the listing's first line, a message's reply
-  address against the sender's own, the session's process against its address, and a
-  process's state as another clone sees it;
+  address against the sender's own, the session's process against its address, a process's
+  state as another clone sees it, and, from the reads, the process space, the start times,
+  the machine's identity and the namespaces;
 - the results file holds each measurement the parts run take, and its evidence fenced;
-- with a stub harness, the headless part runs each of its runs, and the terminal part and the
-  address part walk each of their steps, to the results file.
+- with a stub harness, the headless part and the process part run each of their runs, and
+  the terminal part and the address part walk each of their steps, to the results file.
 
 A stub harness on a PATH the test builds stands in for `claude`: no real session starts.
 """
@@ -31,6 +37,7 @@ import ast
 import importlib.util
 import json
 import os
+import struct
 import subprocess
 import sys
 from pathlib import Path
@@ -60,6 +67,28 @@ if "-p" in args:
         print(json.dumps(event), flush=True)
 
     emit({"type": "system", "subtype": "init", "tools": ["Bash", "Write", "SendMessage"]})
+    if "--read-processes" in brief:
+        import os
+        import shlex
+        import subprocess
+        import time
+
+        # Each command of the process part's brief, run as the session's shell would run it,
+        # with the session's process named as the harness names it.
+        pieces = brief.split("python3 ")[1:]
+        commands = [piece.split(" (")[0].split(" Then answer")[0].strip() for piece in pieces]
+        env = {**os.environ, "CLAUDE_PID": str(os.getpid())}
+        for index, command in enumerate(commands):
+            words = [sys.executable, *shlex.split(command)]
+            done = subprocess.run(words, env=env, capture_output=True, text=True)
+            use = {"type": "tool_use", "id": f"r{index}", "name": "Bash",
+                   "input": {"command": "python3 " + command}}
+            emit({"type": "assistant", "message": {"content": [use]}, "parent_tool_use_id": None})
+            result = {"type": "tool_result", "tool_use_id": f"r{index}", "content": done.stdout}
+            emit({"type": "user", "message": {"content": [result]}})
+        time.sleep(2)
+        emit({"type": "result", "result": "done"})
+        sys.exit(0)
     if "sleep" in brief:
         use = {"type": "tool_use", "id": "t1", "name": "Bash", "input": {"command": "sleep 1"}}
         emit({"type": "assistant", "message": {"content": [use]}, "parent_tool_use_id": None})
@@ -138,6 +167,12 @@ def test_the_terminal_part_needs_a_terminal(
     monkeypatch.setattr(probe_module.sys.stdin, "isatty", lambda: False)
     assert probe_module.main(["--start-claude"]) == 2
     assert "--part headless" in capsys.readouterr().err
+    assert probe_module.main(["--start-claude", "--part", "address"]) == 2
+    assert "--part process" in capsys.readouterr().err
+    # The process part runs headless, so it passes the check, and stops at the harness.
+    monkeypatch.setattr(probe_module.shutil, "which", lambda _name: None)
+    assert probe_module.main(["--start-claude", "--part", "process"]) == 2
+    assert "not on PATH" in capsys.readouterr().err
 
 
 def test_a_harness_older_than_messaging_is_refused(probe_module: Any) -> None:
@@ -233,6 +268,13 @@ def test_the_scratch_folder_holds_a_clone_with_a_linked_worktree(
     assert sandbox["enabled"] is True
     assert sandbox["allowUnsandboxedCommands"] is True
     assert "excludedCommands" not in sandbox
+    process = json.loads((tmp_path / "process" / ".claude" / "settings.json").read_text())
+    assert process["sandbox"] == sandbox
+    for copy in ("probe-messaging.py", "probe-outside.py"):
+        assert (
+            f"Bash(python3 {tmp_path / copy} --read-processes:*)"
+            in (process["permissions"]["allow"])
+        )
     for case in probe_module.INBOUND_CASES:
         written = json.loads(
             (tmp_path / f"inbound-{case.key}" / ".claude" / "settings.json").read_text()
@@ -360,6 +402,121 @@ def test_the_check_tells_a_running_process_from_an_ended_one(
         check=True,
     ).stdout
     assert json.loads(printed)["probe_check"]["start"] == start
+
+
+# --- the reading of a process space and of start times ---------------------------------------
+
+#: The ways into the process table the read takes on the platform the tests run on.
+TABLE = {"darwin": ("sysctl", "libproc"), "linux": ("proc",)}.get(sys.platform, ())
+
+
+@pytest.mark.skipif(not TABLE, reason="the probe reads a process table on macOS and Linux only")
+def test_the_read_gives_the_space_as_digests_and_each_processs_start_from_the_table(
+    tmp_path: Path,
+) -> None:
+    ended = subprocess.Popen([sys.executable, "-c", "pass"])
+    ended.wait()
+    me = os.getpid()
+    printed = subprocess.run(
+        [
+            sys.executable,
+            str(PROBE),
+            "--read-processes",
+            str(tmp_path),
+            "salt",
+            str(me),
+            str(ended.pid),
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+        env={**os.environ, "CLAUDE_PID": str(me)},
+    ).stdout
+    read = json.loads(printed)["probe_read"]
+    assert (read["platform"], read["confined"]) == (sys.platform, False)
+    assert read["session"]["pid"] == me
+    live, gone = read["targets"]
+    assert live["signal"] == "exists" and gone["signal"] == "no such process"
+    for way in TABLE:
+        assert live[way]["start"] and live[way]["exited"] is False
+        assert live[way]["start"] == read["session"][way]["start"]
+        assert gone[way] == {"start": None, "exited": None, "unread": None}
+    for key in ("machine", "boot"):
+        part = read["space"][key]
+        assert part["source"]
+        # A part is read as a digest, or not at all with why.
+        assert (part["value"] is None) == bool(part["unread"])
+        assert part["value"] is None or len(part["value"]) == 16
+    assert read["space"]["boot"]["value"] is not None
+    assert not list(tmp_path.glob("confinement-*"))
+
+
+def test_a_table_entry_is_read_only_in_the_layout_the_probe_knows(
+    probe_module: Any, tmp_path: Path
+) -> None:
+    kinfo = bytearray(648)
+    struct.pack_into("=qi", kinfo, 0, 1795486901, 285490)
+    struct.pack_into("=i", kinfo, probe_module.KINFO_PID_OFFSET, 42)
+    assert probe_module.kinfo_entry(bytes(kinfo), 42) == {
+        "start": "1795486901.285490",
+        "exited": False,
+        "unread": None,
+    }
+    kinfo[probe_module.KINFO_STAT_OFFSET] = probe_module.MACOS_ZOMBIE
+    assert probe_module.kinfo_entry(bytes(kinfo), 42)["exited"] is True
+    assert "layout" in probe_module.kinfo_entry(bytes(kinfo), 43)["unread"]
+    assert probe_module.kinfo_entry(b"", 42) == {"start": None, "exited": None, "unread": None}
+    bsdinfo = bytearray(probe_module.BSDINFO_SIZE)
+    struct.pack_into("=I", bsdinfo, probe_module.BSDINFO_PID_OFFSET, 42)
+    struct.pack_into("=QQ", bsdinfo, probe_module.BSDINFO_START_OFFSET, 1795486901, 7)
+    assert probe_module.bsdinfo_entry(bytes(bsdinfo), 42)["start"] == "1795486901.000007"
+    assert "layout" in probe_module.bsdinfo_entry(bytes(bsdinfo[:100]), 42)["unread"]
+    proc = tmp_path / "proc"
+    (proc / "42").mkdir(parents=True)
+    # A command's name may hold a parenthesis and a space; the fields follow its last one.
+    after = ["S"] + ["0"] * 18 + ["123456"] + ["0"] * 10
+    (proc / "42" / "stat").write_text(f"42 (a) b) {' '.join(after)}\n")
+    assert probe_module.linux_stat(42, proc) == {
+        "start": "123456",
+        "exited": False,
+        "unread": None,
+    }
+    (proc / "42" / "stat").write_text(f"42 (a) {' '.join(['Z', *after[1:]])}\n")
+    assert probe_module.linux_stat(42, proc)["exited"] is True
+    (proc / "42" / "stat").write_text("42 (a) S 1\n")
+    assert "layout" in probe_module.linux_stat(42, proc)["unread"]
+    assert probe_module.linux_stat(43, proc) == {"start": None, "exited": None, "unread": None}
+
+
+def test_the_linux_space_is_read_from_proc_and_the_machines_id(
+    probe_module: Any, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    proc = tmp_path / "proc"
+    (proc / "sys" / "kernel" / "random").mkdir(parents=True)
+    (proc / "sys" / "kernel" / "random" / "boot_id").write_text("boot-one\n")
+    (proc / "self" / "ns").mkdir(parents=True)
+    (proc / "self" / "ns" / "pid").symlink_to("pid:[4026531836]")
+    (proc / "cpuinfo").write_text("processor : 0\nflags : fpu hypervisor\n")
+    machine = tmp_path / "machine-id"
+    machine.write_text("abc123\n")
+    monkeypatch.setattr(probe_module, "LINUX_MACHINE_SOURCES", (tmp_path / "none", machine))
+    monkeypatch.setattr(probe_module, "LINUX_CONTAINER_MARKS", (tmp_path / "no-mark",))
+    space = probe_module.process_space("salt", proc, "linux")
+    assert space["machine"] == {
+        "source": str(machine),
+        "value": probe_module.digest("salt", "abc123"),
+        "unread": None,
+    }
+    assert space["machine"]["value"] != probe_module.digest("other", "abc123")
+    assert space["boot"]["value"] == probe_module.digest("salt", "boot-one")
+    assert space["namespace"]["value"] == "pid:[4026531836]"
+    assert space["virtual"] == "yes"
+    machine.unlink()
+    (proc / "self" / "ns" / "pid").unlink()
+    space = probe_module.process_space("salt", proc, "linux")
+    assert space["machine"]["value"] is None and space["machine"]["unread"]
+    assert space["namespace"]["value"] is None and space["namespace"]["unread"]
+    assert "plan9" in probe_module.process_space("salt", proc, "plan9")["boot"]["unread"]
 
 
 # --- keeping the person's data out of the results --------------------------------------------
@@ -623,6 +780,146 @@ def test_a_check_says_where_it_ran_and_what_it_could_tell(probe_module: Any) -> 
     assert liveness(None, live=True).startswith("not measured")
 
 
+def _entry(
+    pid: int, start: str | None, *, signal: str = "exists", unread: str | None = None
+) -> dict[str, Any]:
+    seen = {"start": start, "exited": False if start else None, "unread": unread}
+    printed = {"start": None, "exited": None, "unread": "ps could not run (PermissionError)"}
+    return {"pid": pid, "signal": signal, "sysctl": seen, "ps": printed}
+
+
+def _read(
+    *,
+    by: str = "session",
+    confined: bool = True,
+    platform: str = "darwin",
+    namespace: str | None = None,
+    machine: str | None = "m1",
+    targets: tuple[Any, ...] = (),
+    session: Any = None,
+) -> dict[str, Any]:
+    source = "/proc/self/ns/pid" if platform == "linux" else None
+    return {
+        "by": by,
+        "copy": "probe-messaging.py",
+        "platform": platform,
+        "confined": confined,
+        "space": {
+            "machine": {
+                "source": "the platform's UUID",
+                "value": machine,
+                "unread": None if machine else "Operation not permitted",
+            },
+            "boot": {"source": "kern.bootsessionuuid", "value": "b1", "unread": None},
+            "namespace": {"source": source, "value": namespace, "unread": None},
+            "virtual": "no",
+        },
+        "session": session,
+        "targets": list(targets),
+    }
+
+
+def test_the_reads_say_what_each_place_read_of_the_space_and_the_start_times(
+    probe_module: Any,
+) -> None:
+    space = probe_module.space_reading
+    assert space(_read()) == (
+        "read whole: the machine from the platform's UUID, the boot from kern.bootsessionuuid, "
+        "no namespaces on this platform"
+    )
+    assert space(_read(machine=None)).startswith(
+        "not read whole: not the machine (Operation not permitted)"
+    )
+    assert space(None) == "not read"
+    table = probe_module.table_reading
+    one = [_read(targets=(_entry(7, "1.000001"),)), _read(targets=(_entry(7, "1.000001"),))]
+    assert table(one, 7) == "2 reads, through sysctl, gave one start time"
+    two = [*one, _read(targets=(_entry(7, "2.000000"),))]
+    assert table(two, 7) == "3 reads, through sysctl, gave 2 start times, 1.000001, 2.000000"
+    assert table([_read(targets=(_entry(7, None),))], 7) == "1 read found no process under its id"
+    refused = [_read(targets=(_entry(7, None, unread="Operation not permitted"),))]
+    assert table(refused, 7) == "not read through sysctl (Operation not permitted)"
+    assert table(one, None) == "no id to read"
+    assert table(one, 8) == "not read"
+    assert probe_module.signal_reading(one, 7) == "“exists”"
+    assert probe_module.ps_reading(one) == "ps did not run (ps could not run (PermissionError))"
+    assert probe_module.where_read(_read(by="terminal")) == (
+        "the person's terminal, outside the sandbox"
+    )
+    assert probe_module.where_read(_read()) == "a command in the sandbox, in the session"
+
+
+def test_the_reads_tell_whether_each_command_has_a_process_space_of_its_own(
+    probe_module: Any,
+) -> None:
+    namespaces = probe_module.namespace_reading
+    terminal = [_read(by="terminal", confined=False, platform="linux", namespace="pid:[1]")]
+
+    def inside(*values: str) -> list[dict[str, Any]]:
+        return [_read(platform="linux", namespace=value) for value in values]
+
+    assert namespaces(inside("pid:[2]", "pid:[3]"), terminal) == (
+        "each command in the sandbox reads a namespace of its own: pid:[2], pid:[3]"
+    )
+    assert namespaces(inside("pid:[1]", "pid:[1]"), terminal) == (
+        "the commands in the sandbox read the terminal's namespace, pid:[1]"
+    )
+    assert namespaces(inside("pid:[2]", "pid:[2]"), terminal) == (
+        "the commands in the sandbox share one namespace, pid:[2], which is not the "
+        "terminal's (pid:[1])"
+    )
+    assert namespaces([_read(platform="linux")], terminal).startswith("cannot tell")
+    assert namespaces([_read()], []).startswith("macOS has no process namespaces")
+    assert namespaces([], terminal).startswith("not measured")
+    machine = probe_module.machine_reading
+    assert machine([_read(), _read(by="terminal")]) == (
+        "the platform's UUID: 2 reads gave one value; the machine runs virtual: no"
+    )
+    assert machine([_read(), _read(machine="m2")]).startswith("the platform's UUID: 2 reads gave 2")
+    assert machine([_read(machine=None)]) == "not read from the platform's UUID"
+
+
+def test_the_reads_give_each_of_adr_103s_measurements(probe_module: Any, tmp_path: Path) -> None:
+    probe = _probe(probe_module, tmp_path, _stub(tmp_path))
+    probe.report.numbers = probe_module.measured_by("process")
+    terminal = [
+        _read(
+            by="terminal",
+            confined=False,
+            targets=(_entry(10, "1.000001"), _entry(20, None), _entry(30, "3.000003")),
+        )
+    ]
+    session = [
+        _read(
+            targets=(
+                _entry(10, None, signal="not permitted", unread="Operation not permitted"),
+                _entry(20, None, signal="no such process"),
+            ),
+            session=_entry(30, "3.000003", signal="not permitted"),
+        )
+    ]
+    probe_module.report_reads(probe, terminal, session, {"probe": 10, "session": 30, "ended": 20})
+    text = probe.report.render()
+    assert "| 13. The process space and the start time | the person's terminal" in text
+    assert (
+        "the session's process, across every read: 2 reads, through sysctl, gave one start time"
+        in text
+    )
+    assert (
+        "a command in the sandbox, in the session, the probe's process (10): not read through "
+        "sysctl (Operation not permitted)" in text
+    )
+    assert "process 10: signal not permitted; sysctl not read: Operation not permitted" in text
+    assert "| 14. The source of the machine's identity | the platform's UUID: 2 reads" in text
+    assert "macOS has no process namespaces" in text
+    assert "to the session's said “not permitted”" in text
+    assert "and to an ended process's id said “no such process”" in text
+    assert "ps did not run" in text
+    assert "the session's process: 1 read, through sysctl, gave one start time" in text
+    probe_module.report_reads(probe, terminal, [_read(platform="linux")], {"probe": 10})
+    assert "not measured: the sandbox's commands ran on linux" in probe.report.render()
+
+
 def test_the_inbound_settings_are_read_from_each_file_that_may_set_them(
     probe_module: Any, tmp_path: Path
 ) -> None:
@@ -675,7 +972,8 @@ def test_the_results_hold_each_measurement_with_its_evidence_scrubbed(
 
 def test_the_results_hold_only_the_measurements_the_parts_run_take(probe_module: Any) -> None:
     assert probe_module.measured_by("address") == [2, 9, 10, 11, 12]
-    assert probe_module.measured_by("all") == list(range(1, 13))
+    assert probe_module.measured_by("process") == [13, 14, 15, 16]
+    assert probe_module.measured_by("all") == list(range(1, 17))
     scrub = probe_module.Scrubber(Path("/nowhere"), Path("/home"), None, "someone", "host", None)
     report = probe_module.Report(scrub, ["heading"], probe_module.measured_by("address"))
     text = report.render()
@@ -709,6 +1007,41 @@ def test_the_headless_part_runs_each_of_its_runs_to_the_results(
         "3 of 5 cases measured read as the documentation says; "
         "these differ: both-bypass, flag-accept-bypass." in text
     )
+    assert str(tmp_path) not in text
+    capsys.readouterr()
+
+
+@pytest.mark.skipif(not TABLE, reason="the probe reads a process table on macOS and Linux only")
+def test_the_process_part_runs_its_session_to_the_results(
+    probe_module: Any, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The stub runs the brief's three commands as the session's shell would, though outside
+    any sandbox, so every read is one from outside it."""
+    probe = _probe(probe_module, tmp_path, _stub(tmp_path))
+    probe.report.numbers = probe_module.measured_by("process")
+    try:
+        probe_module.process_part(probe)
+    finally:
+        probe.end_all()
+    probe.save()
+    text = probe.out.read_text()
+    assert (probe.root / "evidence" / "m13-process.jsonl").is_file()
+    # A machine may keep no identity a read can find, as a container may hold no machine id.
+    assert "the person's terminal, outside the sandbox: the space " in text
+    assert "a command outside the sandbox, though its session's sandbox is on, in the session" in (
+        text
+    )
+    # The probe's process, read twice at the terminal and by each of the session's three
+    # commands, has one start time.
+    ways = " and ".join("/proc" if way == "proc" else way for way in TABLE)
+    assert (
+        f"the probe's process, across every read: 5 reads, through {ways}, gave one start time"
+        in text
+    )
+    assert "the session's process, across every read:" in text
+    assert "| 15. A process space for each command | not measured: no command ran in the " in text
+    assert "| 16. Inside the macOS sandbox | not measured: no command ran in the sandbox |" in text
+    assert "The session's command outside the sandbox printed no reading" not in text
     assert str(tmp_path) not in text
     capsys.readouterr()
 
