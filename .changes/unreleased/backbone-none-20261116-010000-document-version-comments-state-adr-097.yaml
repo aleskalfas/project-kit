@@ -1,0 +1,5 @@
+component: backbone
+kind: none
+body: >
+  The comments over each versioned backbone document state ADR-097's rule,
+  and tests hold those documents to their contracts. No behaviour changes.

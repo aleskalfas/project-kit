@@ -1,0 +1,13 @@
+component: project-management
+kind: patch
+body: >
+  Where labels carry the state, an audited move made again posts its own
+  audit comment, and the `after_move_issue` hook's comment its own, whether
+  or not the journal recorded the first (DEC-078 point 4). The key by which
+  a retry finds its own comment counts the issue's state-label events on its
+  timeline in every such project, a project that keeps a journal among them,
+  in place of the journal's length, which stayed put while a move went
+  unrecorded. Where a board or a derivation carries the state, the key
+  counts the journal as before, a limit DEC-078 point 4 states. A retry of a
+  move whose first attempt ran on the release before may post its comment a
+  second time, once.

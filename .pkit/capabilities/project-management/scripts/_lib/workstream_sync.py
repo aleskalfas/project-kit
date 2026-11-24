@@ -9,7 +9,12 @@ step with the file:
 * **Carriers.** Which issues carry a workstream, read from whatever substrate
   carries the axis (`axis_carriage.carriage`): the kit's label, the adopter's own
   label or title prefix, or the board's `Workstream` field. `remove-workstream`
-  refuses while any issue carries the slug, whatever the carriage.
+  refuses while any issue carries the slug, whatever the carriage. On the board,
+  a card the walk did not count may hold the option: one the board withheld, or
+  one that holds a state issue. Each command that removes the option, or merges
+  it into another, refuses while one may, since it would clear that card's value
+  unseen; `remove-workstream` does too, since its count leaves that card out
+  (`uncounted_refusal`, [pkit:ADR-096] point 2).
 * **Labels.** The repository's label names, and the move of one issue from one
   label to another.
 * **The board.** The board's `Workstream` single-select field with its options in
@@ -21,8 +26,7 @@ step with the file:
 
 Every function that runs `gh` takes the runner as `gh_call`, so a script passes
 its own (and a test its fake). The board reads take `board_call`, which defaults
-to the board seam's own runner: a `gh project` read needs the owner that runner
-splices, which a plain `gh` runner does not.
+to the board seam's own runner.
 """
 
 from __future__ import annotations
@@ -67,12 +71,48 @@ class CarriersRead:
     """Outcome of finding the issues that carry a workstream.
 
     `ok=False` means the read failed and nothing is known, which a caller that
-    needs a count must not take for zero.
+    needs a count must not take for zero. `withheld` counts the board's cards
+    that may hold the value and whose issues the credential may not read, and
+    `set_aside` those that hold it and hold a state issue: neither is among
+    `carriers` ([pkit:ADR-096] point 2).
     """
 
     ok: bool
     carriers: tuple[Carrier, ...] = ()
     error: str | None = None
+    withheld: int = 0
+    set_aside: int = 0
+
+
+def uncounted_refusal(slug: str, read: CarriersRead, *, removes_option: bool) -> str | None:
+    """Why a command refuses while a card on the board may hold `slug` whose
+    value the read did not count ([pkit:ADR-096] point 2). None where every card
+    that may hold it was counted.
+
+    `removes_option` says what the command does with the option. One that
+    removes it, or merges it into another, would clear such a card's value
+    unseen. One that leaves it, as `remove-workstream` does, refuses because its
+    count of the issues that carry the workstream leaves such a card out."""
+    if not read.withheld and not read.set_aside:
+        return None
+    parts = []
+    if read.withheld:
+        parts.append(
+            f"{read.withheld} card(s) whose issues lie in repositories this credential "
+            "may not read, so the board did not say what they hold"
+        )
+    if read.set_aside:
+        parts.append(f"{read.set_aside} card(s) holding a state issue")
+    why = (
+        "removing the option would clear their value unseen"
+        if removes_option
+        else "the count of the issues that carry the workstream leaves them out"
+    )
+    return (
+        f"the board holds {' and '.join(parts)}, which may hold {slug!r}; {why}. Use a "
+        "credential that reads every repository whose issues the board holds, or set "
+        "those cards' values on the board first."
+    )
 
 
 def _run(gh_call: GhCall, args: list[str], config: dict[str, Any], **kwargs: Any):
@@ -267,14 +307,12 @@ class BoardFieldRead:
 
 
 def read_board_field(config: dict[str, Any], *, board_call: GhCall | None = None) -> BoardFieldRead:
-    """The board's `Workstream` field and its options, through the board read seam."""
-    owner = board_fields.default_owner(config)
-    project = board_fields.read_project_node_id(config, owner=owner, gh_call=board_call)
-    if not project.ok or not project.node_id:
-        return BoardFieldRead(error=project.error or "the board did not resolve to a project id.")
-    fields = board_fields.read_fields(config, owner=owner, gh_call=board_call)
-    if not fields.ok:
-        return BoardFieldRead(error=fields.error)
+    """The board's `Workstream` field and its options, through the board read
+    seam: one read of the board, under the owner the seam resolves, giving its
+    node, its fields and each single-select's options in full."""
+    fields = board_fields.read_fields(config, gh_call=board_call)
+    if not fields.ok or not fields.project_id:
+        return BoardFieldRead(error=fields.error or "the board's answer carries no id.")
     field = board_fields.find_field(fields.fields, FIELD_NAME)
     if field is None:
         offered = ", ".join(board_fields.field_names(fields.fields)) or "(no fields)"
@@ -295,11 +333,9 @@ def read_board_field(config: dict[str, Any], *, board_call: GhCall | None = None
     field_id = field.get("id")
     if not isinstance(field_id, str) or not field_id:
         return BoardFieldRead(error=f"the board's `{FIELD_NAME}` field has no id.")
-    options = board_fields.read_field_options(config, field_id=field_id, gh_call=board_call)
-    if not options.ok:
-        return BoardFieldRead(error=options.error)
+    options = tuple(dict(option) for option in field.get("options") or ())
     return BoardFieldRead(
-        field=BoardField(project_id=project.node_id, field_id=field_id, options=options.options)
+        field=BoardField(project_id=fields.project_id, field_id=field_id, options=options)
     )
 
 
@@ -344,7 +380,9 @@ def write_options(
 def board_carriers(
     field: BoardField, slug: str, config: dict[str, Any], *, board_call: GhCall | None = None
 ) -> CarriersRead:
-    """Every card whose `Workstream` value is the option `slug`."""
+    """Every card whose `Workstream` value is the option `slug`, an archived card
+    included, and the count of the cards that may hold it whose value the walk
+    did not count (:func:`uncounted_refusal`)."""
     option = find_option(field, slug)
     if option is None:
         return CarriersRead(ok=True)
@@ -363,6 +401,8 @@ def board_carriers(
             Carrier(number=item.number, title=item.title, item_id=item.item_id)
             for item in read.items
         ),
+        withheld=len(read.withheld),
+        set_aside=len(read.set_aside),
     )
 
 

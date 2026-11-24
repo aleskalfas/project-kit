@@ -1,0 +1,46 @@
+component: project-management
+kind: major
+custom:
+  category: Changed
+  requires_backbone: release
+body: >
+  The commands read the acting account from the backbone's reading, `pkit
+  account read`, and compare accounts through `pkit account compare`
+  (ADR-094), and under a credential that names no user's account, such as a
+  GitHub App installation's token or a workflow's own, no person stands for
+  the acting account (DEC-076). Neither `PM_INVOKER_LOGIN` nor git's email
+  stands for the account any more: the closed membership gate matches a
+  bot's account only by its own login, `<name>[bot]`, and nothing where no
+  account is named, and `add-member` and `remove-member` refuse under such a
+  credential in open mode too. `PM_INVOKER_LOGIN` now names only the person
+  the agent works for: `create-issue`'s default assignee, `assign-issue
+  --me`, the person `start-work` compares a Task's assignees with and
+  assigns, and the Tasks `next-task` offers. Where none is named, those
+  refuse, saying why and how to name one. Under such a credential a clone
+  takes no part in instance ownership, whatever id it holds: it claims and
+  releases nothing, and the clash guard reads the owner for it. Under a
+  credential GitHub gives no answer for, a clone that holds an instance id or
+  took a seat refuses instead. In a project with a topology such a clone
+  takes no seat that builds and `start-work` refuses, and it takes a
+  planner's seat only behind a closed gate whose members name its own
+  account. Whether a session is autonomous is read from its terminal alone,
+  no longer from the variable. Each move's actor is the acting account in
+  the one spelling, and with none the move reaches the engine with no actor
+  (DEC-078 points 1 and 3). In human mode, `done-work`'s gate counts no
+  approval from an account registered under
+  `review.agents.remote_registered`, compares each approver with the pull
+  request's author through the backbone, counting none it cannot tell apart,
+  and counts none while a registered entry has no spelling, naming the
+  entry; `review-work` asks no member whose entry names a bot's account or a
+  reviewer agent's, nor one it cannot tell from the pull request's author,
+  as GitHub records it for a pull request found (DEC-079 point 3). The
+  question that names a head from elsewhere says its programs start under
+  the credential the session holds, not a person's account, where the
+  credential names no user's account (DEC-067 point 4). Two migrations warn
+  and write nothing: of a bare member entry whose
+  `<name>[bot]` GitHub answers as a bot's, of a workflow that sets
+  `PM_INVOKER_LOGIN`, and of each `remote_registered` entry with no spelling
+  or read as a user's. No migration finds a setup whose agent relied on the
+  variable standing for the account at a terminal-less run; such a setup
+  sets it to the person the agent works for. The capability's floor rises to
+  the backbone release that brings the account commands.

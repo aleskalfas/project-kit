@@ -39,6 +39,8 @@ pkit:
         - .pkit/capabilities/project-management/scripts/_lib/decision_ids.py
         - .pkit/capabilities/project-management/scripts/_lib/containment.py
         - .pkit/capabilities/project-management/scripts/_lib/session_guard.py
+        - .pkit/capabilities/project-management/scripts/_lib/membership.py
+        - .pkit/capabilities/project-management/scripts/_lib/bootstrap_gate.py
         - .pkit/capabilities/project-management/schemas/issue-types.yaml
         - .pkit/capabilities/project-management/schemas/body-format.yaml
         - .pkit/capabilities/project-management/schemas/titles.yaml
@@ -55,11 +57,15 @@ pkit:
         - project-management:DEC-014
         - project-management:DEC-018
         - project-management:DEC-019
+        - project-management:DEC-021
+        - project-management:DEC-003
         - project-management:DEC-031
         - project-management:DEC-039
         - project-management:DEC-041
         - project-management:DEC-054#4
         - project-management:DEC-061#6
+        - project-management:DEC-076#3
+        - project-management:DEC-079#1
         - COR-005
         - COR-013
         - COR-017
@@ -117,7 +123,7 @@ pkit:
 1. The developer chooses the [Task](../../../glossary.md#term-task--task)'s parent, its title, its [kind of work](../../../glossary.md#term-kind-of-work--kind-of-work), its priority and its [workstream](../../../glossary.md#term-workstream--workstream) ([DEC-004](../../../../../../.pkit/capabilities/project-management/decisions/DEC-004-six-level-hierarchy.md) and [DEC-012](../../../../../../.pkit/capabilities/project-management/decisions/DEC-012-classification-axes.md)).
 2. The developer writes the body in a file, opening with the [parent reference](../../../glossary.md#term-parent-reference--parent-reference), or leaves the body to the Task's template ([DEC-010](../../../../../../.pkit/capabilities/project-management/decisions/DEC-010-issue-body-minimum-structure.md)).
 3. The developer runs `pkit pm create-issue --type task --title "<title>" --parent <N>`, with `--kind`, `--priority`, `--workstream` and, where they wrote one, `--body-file`.
-4. At its entry, the [system](../../../../core/glossary.md#term-system--system) checks the [project](../../../../core/glossary.md#term-project--project)'s prerequisites, and the developer's membership where the team keeps a list ([REQ-041](../../../requirements/functional/REQ-041-gates-before-writing.md)). It then checks that the repository it would write in is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses ([core:REQ-012](../../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)).
+4. At its entry, the [system](../../../../core/glossary.md#term-system--system) checks the [project](../../../../core/glossary.md#term-project--project)'s prerequisites, and that whoever runs the command is a member where the team keeps a list ([REQ-041](../../../requirements/functional/REQ-041-gates-before-writing.md)). Wherever GitHub names a user's account the command runs as, that account is whoever runs the command, not the person an agent works for. The system then checks that the repository it would write in is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses ([core:REQ-012](../../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)).
 5. The system composes the title from the prefix of the Task's kind of work and `<title>`, such as `[Bug] <title>`. It checks the title against the title formats the [capability](../../../../core/glossary.md#term-capability--capability) declares ([DEC-011](../../../../../../.pkit/capabilities/project-management/decisions/DEC-011-title-formats.md)).
 6. The system reads the parent's type, and checks that a Task may sit under it: a [Feature](../../../glossary.md#term-feature--feature), an [Umbrella](../../../glossary.md#term-umbrella--umbrella) or an [EPIC](../../../glossary.md#term-epic--epic) ([DEC-005](../../../../../../.pkit/capabilities/project-management/decisions/DEC-005-linking-and-containment.md)).
 
@@ -141,7 +147,7 @@ pkit:
 
 - **1a.** An AI agent files the [Task](../../../glossary.md#term-task--task) for the developer, through the `pm` [skill](../../../../core/glossary.md#term-skill--skill)'s `create-issue.md`. It infers the [kind of work](../../../glossary.md#term-kind-of-work--kind-of-work) and the [workstream](../../../glossary.md#term-workstream--workstream) from the request, and asks where it is unsure ([DEC-012](../../../../../../.pkit/capabilities/project-management/decisions/DEC-012-classification-axes.md)). The path goes on at step 3.
 - **3a.** The developer passes `--dry-run`. The [system](../../../../core/glossary.md#term-system--system) makes the checks of steps 4 to 10, prints the Task as step 11 does, and writes nothing. The use case ends.
-- **4a.** The [project](../../../../core/glossary.md#term-project--project) does not meet the prerequisites, or the developer is no member of a team that keeps a list. The system refuses, names the cause, and writes nothing ([REQ-041](../../../requirements/functional/REQ-041-gates-before-writing.md)). The use case ends.
+- **4a.** The [project](../../../../core/glossary.md#term-project--project) does not meet the prerequisites, or whoever runs the command is no member of a team that keeps a list. The system refuses, names the cause, and writes nothing ([REQ-041](../../../requirements/functional/REQ-041-gates-before-writing.md)). The use case ends.
 - **4b.** The repository is another, and the operator declines, or nobody can reply and the developer passed no `--allow-foreign-repo`. The system refuses and writes nothing. The use case ends.
 - **5a.** The composed title fails a check that blocks, such as one on a conventional-commits prefix. The system refuses, naming the check, and writes nothing ([DEC-011](../../../../../../.pkit/capabilities/project-management/decisions/DEC-011-title-formats.md)). A check that only warns, such as one on a short title, is printed, and the path goes on.
 - **6a.** No parent is given. The system refuses, naming the types a Task may sit under, and writes nothing ([DEC-004](../../../../../../.pkit/capabilities/project-management/decisions/DEC-004-six-level-hierarchy.md)). The use case ends.
@@ -165,6 +171,8 @@ pkit:
 - **10a.** The body still holds a placeholder of the template. The system warns, and files the Task. Its first move of the [issue lifecycle](../../../glossary.md#term-issue-lifecycle--issue-lifecycle) is then refused until the body is written ([DEC-031](../../../../../../.pkit/capabilities/project-management/decisions/DEC-031-reject-unauthored-placeholder-bodies.md)).
 - **11a.** The developer says no at the terminal. The system writes nothing, and the use case ends.
 - **11b.** The Milestone of `--milestone` is in a [pool](../../../glossary.md#term-pool--pool), so the Task would enter that pool. The system asks the developer at the terminal, or takes `--yes` as [consent](../../../../core/glossary.md#term-consent--consent), and with neither refuses and writes nothing ([DEC-061 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#6-putting-work-into-a-pool-is-the-persons-act)). Once the Task is filed, an [audit comment](../../../glossary.md#term-audit-comment--audit-comment) on the Task records the consent.
+- **11c.** The developer names no assignee, and nothing names a person. GitHub names no user's account that the command runs as, such as under a GitHub App's credential, and `PM_INVOKER_LOGIN` names nobody. The system refuses before it prints the Task, says why and that `PM_INVOKER_LOGIN` names a person, and writes nothing ([DEC-076 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-076-app-credentials.md#3-the-person-the-agent-works-for-serves-only-where-naming-a-person-grants-nothing)). The use case ends.
+- **11d.** The assignee names a bot's account, such as `<name>[bot]`, or a bare login that GitHub does not confirm as a user's account. The system refuses before it prints the Task, names the login and the cause, and writes nothing ([DEC-079 point 1](../../../../../../.pkit/capabilities/project-management/decisions/DEC-079-bots-are-no-person.md#1-an-assignee-is-never-a-bots-account)). The use case ends.
 - **12a.** GitHub refuses the filing. The system says so and exits `3`, and nothing is filed. The use case ends.
 - **13a.** The link to the parent fails. The system warns that the Task is filed under its parent by its body alone, and names `pkit pm link-parent <n>`, which makes the link ([DEC-005](../../../../../../.pkit/capabilities/project-management/decisions/DEC-005-linking-and-containment.md)). The use case ends with the Task filed.
 - **13b.** The project keeps containment as text, where its GitHub has no sub-issues. The system makes no link, and rewrites the comment on the parent that lists its children ([DEC-039](../../../../../../.pkit/capabilities/project-management/decisions/DEC-039-containment-substrate-selection.md)).

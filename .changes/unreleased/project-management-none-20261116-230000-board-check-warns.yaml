@@ -1,0 +1,10 @@
+component: project-management
+kind: none
+body: >
+  DEC-074, accepted with this change (#3193), decides that pre-check's board
+  check warns where the declared board does not answer, fails a configuration
+  that declares a board and gives no board number its schema admits, gives
+  each check's outcome under a key that stays, and that the skill's first
+  step shows pre-check's warnings. DEC-017 and DEC-037 take the edits it
+  names. Pre-check and the skill are unchanged until the change that builds
+  the warning (#3243), so no surface moves.

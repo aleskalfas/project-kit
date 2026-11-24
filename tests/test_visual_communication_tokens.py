@@ -687,7 +687,7 @@ RELEASED_NEUTRAL = RELEASES / "neutral" / "1.0.0"
 
 #: The shared roles the foundations being built add to their release 1.0.0, each with the role
 #: its default aliases (DEC-022 points 3 and 5, DEC-036 point 3, DEC-032 point 1, DEC-004
-#: point 7).
+#: point 7), the type of a page's title among them (DEC-008 point 2).
 SITE = tokens.Role("size.site", "dimension", "size.slide")
 LINE = tokens.Role("size.line", "dimension", "size.figure")
 MARKS = {
@@ -699,7 +699,8 @@ ORDER_ROLES = {
     "family.order.last": tokens.Role("family.order.last", "color", "family.neutral.fill"),
     "family.order.text": tokens.Role("family.order.text", "color", "family.neutral.text"),
 }
-ADDED = {"size.site": SITE, "size.line": LINE, **MARKS, **ORDER_ROLES}
+TITLE = tokens.Role("type.title", "typography", "type.heading")
+ADDED = {"size.site": SITE, "size.line": LINE, **MARKS, **ORDER_ROLES, "type.title": TITLE}
 
 #: The pairs of an order's text with each of its ends, which the foundations being built add
 #: to their release 1.0.0 (DEC-032 point 2).
@@ -728,9 +729,9 @@ def test_the_foundations_being_built_add_the_size_axis_device_and_their_roles_al
     from across a room, and the default `desktop` (DEC-021 point 1). `size.site`, a
     dimension whose default is `size.slide` (DEC-004 point 7), `size.line`, the length of
     a line, whose default is `size.figure` (DEC-022 point 5), the lengths of a run's sign
-    and ground, each of whose defaults is `space.1` (DEC-036 point 3), and an order's roles
-    with their pairs (DEC-032 points 1 and 2). Every other declaration is their release
-    1.0.0's."""
+    and ground, each of whose defaults is `space.1` (DEC-036 point 3), an order's roles
+    with their pairs (DEC-032 points 1 and 2), and the type of a page's title, whose default
+    is `type.heading` (DEC-008 point 2). Every other declaration is their release 1.0.0's."""
     assert foundations.findings == ()
     assert foundations.axes["device"] == DEVICE
     assert {name: axis for name, axis in foundations.axes.items() if name != "device"} == (
@@ -805,7 +806,8 @@ def test_a_brand_that_gives_no_size_reads_on_the_foundations_being_built_as_on_t
     the roles the foundations add, each at the value of the role its default aliases: the
     site at its slide's width, a line at its figure's (DEC-022 points 3 and 5, DEC-004
     point 7), a run's sign's and ground's lengths at its smallest space (DEC-036 point 3),
-    and an order's ends and text at its neutral family's fill and text (DEC-032 point 1)."""
+    an order's ends and text at its neutral family's fill and text (DEC-032 point 1), and a
+    page's title in its heading's type (DEC-008 point 2)."""
     before = tokens.read_brand(folder, released)
     read = tokens.read_brand(folder, foundations)
     assert read.findings == before.findings
@@ -2250,14 +2252,8 @@ def test_the_foundations_declare_an_orders_roles_apart_from_the_families(
     assert foundations.roles[ORDER.ground] == tokens.Role("background", "color")
 
 
-#: The neutral brand being built, which gives an order no value.
-NEUTRAL = FOUNDATIONS.parent / "neutral"
-
-
 @pytest.mark.parametrize(
-    "folder",
-    [TEST_BRAND, NEUTRAL, RELEASED_NEUTRAL],
-    ids=["test-brand", "neutral", "neutral-1.0.0"],
+    "folder", [TEST_BRAND, RELEASED_NEUTRAL], ids=["test-brand", "neutral-1.0.0"]
 )
 def test_a_brand_that_gives_an_order_no_value_draws_it_as_the_neutral_family(
     folder: Path, foundations: Any

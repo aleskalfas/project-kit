@@ -1,0 +1,13 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `done-work` no longer exits as though nothing merged when a step after the
+  merge fails. It exits 5 when the move to Done fails, and 6 when the move was
+  made and the close of an issue the pull request closes fails, rather than
+  the failed step's own code, which read as a failed merge (3), a refused gate
+  (1) or a usage error (2). The same holds for a merge the queue made and for a
+  pull request a later run finds merged, where a failed move ahead of the move
+  to Done exits 5 too. Running `done-work` again completes either, as before.
+  `land-work` exits 7 for such a run, as before.

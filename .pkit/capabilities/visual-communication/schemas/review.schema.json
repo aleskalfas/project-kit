@@ -1,0 +1,353 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "review.schema.json",
+  "title": "A review's report — visual-communication capability",
+  "description": "Formal shape of the document `graphic-design-reviewer` opens its report with, one for each reading of a piece (DEC-070 point 5; DEC-015 point 7): its findings, each with the labels and marks the review alone gives it, what it read before writing them and after, and the full name of the model it ran on. It holds no grade, no bar and no verdict, since the review informs the person's ship call with its findings and nothing it reports passes or fails a piece (DEC-070 point 1). It holds no number a rule's text does not give, and no look of a piece. The reviewer writes its report as its reply; whoever dispatched it keeps the report whole, as written, in the clone's local folder, as `reading-<n>.md`, `<n>` counting the piece's readings from 1. Document-shaped schema. Companion per COR-018.",
+  "type": "object",
+  "required": [
+    "pkit_schema",
+    "schema_version",
+    "piece",
+    "model",
+    "read-before-findings",
+    "findings"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "pkit_schema": {
+      "description": "The schema that binds this file (COR-023; DEC-002 point 3): `visual-communication:review`.",
+      "const": "visual-communication:review"
+    },
+    "schema_version": {
+      "description": "The format number, shared by every schema of the capability (DEC-003 point 1).",
+      "type": "integer",
+      "const": 1
+    },
+    "pkit": {
+      "$ref": "#/$defs/container"
+    },
+    "piece": {
+      "description": "The piece the review read, by its name.",
+      "$ref": "defs.schema.json#/$defs/name"
+    },
+    "lock": {
+      "description": "The lock the images were drawn under, as the frames name it. Absent where the images were handed over without one.",
+      "$ref": "defs.schema.json#/$defs/lock"
+    },
+    "model": {
+      "description": "The model the review ran on (DEC-070 point 5).",
+      "type": "object",
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "pkit": {
+          "$ref": "#/$defs/container"
+        },
+        "name": {
+          "description": "The model's full name, as the harness gives it, never an alias that moves to a newer model.",
+          "$ref": "defs.schema.json#/$defs/text"
+        },
+        "effort": {
+          "description": "The effort the review ran at, where the harness has one. Absent where it has none.",
+          "$ref": "defs.schema.json#/$defs/text"
+        }
+      }
+    },
+    "read-before-findings": {
+      "description": "What the review had read when it wrote its findings (DEC-070 point 5). The brief's file and its report of an earlier reading belong in `read-after-findings` alone: one listed here is a breach of the order, and shows.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/read"
+      },
+      "minItems": 1
+    },
+    "read-after-findings": {
+      "description": "What the review read once its findings were written: the brief's file, and its report of the reading before, as it was written (DEC-070 point 5).",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/read"
+      }
+    },
+    "findings": {
+      "description": "Each finding of the review, with its labels and marks (DEC-070 point 5). One observation that fails the words of several rules is one finding that cites each (DEC-070 point 1). Empty where the review found nothing in what it read.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/finding"
+      }
+    }
+  },
+  "$defs": {
+    "container": {
+      "description": "The methodology's container (COR-053 point 10), which the capability never reads.",
+      "type": "object"
+    },
+    "rule-id": {
+      "description": "A rule's id, as the rule-set file that holds it gives it, such as `RS-COMM-001`.",
+      "type": "string",
+      "pattern": "^RS-[A-Z][A-Z0-9]*-(?:[0-9]{3}|[1-9][0-9]{3,})$"
+    },
+    "citation": {
+      "description": "One rule a finding cites, by its id, and on a rule finding its label. A rule finding that cites several rules gives each its own label (DEC-070 point 5).",
+      "type": "object",
+      "required": [
+        "rule"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "pkit": {
+          "$ref": "#/$defs/container"
+        },
+        "rule": {
+          "$ref": "#/$defs/rule-id"
+        },
+        "label": {
+          "description": "On a rule finding alone, whether or not its rule binds: `settled` where the rule's text settles the break with no reading left to choose, `for-a-person` where judging it needs a reading the rule's text does not settle, or a fact the rule does not name (DEC-070 point 5; DEC-030 point 6).",
+          "enum": [
+            "settled",
+            "for-a-person"
+          ]
+        }
+      }
+    },
+    "place": {
+      "description": "What a finding is of: a page, by the id the page carries in the content, or the piece as a whole. Exactly one of `page` and `piece`.",
+      "type": "object",
+      "oneOf": [
+        {
+          "required": [
+            "page"
+          ],
+          "not": {
+            "required": [
+              "piece"
+            ]
+          }
+        },
+        {
+          "required": [
+            "piece"
+          ],
+          "not": {
+            "required": [
+              "page"
+            ]
+          }
+        }
+      ],
+      "properties": {
+        "page": {
+          "description": "The page the finding is of, by its id.",
+          "$ref": "defs.schema.json#/$defs/id"
+        },
+        "piece": {
+          "description": "True where the finding is of the piece as a whole, as for a rule that judges the pages together.",
+          "const": true
+        }
+      }
+    },
+    "read": {
+      "description": "One thing the review read, by its kind, and what exactly.",
+      "type": "object",
+      "required": [
+        "kind",
+        "what"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "pkit": {
+          "$ref": "#/$defs/container"
+        },
+        "kind": {
+          "description": "What kind of thing it is. `intent` is the brief's goals, relations and takeaways a command hands the review, without their reasons. `brief-file` is the brief's file, and `earlier-reports` the review's report of an earlier reading.",
+          "enum": [
+            "images",
+            "frames",
+            "report",
+            "piece",
+            "brand",
+            "intent",
+            "rule-sets",
+            "design-knowledge",
+            "sources",
+            "brief-file",
+            "earlier-reports"
+          ]
+        },
+        "what": {
+          "description": "What was read, in words: the files, or that nothing of the kind was handed.",
+          "$ref": "defs.schema.json#/$defs/text"
+        }
+      }
+    },
+    "mark": {
+      "description": "A mark the review alone sets on a fault, a rule finding or a brief finding, where no fix the designer may make would clear it (DEC-070 point 5). A note takes none. The designer marks nothing, and the round mends no marked finding.",
+      "type": "object",
+      "required": [
+        "kind",
+        "names"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "pkit": {
+          "$ref": "#/$defs/container"
+        },
+        "kind": {
+          "description": "`need`: only a tool the engine lacks would clear the finding. `asker`: only the asker's words would clear it.",
+          "enum": [
+            "need",
+            "asker"
+          ]
+        },
+        "names": {
+          "description": "For a need, the tool, and what the design needs of it. For the asker's, the words.",
+          "$ref": "defs.schema.json#/$defs/text"
+        }
+      }
+    },
+    "finding": {
+      "description": "One finding, of one of four kinds (DEC-030 point 6), on a page or the piece, with its evidence (DEC-070 point 5). A rule finding cites each rule whose words it fails, each with its label. A fault cites the rule whose words name its defect, where one does, with no label. A fault and a rule finding say whether they are a thing a reader cannot make out; a brief finding and a note are never one, cite no rule and carry no label, and a note takes no mark.",
+      "type": "object",
+      "required": [
+        "kind",
+        "on",
+        "evidence"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "pkit": {
+          "$ref": "#/$defs/container"
+        },
+        "kind": {
+          "description": "`fault`: one of the reviewer's list of faults, an error of drawing and never a judgement of design. `rule`: a rule finding, which cites a rule by its id. `brief`: a brief finding, which rests on a part of the piece's brief. `note`: a matter of taste, or a doubt the review cannot settle, which never fails (DEC-030 point 6).",
+          "enum": [
+            "fault",
+            "rule",
+            "brief",
+            "note"
+          ]
+        },
+        "on": {
+          "$ref": "#/$defs/place"
+        },
+        "rules": {
+          "description": "The rules the finding cites: on a rule finding, each rule whose words the observation fails, one at least, each with its label (DEC-070 point 1); on a fault, the rule whose words name the defect, where one does (DEC-030 point 6).",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/citation"
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "reader-cannot-make-out": {
+          "description": "On a fault and a rule finding: whether it is a thing its reader cannot make out where the piece is shown, such as a difference told by colour alone, or a text or another part that cannot be read or seen there. Told by what its reader loses, never by its rule alone (DEC-070 points 3 and 5).",
+          "type": "boolean"
+        },
+        "mark": {
+          "$ref": "#/$defs/mark"
+        },
+        "evidence": {
+          "description": "What the drawn page, or the pages, show that gives the finding, in a line.",
+          "$ref": "defs.schema.json#/$defs/text"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "rule"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "required": [
+              "rules"
+            ],
+            "properties": {
+              "rules": {
+                "items": {
+                  "required": [
+                    "label"
+                  ]
+                }
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "rules": {
+                "items": {
+                  "not": {
+                    "required": [
+                      "label"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "enum": [
+                  "fault",
+                  "rule"
+                ]
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "required": [
+              "reader-cannot-make-out"
+            ]
+          },
+          "else": {
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "rules"
+                  ]
+                },
+                {
+                  "required": [
+                    "reader-cannot-make-out"
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "note"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "not": {
+              "required": [
+                "mark"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  }
+}

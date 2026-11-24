@@ -327,11 +327,11 @@ two entries for it.
 
 ### Authoring a changeset
 
-Contributors use **changie** — a dev-only tool provisioned through `mise`
-(`[tools]` in `mise.toml`) and wrapped by `mise run changeset`:
+A contributor writes a changeset by hand, or with **changie**, a dev-only tool
+installed however they choose:
 
 ```
-mise run changeset        # or: changie new
+changie new
 ```
 
 changie's native `component` / `kind` / `body` fields are exactly the schema
@@ -339,8 +339,8 @@ above, and its `fragmentFileFormat` (`.changie.yaml`) names files
 `<component>-<kind>-<timestamp>-<random>.yaml` — the random suffix makes
 **parallel PRs collision-free**. Its `custom:` prompts write the optional
 `category`, `pr` and `requires_backbone` fields (the last a free string —
-`release` or a shipped `X.Y.Z` — which the lint checks). A changeset is equally
-hand-writable: drop a YAML file with the three keys into `.changes/unreleased/`.
+`release` or a shipped `X.Y.Z` — which the lint checks). To write one by hand,
+drop a YAML file with the three keys into `.changes/unreleased/`.
 
 ### changie is adopter-invisible
 
@@ -591,10 +591,10 @@ a lower bound; that moves only on declaration (the floor raise, below):
   backbone (`.pkit/VERSION`) — the version the author is releasing under and
   tested against. Releasing a capability under backbone X asserts compatibility
   with X, so its declared range comes to include X. This is #494's author-side
-  auto-broaden, closing the gap [COR-041](../decisions/core/COR-041-external-source-distribution.md)
-  and [ADR-040](../../tech-docs/architecture/decisions/ADR-040-external-source-write-path.md)
-  flagged: the author owns an externally-sourced capability's compatibility
-  claim, and this keeps it current on release rather than by hand.
+  auto-broaden, the follow-up [COR-041](../decisions/core/COR-041-external-source-distribution.md)
+  names and [ADR-040](../../tech-docs/architecture/decisions/ADR-040-external-source-write-path.md)
+  point 5 relies on: the author owns an externally-sourced capability's
+  compatibility claim, and this keeps it current on release rather than by hand.
 
 The broaden is **keyed on "a component moved under backbone X"**, not on being
 project-kit — so it fires the same way in an adopter's own repo releasing its
@@ -1109,8 +1109,19 @@ into it (COR-014). Instead the release flow owns its own merge verb, beside the
   - **dropped** by the queue — its checks failed on the merge it was about
     to make, or it no longer merged cleanly — exit 3, with what the queue
     reported; nothing is deleted. Fix it and run again;
-  - **head moved** after the checks were read — the PR is taken out of the
-    queue, so commits nobody checked do not merge; exit 3, nothing deleted.
+  - **head moved** after the checks were read, while the run waits — the PR
+    is taken out of the queue; exit 3, nothing deleted. Taking it out races
+    the queue, so commits nobody checked may merge, and which way it goes
+    turns on timing. Where taking it out finds the PR merged, the run says
+    at which head and exits 3, and a re-run deletes the head branch; where
+    it cannot tell whether the PR is out, it says how to take it out by
+    hand. Where the run's first reading at the new head already shows the
+    PR merged, that is a merge as above, exit 0, warned about as "Merges"
+    above says. Once a run has exited 4, nothing takes the PR out on a
+    push, and the queue may merge the later head. A release merged at a
+    later head is tagged as any other ("Does not tag" below), though the
+    run read only the earlier head's checks. Whether such a release is
+    tagged before a person has looked at it is open (#3357).
 
   Without a queue the merge is direct, pinned to the checked head; if GitHub
   then reports the PR queued rather than merged (a queue switched on
@@ -1134,9 +1145,7 @@ into it (COR-014). Instead the release flow owns its own merge verb, beside the
   its view answered with something that is not JSON among it — or how its
   base merges, before it asks anything says that this run asked nothing; so
   does one whose view names the head in another form than a full commit id,
-  which the landing refuses before it reads. When the head moved while the PR was queued and the queue merged
-  it before it could be taken out, the run says it merged, and at which head,
-  exit 3, nothing deleted; a re-run deletes the head branch.
+  which the landing refuses before it reads.
 - **Does not tag.** `release-tag.yml` cuts the backbone tag on the resulting
   push to `main` (VERSION-driven, PRJ-004); the merge and the tag stay split.
 - **Is idempotent**: on a closed PR it reports there is nothing to merge, and
@@ -1145,6 +1154,7 @@ into it (COR-014). Instead the release flow owns its own merge verb, beside the
   project-neutral.
 
 It stays **human-gated**: a human decides to run it; nothing auto-merges.
+One exception is the queue's merge of a later head ("head moved" above).
 
 ### The queue's check — `pkit release check-queue`
 

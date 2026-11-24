@@ -21,6 +21,7 @@ pkit:
         - COR-001
         - COR-002
         - COR-003
+        - COR-030
         - COR-048
         - COR-049
         - COR-053#6
@@ -32,6 +33,7 @@ pkit:
         - ADR-064
         - ADR-065#1
         - ADR-065#4
+        - ADR-065#6
         - ADR-089#6
         - ADR-089#7
         - ADR-092#7
@@ -303,7 +305,7 @@ A project whose version pin names 1.150.0 runs each command under `uvx` at 1.150
 **Relations:**
 
 - In a checkout of the methodology's source repository, it runs that checkout's own code ([ADR-039 point 1](../../../architecture/decisions/ADR-039-pkit-entry-point-router.md#1-source-checkout--exec-the-in-tree-dispatcher)).
-- Where the project's version pin names another version than the installed CLI's, it runs the command at the pinned release ([ADR-039 point 2](../../../architecture/decisions/ADR-039-pkit-entry-point-router.md#2-project-pins-a-version--me--re-exec-uvx-project-kitpin)).
+- Where the project's version pin names another version than the installed CLI's, it runs the command at the pinned release ([ADR-039 point 2](../../../architecture/decisions/ADR-039-pkit-entry-point-router.md#2-project-pins-a-version--me--re-exec-pkit-at-the-pin-through-uvx)).
 - Where the project names no version pin, or one that matches, it runs the installed CLI ([ADR-039 point 3](../../../architecture/decisions/ADR-039-pkit-entry-point-router.md#3-match-or-no-pin--run-self)).
 
 **States:** None.
@@ -342,6 +344,7 @@ Validation checks a [project](../glossary.md#term-project--project)'s state agai
 - It rejects a mandatory mark that a connection carries with no reason (COR-053 point 6).
 - It reports a connection that ties to no [connection point](../glossary.md#term-connection-point--connection-point) (COR-053 point 6).
 - It rejects two mandatory connections facing each other, which form a cycle (COR-053 point 6).
+- It reports a pair out of [range](../glossary.md#term-range--range) neither side of which moves, such as one an earlier `--force` left ([COR-030](../../../../.pkit/decisions/core/COR-030-capability-dependencies.md), [ADR-065 point 6](../../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#6-a-transition-settles-its-collisions-and-its-dependency-gates-before-it-writes)).
 
 ## Validator
 

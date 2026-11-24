@@ -70,6 +70,7 @@ if TYPE_CHECKING:
     from ruamel.yaml.comments import CommentedMap
 
     from project_kit import (
+        acting_account,
         agent_runs,
         default_branch,
         friction_check,
@@ -92,6 +93,7 @@ if TYPE_CHECKING:
     from project_kit.changesets import Changeset
     from project_kit.decisions import stamp_decision
     from project_kit.loaded_rules import SetReading
+    from project_kit.manifest import CapabilityPin
     from project_kit.merge import run_merge
     from project_kit.migrations import refuse_inside_migration
     from project_kit.process import ProcessEngine
@@ -113,6 +115,7 @@ if TYPE_CHECKING:
         refuse_final_release_tag,
         release_summary,
     )
+    from project_kit.report import RedactionFinding
     from project_kit.scaffolds import (
         AreaVariant,
         MigrationScope,
@@ -152,6 +155,7 @@ if TYPE_CHECKING:
         untag_version,
     )
 else:
+    acting_account = _OnFirstUse("project_kit.acting_account")
     agent_runs = _OnFirstUse("project_kit.agent_runs")
     default_branch = _OnFirstUse("project_kit.default_branch")
     friction_check = _OnFirstUse("project_kit.friction_check")
@@ -1900,6 +1904,122 @@ def _echo_graph(
             ),
             nl=False,
         )
+
+
+# --- the acting account (per ADR-094) ----------------------------------
+
+
+@main.group("account")
+def account() -> None:
+    """The account on the hosting service the credential acts as, and the one
+    spelling accounts are compared in (ADR-094).
+
+    `read` asks GitHub, through `gh`, which account the credential acts as.
+    `spell` and `compare` read a JSON request on standard input and ask GitHub
+    nothing. `--json` writes each document as one line of JSON, which is how a
+    capability's script calls them; without it, each prints lines for people.
+    Reference: `.pkit/cli/README.md`, "Account commands".
+    """
+
+
+def _account_json_option(command: Callable[..., None]) -> Callable[..., None]:
+    return click.option(
+        "--json",
+        "as_json",
+        is_flag=True,
+        default=False,
+        help="Write the document as one line of JSON.",
+    )(command)
+
+
+@account.command("read")
+@_account_json_option
+def account_read(as_json: bool) -> None:
+    """Which account the credential acts as, as GitHub answers it.
+
+    Names an account only from GitHub's answer, a user's by its login and a
+    bot's with its `[bot]` suffix; otherwise says why it names none. Read-only.
+    Exit 0 whenever it read; the document says what it found.
+    """
+    import json
+
+    reading = acting_account.read()
+    if as_json:
+        click.echo(json.dumps(reading.document(), sort_keys=True))
+    elif reading.named:
+        click.echo(f"The credential acts as {acting_account.kind_phrase(reading)}.")
+    elif reading.unnamed:
+        click.echo(
+            "The credential names no user's account, and pkit cannot name the account it "
+            f"acts as: {reading.because()}."
+        )
+    else:
+        click.echo(f"pkit cannot tell which account is acting: {reading.because()}.")
+
+
+def _account_request(run: Callable[[object], dict[str, Any]]) -> dict[str, Any]:
+    """Read a JSON request on standard input and answer it with `run`. A request
+    it refuses prints no document and exits 1, saying why."""
+    import json
+
+    text = click.get_text_stream("stdin").read()
+    try:
+        request: object = json.loads(text)
+    except (json.JSONDecodeError, ValueError) as exc:
+        raise click.ClickException(f"the request on standard input is no JSON: {exc}") from exc
+    try:
+        return run(request)
+    except acting_account.FormError as exc:
+        raise click.ClickException(f"refused: {exc}") from exc
+
+
+def _spelled_line(account: Mapping[str, Any]) -> str:
+    """One account of a spell or compare document, for people."""
+    if account["account"] is None:
+        return f"{account['login']!r}: no spelling ({account['reason']})"
+    return f"{account['login']!r}: {account['account']} ({account['kind']})"
+
+
+@account.command("spell")
+@_account_json_option
+def account_spell(as_json: bool) -> None:
+    """Put each account a JSON request names into the one spelling.
+
+    Reads `{"accounts": [<account>, ...]}` on standard input, each account an
+    object with its `form` and `login`. Asks GitHub nothing. Exit 1, with no
+    document, on a request it refuses, a form it does not know among it.
+    """
+    import json
+
+    document = _account_request(acting_account.spell_document)
+    if as_json:
+        click.echo(json.dumps(document, sort_keys=True))
+        return
+    for spelled in document["accounts"]:
+        click.echo(_spelled_line(spelled))
+
+
+@account.command("compare")
+@_account_json_option
+def account_compare(as_json: bool) -> None:
+    """Answer whether accounts are one, two, or cannot be told apart.
+
+    Reads `{"pairs": [[<account>, <account>], ...], "folds": [{"account":
+    <account>, "among": [<account>, ...]}, ...]}` on standard input. Asks
+    GitHub nothing. Exit 1, with no document, on a request it refuses.
+    """
+    import json
+
+    document = _account_request(acting_account.compare_document)
+    if as_json:
+        click.echo(json.dumps(document, sort_keys=True))
+        return
+    for pair in document["pairs"]:
+        left, right = pair["accounts"]
+        click.echo(f"{pair['answer']}: {left['login']!r} and {right['login']!r}")
+    for question in document["folds"]:
+        among = ", ".join(repr(entry["account"]["login"]) for entry in question["among"])
+        click.echo(f"{question['answer']}: {question['account']['login']!r} among {among}")
 
 
 @main.group("connections")
@@ -4192,6 +4312,7 @@ def _run_report_list(*, tree: bool = False) -> None:
         list_my_reports,
         list_my_reports_tree,
         local_reported_notes,
+        posting_account,
     )
 
     if not gh_authenticated():
@@ -4200,6 +4321,12 @@ def _run_report_list(*, tree: bool = False) -> None:
             f"    https://github.com/{REPORT_TARGET}/issues?q=is%3Aissue+author%3A%40me"
         )
         return
+    # Whose reports: the acting account, or none named (ADR-094 point 6).
+    reading = posting_account()
+    if reading.account is None:
+        raise click.ClickException(
+            f"pkit cannot tell whose reports to list: {reading.because()}. Nothing was listed."
+        )
 
     # The one-tracking-truth cross-tag (#664): a row whose issue a local
     # reported/ note references is tagged [note: <slug>] — derived live,
@@ -4210,7 +4337,7 @@ def _run_report_list(*, tree: bool = False) -> None:
     notes = local_reported_notes(target_root, REPORT_TARGET) if target_root else {}
 
     if tree:
-        rows = list_my_reports_tree(REPORT_TARGET, target_root)
+        rows = list_my_reports_tree(REPORT_TARGET, target_root, account=reading.account)
         if rows is None:
             raise click.ClickException("could not read your reports (gh error).")
         if not rows:
@@ -4223,7 +4350,7 @@ def _run_report_list(*, tree: bool = False) -> None:
                 click.echo(f"      └ {_tracked_fix_row(n, fix)}")
         return
 
-    reports = list_my_reports(REPORT_TARGET, target_root)
+    reports = list_my_reports(REPORT_TARGET, target_root, account=reading.account)
     if reports is None:
         raise click.ClickException("could not read your reports (gh error).")
     if not reports:
@@ -4527,8 +4654,10 @@ def _run_report(
     """Reporter path (#662 realization of ADR-047). The **API post is
     primary**: with `gh` authenticated, the full payload (body + any overflow
     comment) is shown once, the confirm names the target AND the posting
-    identity ("posts as @<gh login> to <owner/repo>"), and only then does the
-    `gh` post run — the note travels as the issue body, never URL-embedded.
+    identity ("posts as @<account> to <owner/repo>", the account the acting-account
+    reading names, ADR-094 point 6), and only then does the `gh` post run — the
+    note travels as the issue body, never URL-embedded. Where the reading names
+    no account, nothing posts: the payload is kept as a draft, saying why.
 
     The prefilled-URL form survives only where it is honest: no `gh` auth, or
     an explicit `--url`/`--open` — and only within `URL_BUDGET` (over it the
@@ -4566,9 +4695,9 @@ def _run_report(
         attach_note,
         build_new_issue_url,
         compose_report,
-        current_login,
         gh_authenticated,
         lint_redaction,
+        posting_account,
         render_finding,
         stage_report,
     )
@@ -4613,7 +4742,7 @@ def _run_report(
         raise click.ClickException(str(exc)) from exc
 
     payload = SendPayload(body)
-    findings: list = []
+    findings: list[RedactionFinding] = []
     note_path: Path | None = None
     if scratchpad_note:
         note_path = scratchpads.resolve_note(target_root, scratchpad_note)
@@ -4670,12 +4799,29 @@ def _run_report(
         return
 
     # API-primary gated path: gh authenticated; asked at a terminal, refused off one.
+    # It posts only as an account it can name, and otherwise keeps the draft
+    # (ADR-094 point 6).
+    reading = posting_account()
+    if reading.account is None:
+        draft = stage_report(
+            target_root,
+            kind=kind,
+            title=title,
+            payload=payload,
+            findings=findings,
+            note_path=note_path,
+            project=project,
+            workstream=ws,
+        )
+        click.echo(_unnamed_post_message(reading, draft.draft_id))
+        _echo_stage_location(project_root, target_root)
+        return
     if findings and not _confirm_past_redaction_findings(
         [render_finding(f) for f in findings], refusal=_POST_REFUSAL
     ):
         click.echo("Not posted — edit the note and re-run.")
         return
-    if _confirm_send_payload(kind, payload, current_login(), refusal=_POST_REFUSAL):
+    if _confirm_send_payload(kind, payload, reading, refusal=_POST_REFUSAL):
         outcome = _post_confirmed_payload(
             target_root,
             kind=kind,
@@ -4781,23 +4927,39 @@ _POST_REFUSAL = (
 )
 
 
-def _confirm_send_payload(kind: str, payload, login: str | None, *, refusal: str) -> bool:
+def _unnamed_post_message(reading: acting_account.Reading, draft_id: str) -> str:
+    """What a send says where the acting account is not named (ADR-094 point
+    6): nothing was posted, why, and the two ways the kept draft still goes."""
+    return (
+        f"Not posted: pkit cannot tell which account it would post as: {reading.because()}.\n"
+        f"Kept as a draft: pkit report submit {draft_id}\n"
+        "Submit it once `pkit account read` names the account, or file it through the "
+        "prefilled form (`--url`), which the browser's signed-in account authors."
+    )
+
+
+def _confirm_send_payload(
+    kind: str, payload, reading: acting_account.Reading, *, refusal: str
+) -> bool:
     """Show the FULL send payload (body + any overflow comment) once and
-    confirm it as a single gesture, naming both the target and the posting
-    identity (#662 — the identity is surfaced so a CLI-vs-browser split can
-    never misattribute an API post). Off a terminal `refusal` is raised and no
+    confirm it as a single gesture, naming both the target and the account it
+    posts as, the acting account `reading` names, said to be a bot's where it
+    is one (#662 — the account is surfaced so a CLI-vs-browser split can never
+    misattribute an API post; ADR-094 point 6). The caller asks only where
+    `reading` names an account. Off a terminal `refusal` is raised and no
     answer is read (#2003)."""
+    from project_kit.acting_account import kind_phrase
     from project_kit.project_config import confirm_at_terminal
     from project_kit.report import REPORT_TARGET
 
-    who = f"@{login}" if login else "your gh CLI identity (login unresolved)"
+    who = kind_phrase(reading)
     click.echo(
         "tip: the paired `report-author` skill guides composing (COR-005) — "
         "hand-running the verbs skips that help.\n"
     )
     click.echo(
-        f"This posts a PUBLIC {kind} issue to {REPORT_TARGET} as {who} — your "
-        "gh CLI identity — with this body:\n"
+        f"This posts a PUBLIC {kind} issue to {REPORT_TARGET} as {who} — the account "
+        "gh's credential acts as — with this body:\n"
     )
     click.echo(payload.body)
     if payload.overflow_comment is not None:
@@ -4807,7 +4969,7 @@ def _confirm_send_payload(kind: str, payload, login: str | None, *, refusal: str
             "send, per ADR-047):\n"
         )
         click.echo(payload.overflow_comment)
-    return confirm_at_terminal(f"\nPost as {who} to {REPORT_TARGET}?", refusal=refusal)
+    return confirm_at_terminal(f"\nPost as @{reading.account} to {REPORT_TARGET}?", refusal=refusal)
 
 
 def _post_confirmed_payload(
@@ -5219,11 +5381,11 @@ def report_submit(draft_id: str | None, assume_yes: bool) -> None:
     not lost, it is simply invisible from this one (#693).
     """
     from project_kit.report import (
-        current_login,
         drafts_dir,
         gh_authenticated,
         list_staged,
         load_staged,
+        posting_account,
     )
 
     project_root = find_target_root()
@@ -5259,6 +5421,13 @@ def report_submit(draft_id: str | None, assume_yes: bool) -> None:
         )
     if not gh_authenticated():
         raise click.ClickException("submit posts via gh — authenticate first (`gh auth login`).")
+    reading = posting_account()
+    if reading.account is None:
+        raise click.ClickException(
+            f"not posted — draft kept ({draft.draft_id}): pkit cannot tell which account it "
+            f"would post as: {reading.because()}. Submit it once `pkit account read` names "
+            "the account."
+        )
     note_path = (target_root / draft.note) if draft.note else None
     if note_path is not None and note_path.is_file():
         # The note may have changed since it was staged (#2923); the draft is kept.
@@ -5279,7 +5448,7 @@ def report_submit(draft_id: str | None, assume_yes: bool) -> None:
     ):
         click.echo("Not posted — draft kept; edit the source note and restage.")
         return
-    if not _confirm_send_payload(draft.kind, draft.payload, current_login(), refusal=refusal):
+    if not _confirm_send_payload(draft.kind, draft.payload, reading, refusal=refusal):
         click.echo(f"\nNot posted — draft kept ({draft.draft_id}).")
         return
     outcome = _post_confirmed_payload(
@@ -5498,7 +5667,7 @@ def pin(version: str | None, force: bool) -> None:
     `withdrawn/v<candidate>` marks, is warned of, and the pin goes on (ADR-092
     point 4).
 
-    Once the directive exists, the pkit router re-execs `uvx project-kit@<pin>` so
+    Once the directive exists, the pkit router re-execs `uvx --from …@v<pin> pkit` so
     the pinned version serves every command; a global-tool upgrade no longer moves
     this project. Raise the pin later with `pkit upgrade`; remove it with
     `pkit unpin`.
@@ -5746,9 +5915,15 @@ def upgrade_capability_cmd(name: str, interactive: bool, force: bool, dry_run: b
     # "no longer ships" and steer the adopter toward the destructive uninstall).
     # "Upgrade" for it means re-applying deploy from the in-repo tree, mirroring
     # the sync skip-branch.
-    if caps.read_capability_origin(target_root, name) == caps.INCUBATED_IN_REPO:
+    origin = caps.read_capability_origin(target_root, name)
+    if origin == caps.INCUBATED_IN_REPO:
         _upgrade_incubated_capability(target_root, source_kit, name, dry_run=dry_run)
         return
+    # An externally-sourced capability moves by its pin, never as shipped
+    # (COR-041), and moving a pin waits on #3229. Refused before the bundle is
+    # read, so a capability the bundle ships by the same name is never taken for it.
+    if origin == caps.EXTERNALLY_SOURCED:
+        _refuse_upgrading_externally_sourced(target_root, name)
     # The methodology's source run by its own code (ADR-059 point 2): the tree a
     # kit-shipped capability is refreshed from is its own subtree, so there is
     # nothing to copy and no migration to run — re-deploy it in place (#1107).
@@ -7784,6 +7959,24 @@ def _refuse_collisions_off_terminal(
 @capabilities.command("install")
 @click.argument("name")
 @click.option(
+    "--from",
+    "source_url",
+    metavar="GIT_URL",
+    default=None,
+    help="Install the capability another git repository incubates at "
+    ".pkit/capabilities/<name>/, fetched whole with your own git credentials "
+    "(COR-041, ADR-040). Pass it with --ref. Not available in this release: refused, "
+    "writing nothing, until #3349.",
+)
+@click.option(
+    "--ref",
+    metavar="TAG_OR_COMMIT",
+    default=None,
+    help="With --from: the tag, or the commit's full id, to install the capability at. "
+    "`pkit sync` keeps it there. A branch is refused: a branch pin waits on #3229. Not "
+    "available in this release: refused, writing nothing, until #3349.",
+)
+@click.option(
     "--dry-run",
     is_flag=True,
     default=False,
@@ -7809,7 +8002,13 @@ def _refuse_collisions_off_terminal(
     "dependent is still printed (COR-030).",
 )
 def install_capability_cmd(
-    name: str, dry_run: bool, plan: bool, as_json: bool, force: bool
+    name: str,
+    source_url: str | None,
+    ref: str | None,
+    dry_run: bool,
+    plan: bool,
+    as_json: bool,
+    force: bool,
 ) -> None:
     """Install a capability: copy subtree into adopter, register in manifest, re-deploy.
 
@@ -7824,11 +8023,25 @@ def install_capability_cmd(
     A capability whose rule set takes a name a project rule set declares is
     refused, naming the set and both files, and nothing is installed (COR-051
     point 3).
+
+    With --from and --ref, the capability is the one another git repository
+    incubates at `.pkit/capabilities/<name>/`, fetched whole at that tag or
+    commit with your own git credentials, and registered externally-sourced
+    with its pin (COR-041, ADR-040). It is fetched, then gated, then installed
+    or refused: a refusal writes nothing, and a source that cannot be reached
+    warns and installs nothing. A branch as a ref, and moving the pin of a
+    capability already installed, wait on #3229.
+
+    Not available in this release: until #3349, --from and --ref are refused
+    before anything is read or written, --dry-run and --plan included.
     """
     refuse_inside_migration("capabilities install")
     from project_kit import capabilities as caps
 
+    if source_url is not None or ref is not None:
+        _refuse_install_from_another_repository()
     _plan_flags(plan, as_json)
+    pin = _install_pin(source_url, ref)
 
     target_root = find_target_root()
     if target_root is None:
@@ -7837,11 +8050,12 @@ def install_capability_cmd(
         raise click.ClickException(f"{target_root}/.pkit/ does not exist. Run 'pkit init' first.")
 
     source_kit = find_source_kit()
+    command = f"capabilities install {name}{_pin_arguments(pin)}"
     # Sync's guard first (ADR-065 point 7): it stops wherever `pkit sync` stops,
     # before anything is read or written, and lets the methodology's source
     # pass. It stops `--dry-run` and `--plan` too: under another pkit, both would
     # preview the install of another release's capability, which would refuse.
-    refuse_version_mismatch(target_root, source_kit, command=f"capabilities install {name}")
+    refuse_version_mismatch(target_root, source_kit, command=command)
     # The methodology's source repository run by code that is not its own (the
     # gap, ADR-059): the install would copy the running code's capability
     # subtree into the tree it is built from. Refuse before any other pre-flight
@@ -7850,8 +8064,13 @@ def install_capability_cmd(
     refuse_propagation_into_source(
         target_root,
         source_kit,
-        command=f"capabilities install {name}",
-        would="copy the capability's subtree from that tree into the one it is built from",
+        command=command,
+        would=(
+            "copy the capability's subtree from that tree into the one it is built from"
+            if pin is None
+            else "land a fetched capability in the tree it is built from, registered by "
+            "code that is not its own"
+        ),
         own_code_does=None,
     )
 
@@ -7860,6 +8079,19 @@ def install_capability_cmd(
     # an adapter holds, which no capability may share.
     caps.refuse_reserved_capability_name(name)
     caps.refuse_name_held_by_other_kind(target_root, "capability", name)
+
+    if pin is not None:
+        _install_externally_sourced(
+            target_root,
+            source_kit,
+            name,
+            pin,
+            dry_run=dry_run,
+            plan=plan,
+            as_json=as_json,
+            force=force,
+        )
+        return
 
     capability_source = caps.find_capability_in_source(source_kit, name)
     if capability_source is None:
@@ -7875,13 +8107,231 @@ def install_capability_cmd(
             f"Use `pkit capabilities upgrade {name}` to refresh."
         )
 
+    _install_from(
+        target_root,
+        source_kit,
+        capability_source,
+        None,
+        dry_run=dry_run,
+        plan=plan,
+        as_json=as_json,
+        force=force,
+    )
+
+
+def _refuse_install_from_another_repository() -> NoReturn:
+    """Refuse `--from` and `--ref` until #3349 lands (#3359).
+
+    The fetch takes the commit a pin records only while the pin's ref still
+    names it, and #3349 replaces that handling of a moved ref. So no release
+    ships an install from another repository before then. The refusal names
+    no source, which may carry a credential (ADR-040 point 2). Sync of a
+    capability already installed from another repository is not held. #3349
+    removes this refusal.
+    """
+    raise click.ClickException(
+        "installing a capability from another repository (--from, --ref) is not available "
+        "in this release. It waits on a later release, which changes how a fetch takes the "
+        "commit a pin records once the pin's ref has moved (#3349). Nothing was fetched or "
+        "written. A capability already installed from another repository is not held: "
+        "`pkit sync` keeps it at its pin as before."
+    )
+
+
+def _install_pin(source_url: str | None, ref: str | None) -> CapabilityPin | None:
+    """The pin `--from` and `--ref` name, or None for a capability the running pkit ships.
+
+    The two go together. A pin pkit does not take is refused here, before any
+    other check reads the project (`capability_fetch.refuse_pin`): a source that
+    carries a credential is never passed on, recorded or printed (ADR-040 point 2).
+    """
+    from project_kit import capability_fetch
+    from project_kit import manifest as manifest_mod
+
+    if source_url is None and ref is None:
+        return None
+    if source_url is None or ref is None:
+        raise click.UsageError(
+            "--from and --ref go together: the git source, and the tag or commit to install at."
+        )
+    pin = manifest_mod.CapabilityPin(source=source_url, ref=ref)
+    try:
+        capability_fetch.refuse_pin(pin)
+    except capability_fetch.FetchRefused as exc:
+        raise click.ClickException(f"{_sentence(exc)} Nothing was installed.") from exc
+    return pin
+
+
+def _pin_arguments(pin: CapabilityPin | None) -> str:
+    """`--from` and `--ref` as a command that re-runs the install names them."""
+    if pin is None:
+        return ""
+    return f" --from {shlex.quote(pin.source)} --ref {shlex.quote(pin.ref)}"
+
+
+def _install_externally_sourced(
+    target_root: Path,
+    source_kit: Path,
+    name: str,
+    pin: CapabilityPin,
+    *,
+    dry_run: bool,
+    plan: bool,
+    as_json: bool,
+    force: bool,
+) -> None:
+    """Install capability *name* from another git repository, at *pin* (COR-041, ADR-040).
+
+    The name is checked first, before anything is fetched: a capability of the
+    name already registered, whatever its origin, or files at its landing path
+    outside its ``project/`` tier, are reported and refused, never overwritten
+    (point 6). One already installed from this pin is refused naming `pkit
+    sync`, and one installed from another source or ref is refused naming
+    uninstall, since moving a pin waits on #3229.
+
+    Then point 4's order: the subtree is fetched whole at the pin
+    (`capability_fetch.fetched`), its ``package.yaml`` read, and the gates every
+    install runs judge it (`_install_from`), before anything is written. A
+    source that cannot be reached, a ref it does not hold or a credential it
+    refuses warns loudly and installs nothing, and the command ends without
+    failing: a fetch that fails degrades, never refuses (point 7). The staged
+    copy is removed whatever the outcome. Under `--plan --json` the lines about
+    the fetch go to standard error, so the plan alone reaches standard output.
+    The pin is recorded with the commit the fetch took (`CapabilityPin.commit`).
+    """
+    from dataclasses import replace
+
+    from project_kit import capabilities as caps
+    from project_kit import capability_fetch
+
+    _refuse_landing_held(target_root, name, pin)
+    # The methodology's source run by its own code (ADR-059 point 2): every
+    # subtree at `.pkit/capabilities/` is authored there and bundled from there,
+    # and install there copies nothing, so a fetched copy has nowhere to land.
+    if caps.authored_in_source(target_root, source_kit, name):
+        raise click.ClickException(
+            f"refusing to install {name!r} from {caps.pin_text(pin)}: this is the "
+            "methodology's source repository, where every capability at "
+            ".pkit/capabilities/ is authored and bundled from, and install copies nothing "
+            "there (ADR-059). A fetched copy would ship in its releases. Nothing was fetched "
+            "or written. Install it in a project instead."
+        )
+    shipped = caps.find_capability_in_source(source_kit, name)
+    if shipped is not None:
+        click.echo(
+            f"note: the running pkit ships a capability named {name!r} too "
+            f"(v{shipped.package.version}). This install makes {name!r} the one fetched from "
+            f"{caps.pin_text(pin)}, and neither sync nor upgrade reads the shipped one as it.",
+            err=as_json,
+        )
+    click.echo(f"Fetching capability {name!r} from {caps.pin_text(pin)}", err=as_json)
+    try:
+        with capability_fetch.fetched(pin, name) as got:
+            capability_source = caps.fetched_capability(got.path, name)
+            if capability_source is None:
+                raise click.ClickException(
+                    f"{caps.pin_text(pin)} holds .pkit/capabilities/{name}/, but no package.yaml "
+                    f"there names the capability {name!r}. Nothing was installed."
+                )
+            click.echo(
+                f"  fetched v{capability_source.package.version}, commit {got.commit}",
+                err=as_json,
+            )
+            _install_from(
+                target_root,
+                source_kit,
+                capability_source,
+                # The pin records the commit fetched, so sync follows no tag moved since.
+                replace(pin, commit=got.commit),
+                dry_run=dry_run,
+                plan=plan,
+                as_json=as_json,
+                force=force,
+            )
+    except capability_fetch.FetchRefused as exc:
+        raise click.ClickException(f"{_sentence(exc)} Nothing was installed.") from exc
+    except capability_fetch.FetchFailed as exc:
+        click.echo(
+            f"⚠ WARNING: capability {name!r} could not be fetched from {caps.pin_text(pin)}: "
+            f"{_sentence(exc)} Nothing was installed or activated (ADR-040 point 7).",
+            err=True,
+        )
+
+
+def _sentence(exc: Exception) -> str:
+    """An exception's message as one sentence, ending in a full stop."""
+    return str(exc).rstrip(".") + "."
+
+
+def _refuse_landing_held(target_root: Path, name: str, pin: CapabilityPin) -> None:
+    """Refuse an externally-sourced install whose name is held, before anything is
+    fetched (ADR-040 point 6), naming what holds it and the way on."""
+    from project_kit import capabilities as caps
+    from project_kit import capability_fetch
+
+    wanted = caps.pin_text(pin)
+    if caps.installed_capability_origins(target_root).get(name) == caps.EXTERNALLY_SOURCED:
+        recorded = caps.read_capability_pin(target_root, name)
+        # The same source and ref: the commit recorded beside them is what they named.
+        if recorded is not None and (recorded.source, recorded.ref) == (pin.source, pin.ref):
+            raise click.ClickException(
+                f"capability {name!r} is already installed from {wanted}. `pkit sync` brings "
+                "its copy to that pin."
+            )
+        installed_from = (
+            caps.pin_text(recorded)
+            if recorded is not None
+            else "a pin its manifest does not record"
+        )
+        raise click.ClickException(
+            f"capability {name!r} is already installed from {installed_from}. Moving it to "
+            f"another source or ref waits on {capability_fetch.PIN_TRANSITION_ISSUE}: uninstall "
+            f"it first (`pkit capabilities uninstall {name}`), then install it from {wanted}. "
+            "Nothing was fetched or written."
+        )
+    held = caps.landing_held(target_root, name)
+    if held is not None:
+        raise click.ClickException(
+            f"capability {name!r} cannot be installed from {wanted}: the name is held by "
+            f"{held}. A fetched capability never lands over another (ADR-040 point 6). "
+            "Nothing was fetched or written."
+        )
+
+
+def _install_from(
+    target_root: Path,
+    source_kit: Path,
+    capability_source: CapabilitySource,
+    pin: CapabilityPin | None,
+    *,
+    dry_run: bool,
+    plan: bool,
+    as_json: bool,
+    force: bool,
+) -> None:
+    """Gate, then install, *capability_source*: the tail every install runs.
+
+    The source is the running pkit's capability where *pin* is None, and one a
+    fetch staged from another repository otherwise, which is registered
+    externally-sourced with its pin. The plan, or the gates — the backbone, the
+    capability's dependencies, the ranges installed capabilities declare on it,
+    its mandatory upstreams and its rule-set names — then the collisions, the
+    copy and registration, the rule set, the write categories' defaults, the
+    deploy and the points' questions. Nothing is written before every gate has
+    passed.
+    """
+    from project_kit import capabilities as caps
+
+    name = capability_source.name
+    origin = caps.KIT_SHIPPED if pin is None else caps.EXTERNALLY_SOURCED
+
     if plan:
         # The plan runs before the gates: what the gates refuse on — the backbone
         # and dependency ranges — is among what the plan reports it needs, and a
         # range an installed capability declares on it among the findings it adds.
         from project_kit import capability_plans as plans
 
-        candidate = plans.candidate_of(capability_source, caps.KIT_SHIPPED, installed=False)
+        candidate = plans.candidate_of(capability_source, origin, installed=False)
         if candidate is None:
             raise click.ClickException(f"capability {name!r}'s package.yaml does not read.")
         install_plan = plans.plan_install(target_root, candidate)
@@ -7945,8 +8395,9 @@ def install_capability_cmd(
 
     # The methodology's source run by its own code (ADR-059 point 2): the tree the
     # capability would be copied from is its destination. Register it in place —
-    # a copy would put the tree onto itself (#1107).
-    if caps.authored_in_source(target_root, source_kit, name):
+    # a copy would put the tree onto itself (#1107). A fetched capability never
+    # gets here in the source: `_install_externally_sourced` refuses it there.
+    if pin is None and caps.authored_in_source(target_root, source_kit, name):
         _install_capability_in_source(target_root, source_kit, capability_source, dry_run=dry_run)
         return
 
@@ -7964,7 +8415,9 @@ def install_capability_cmd(
             + "\n"
         )
         _refuse_collisions_off_terminal(
-            target_root, collisions, f"pkit capabilities install {shlex.quote(name)}"
+            target_root,
+            collisions,
+            f"pkit capabilities install {shlex.quote(name)}{_pin_arguments(pin)}",
         )
         for finding in collisions:
             choice = caps.resolve_collision_interactive(target_root, finding, capability=name)
@@ -7983,6 +8436,7 @@ def install_capability_cmd(
         capability_source,
         skipped_artifacts=tuple(skipped),
         dry_run=dry_run,
+        pin=pin,
     )
     caps.apply_overrides(target_root, overridden, dry_run=dry_run)
     # An override of an agent another capability ships records the project's
@@ -8002,12 +8456,13 @@ def install_capability_cmd(
 
     verb = "Would install" if dry_run else "Installed"
     skip_note = f" ({len(skipped)} artifact(s) skipped)" if skipped else ""
+    pinned = f", externally sourced from {caps.pin_text(pin)}" if pin is not None else ""
     click.echo(
         "\n  "
         + cli_render.style(
             "strong",
             f"{verb} capability {name!r} v{capability_source.package.version} "
-            f"at {installed_path.relative_to(target_root)}/{skip_note}",
+            f"at {installed_path.relative_to(target_root)}/{pinned}{skip_note}",
         )
     )
     _create_declared_rule_set(target_root, capability_source, dry_run=dry_run)
@@ -8362,6 +8817,16 @@ def register_capability_cmd(name: str, dry_run: bool, force: bool) -> None:
                 )
             )
             return
+        # An externally-sourced copy was pulled from its pinned source, not
+        # authored here (COR-041): adopting it as incubated would cut it off
+        # from its pin. Refused, naming the way to author it here.
+        if current_origin == caps.EXTERNALLY_SOURCED:
+            raise click.ClickException(
+                f"capability {name!r} is externally sourced: its copy is pulled from its "
+                "pinned source, not authored here, so it is never registered as incubated. "
+                f"To author it here, uninstall it (`pkit capabilities uninstall {name}`) "
+                "and create it in this repository."
+            )
         # kit-shipped / unset → adopt in place: run the applicable pre-flights
         # below, then set origin on the existing entry (no re-copy, no re-deploy —
         # the subtree is already installed; this is an origin-state upgrade).
@@ -8546,6 +9011,25 @@ def _upgrade_incubated_capability(
     if not dry_run:
         _deploy_capability(target_root, source_kit, name)
     _ask_point_questions(target_root, name, dry_run=dry_run)
+
+
+def _refuse_upgrading_externally_sourced(target_root: Path, name: str) -> NoReturn:
+    """Refuse `capabilities upgrade` of an externally-sourced capability (COR-041).
+
+    It moves by its pin, never as shipped, and moving the pin waits on #3229;
+    `pkit sync` keeps its copy at the pin it has. Nothing is read or written.
+    """
+    from project_kit import capabilities as caps
+    from project_kit import capability_fetch
+
+    pin = caps.read_capability_pin(target_root, name)
+    pinned = f" from {caps.pin_text(pin)}" if pin is not None else ""
+    raise click.ClickException(
+        f"capability {name!r} is externally sourced{pinned}: it moves by its pin, never as "
+        f"shipped, and moving the pin waits on {capability_fetch.PIN_TRANSITION_ISSUE}. "
+        "`pkit sync` keeps its copy at its pin. To take another tag or commit, uninstall it "
+        f"(`pkit capabilities uninstall {name}`) and install it again with --from and --ref."
+    )
 
 
 def _upgrade_capability_in_source(
@@ -9118,6 +9602,18 @@ def uninstall_capability_cmd(
                 f"{verb} capability {name!r} from {outcome.cap_dir.relative_to(target_root)}",
             )
         )
+        # An externally-sourced copy goes, and its `project/` tier, the project's
+        # own, stays (ADR-040 point 3).
+        if origin == caps.EXTERNALLY_SOURCED and dry_run:
+            click.echo(
+                f"  (its copy from its pinned source would go; the project's own files under "
+                f"{subtree}project/ would stay.)"
+            )
+        elif outcome.project_tier_kept is not None:
+            click.echo(
+                f"  (its copy from its pinned source is gone; the project's own files stay at "
+                f"{outcome.project_tier_kept.relative_to(target_root)}/.)"
+            )
     elif outcome.in_source and not incubated:
         verb, deleted = ("Would unregister", "would be") if dry_run else ("Unregistered", "was")
         click.echo(
@@ -9176,6 +9672,7 @@ def uninstall_capability_cmd(
 def list_capabilities_cmd() -> None:
     """List capabilities available in the kit source and which are installed."""
     from project_kit import capabilities as caps
+    from project_kit.capability_fetch import shown as shown_source
 
     target_root = find_target_root()
     if target_root is None:
@@ -9211,11 +9708,19 @@ def list_capabilities_cmd() -> None:
             if n in installed
             else ""
         )
+        # An externally-sourced one's pin, beside its origin (ADR-040 point 3).
+        pin = (
+            caps.read_capability_pin(target_root, n)
+            if origins.get(n) == caps.EXTERNALLY_SOURCED
+            else None
+        )
         rows.append(
             {
                 "name": n,
                 "status": "installed" if n in installed else "",
                 "origin": origin_label,
+                "source": shown_source(pin.source) if pin is not None else "",
+                "ref": pin.ref if pin is not None else "",
             }
         )
     click.echo(
@@ -9225,9 +9730,15 @@ def list_capabilities_cmd() -> None:
                 f"{len(names)} known",
                 gloss="install with `pkit capabilities install <name>`",
             ),
-            sections=[cli_render.section(rows=rows, columns=["name", "status", "origin"])],
+            sections=[
+                cli_render.section(rows=rows, columns=["name", "status", "origin", "source", "ref"])
+            ],
             commands=[
                 ("pkit capabilities install <name>", "install a kit-shipped one into this project"),
+                (
+                    "pkit capabilities install <name> --from <git URL> --ref <tag or commit>",
+                    "install one another repository keeps",
+                ),
                 ("pkit capabilities register <name>", "register an in-repo (incubated) one"),
             ],
         ),
@@ -9933,9 +10444,10 @@ def _load_engine(address: str, subject: str | None) -> ProcessEngine:
 )
 @click.option(
     "--actor",
-    default="operator",
-    show_default=True,
-    help="Evaluate gate prechecks as this actor (cross-authority).",
+    default=None,
+    help="Evaluate gate prechecks as this actor (cross-authority), in its binding's terms. "
+    "None is taken by default: without it, a cross-authority gate whose authorisation names "
+    "its producer is shown `?`, not judged (ADR-098).",
 )
 @click.option(
     "--json",
@@ -9944,7 +10456,7 @@ def _load_engine(address: str, subject: str | None) -> ProcessEngine:
     default=False,
     help="Emit structured JSON instead of the narrative view.",
 )
-def process_status(address: str, subject: str | None, actor: str, as_json: bool) -> None:
+def process_status(address: str, subject: str | None, actor: str | None, as_json: bool) -> None:
     """Where the subject is · why · how it got here · legal moves · next hint."""
     from project_kit import process as process_mod
 
@@ -9969,11 +10481,12 @@ def process_status(address: str, subject: str | None, actor: str, as_json: bool)
 )
 @click.option(
     "--actor",
-    default="operator",
-    show_default=True,
-    help="The actor being gated (cross-authority is computed against this).",
+    default=None,
+    help="The actor being gated, in its binding's terms (cross-authority is computed against "
+    "this). None is taken by default: without it, a cross-authority gate whose authorisation "
+    "names its producer refuses, not judged (ADR-098).",
 )
-def process_can_move(address: str, to_state: str, subject: str | None, actor: str) -> None:
+def process_can_move(address: str, to_state: str, subject: str | None, actor: str | None) -> None:
     """Validate a candidate move; refuse (fail-closed) with a self-explaining reason."""
     from project_kit import process as process_mod
 
@@ -9986,33 +10499,6 @@ def process_can_move(address: str, to_state: str, subject: str | None, actor: st
     click.echo(f"  {marker} {reason}")
     if not allowed:
         raise SystemExit(1)
-
-
-def _resolve_actor_identity() -> str:
-    """Resolve the GitHub login of whoever is driving, for the `--actor` default.
-
-    The cross-authority gate (COR-033 P4) compares `--actor` against an
-    authorisation artifact's `produced_by` login, so the default must be a real
-    GitHub login — not an authorisation token. We resolve it via `gh api user`
-    rather than importing the project-management capability's membership helper:
-    the binary must not depend on a capability tree (dependency boundary).
-
-    Falls back to `"operator"` when `gh` is missing/unauthenticated, preserving
-    the prior default so the command never fails on identity resolution alone.
-    """
-    import subprocess
-
-    try:
-        result = subprocess.run(
-            ["gh", "api", "user", "-q", ".login"],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-    except (OSError, FileNotFoundError):
-        return "operator"
-    login = result.stdout.strip() if result.returncode == 0 else ""
-    return login or "operator"
 
 
 @process.command("move")
@@ -10036,9 +10522,10 @@ def _resolve_actor_identity() -> str:
 @click.option(
     "--actor",
     default=None,
-    help="The actor performing the move (recorded in the journal; gated "
-    "cross-authority). Defaults to the resolved gh login of the "
-    "current user.",
+    help="The actor performing the move, in its binding's terms (recorded in the journal; "
+    "gated cross-authority). None is taken by default: without it, a cross-authority gate "
+    "whose authorisation names its producer refuses the move, and a move through no such "
+    "gate is journaled with no actor (ADR-098).",
 )
 @click.option(
     "--reason",
@@ -10058,8 +10545,6 @@ def process_move(
     """Execute a legal move; append the journal entry. Refuses an illegal move."""
     from project_kit import process as process_mod
 
-    if actor is None:
-        actor = _resolve_actor_identity()
     engine = _load_engine(address, subject)
     try:
         result = engine.move(to_state, actor, from_state=from_state, reason=reason)

@@ -1,0 +1,6 @@
+component: doc-examples
+kind: none
+body: >
+  The README states the contract of the pages document `pkit doc-examples
+  pages --json` prints, which the run reads: each key with what it means
+  (ADR-097 point 6). Nothing a command prints changes.

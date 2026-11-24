@@ -11,6 +11,7 @@ import pytest
 
 import project_kit.cli as cli_mod
 import project_kit.report as _rep_for_pins
+from project_kit.acting_account import Reading
 from project_kit.report import (
     KINDS,
     REPORT_TARGET,
@@ -26,7 +27,6 @@ _REAL_RESOLVE_CONTEXT = cli_mod._resolve_report_context
 #: Real gh seams, captured before the autouse pins below replace them —
 #: tests exercising the real functions restore these explicitly.
 _REAL_GH_AUTHENTICATED = _rep_for_pins.gh_authenticated
-_REAL_CURRENT_LOGIN = _rep_for_pins.current_login
 _REAL_ENSURE_KIND_LABEL = _rep_for_pins.ensure_kind_label
 _REAL_LOCAL_REPORTED_NOTES = _rep_for_pins.local_reported_notes
 
@@ -41,7 +41,11 @@ def _pinned_report_context(monkeypatch):
     Tests override per-case (or restore the captured real functions)."""
     monkeypatch.setattr(cli_mod, "_resolve_report_context", lambda *a, **k: (None, None))
     monkeypatch.setattr(_rep_for_pins, "gh_authenticated", lambda: False)
-    monkeypatch.setattr(_rep_for_pins, "current_login", lambda: "tester")
+    monkeypatch.setattr(
+        _rep_for_pins,
+        "posting_account",
+        lambda: Reading(account="tester", kind="user", login="tester"),
+    )
     monkeypatch.setattr(_rep_for_pins, "ensure_kind_label", lambda *a, **k: True)
     # Pin the local reported-note cross-tag read (#664) to empty so list
     # rendering never depends on this checkout's own scratchpad state; the
@@ -441,7 +445,7 @@ def test_list_my_reports_filters_to_members_and_sorts(monkeypatch) -> None:
         return issues
 
     monkeypatch.setattr(rep, "_gh_json", fake)
-    reports = rep.list_my_reports("o/r")
+    reports = rep.list_my_reports("o/r", account="tester")
     assert reports is not None
     assert [r.number for r in reports] == [3, 1]  # #2 dropped; newest-first
     assert reports[0].state == "closed" and reports[0].kind == "feedback"
@@ -504,7 +508,7 @@ def test_list_my_reports_excludes_ordinary_prefix_titled_issues(monkeypatch) -> 
         },
     ]
     monkeypatch.setattr(rep, "_gh_json", lambda args: issues)
-    reports = rep.list_my_reports("o/r")
+    reports = rep.list_my_reports("o/r", account="tester")
     assert reports is not None
     assert [r.number for r in reports] == [32, 33]  # the pm issues stay OUT
     assert reports[0].kind == "bug" and reports[1].kind == "feedback"
@@ -535,7 +539,7 @@ def test_list_my_reports_unions_locally_reported(tmp_path: Path, monkeypatch) ->
         return None  # #999 unfetchable
 
     monkeypatch.setattr(rep, "_gh_json", fake)
-    reports = rep.list_my_reports("o/r", tmp_path)
+    reports = rep.list_my_reports("o/r", tmp_path, account="tester")
     assert reports is not None
     assert [r.number for r in reports] == [660]
     assert reports[0].kind == "feedback"  # prefix classifies the member
@@ -543,7 +547,6 @@ def test_list_my_reports_unions_locally_reported(tmp_path: Path, monkeypatch) ->
 
 
 def test_list_my_reports_includes_attributed(monkeypatch) -> None:
-    monkeypatch.setattr(rep, "current_login", _REAL_CURRENT_LOGIN)
 
     def fake(args):
         if args[:3] == ["gh", "api", "user"]:
@@ -573,7 +576,7 @@ def test_list_my_reports_includes_attributed(monkeypatch) -> None:
         return None
 
     monkeypatch.setattr(rep, "_gh_json", fake)
-    reports = rep.list_my_reports("o/r")
+    reports = rep.list_my_reports("o/r", account="mike")
     assert reports is not None
     assert [r.number for r in reports] == [9, 1]  # newest first
     assert next(r for r in reports if r.number == 9).attributed is True
@@ -582,7 +585,6 @@ def test_list_my_reports_includes_attributed(monkeypatch) -> None:
 
 def test_list_my_reports_authored_wins_over_attributed(monkeypatch) -> None:
     # an issue both authored and self-attributed should render as authored.
-    monkeypatch.setattr(rep, "current_login", _REAL_CURRENT_LOGIN)
 
     def fake(args):
         if args[:3] == ["gh", "api", "user"]:
@@ -597,7 +599,7 @@ def test_list_my_reports_authored_wins_over_attributed(monkeypatch) -> None:
         return [issue]  # both --author and --search return it
 
     monkeypatch.setattr(rep, "_gh_json", fake)
-    reports = rep.list_my_reports("o/r")
+    reports = rep.list_my_reports("o/r", account="mike")
     assert reports is not None
     assert [r.number for r in reports] == [5]
     assert reports[0].attributed is False  # authored wins the de-dup
@@ -608,7 +610,7 @@ def test_cli_report_list_marks_attributed(monkeypatch) -> None:
     monkeypatch.setattr(
         rep,
         "list_my_reports",
-        lambda t, root=None: [
+        lambda t, root=None, **k: [
             rep.ReportSummary(9, "for mike", "feedback", "open", "2026-08-05", attributed=True)
         ],
     )
@@ -619,7 +621,7 @@ def test_cli_report_list_marks_attributed(monkeypatch) -> None:
 
 def test_list_my_reports_gh_failure_returns_none(monkeypatch) -> None:
     monkeypatch.setattr(rep, "_gh_json", lambda args: None)
-    assert rep.list_my_reports("o/r") is None
+    assert rep.list_my_reports("o/r", account="tester") is None
 
 
 def test_show_report_resolves_tracked_by(monkeypatch) -> None:
@@ -659,7 +661,7 @@ def test_cli_report_list(monkeypatch) -> None:
     monkeypatch.setattr(
         rep,
         "list_my_reports",
-        lambda target, root=None: [
+        lambda target, root=None, **k: [
             rep.ReportSummary(
                 1,
                 "a bug",
@@ -684,7 +686,7 @@ def test_cli_report_list_without_url_degrades_to_bare_row(monkeypatch) -> None:
     monkeypatch.setattr(
         rep,
         "list_my_reports",
-        lambda target, root=None: [rep.ReportSummary(1, "a bug", "bug", "open", "2026-08-01")],
+        lambda target, root=None, **k: [rep.ReportSummary(1, "a bug", "bug", "open", "2026-08-01")],
     )
     res = CliRunner().invoke(main, ["report"])
     assert res.exit_code == 0
@@ -715,7 +717,7 @@ def test_list_my_reports_tree_pairs_each_with_tracked(monkeypatch) -> None:
         return None
 
     monkeypatch.setattr(rep, "_gh_json", fake_gh_json)
-    rows = rep.list_my_reports_tree("o/r")
+    rows = rep.list_my_reports_tree("o/r", account="tester")
     assert rows is not None
     assert len(rows) == 1
     summary, tracked = rows[0]
@@ -760,7 +762,7 @@ def test_list_my_reports_tree_excludes_and_unions_like_flat(tmp_path: Path, monk
         return None
 
     monkeypatch.setattr(rep, "_gh_json", fake_gh_json)
-    rows = rep.list_my_reports_tree("o/r", tmp_path)
+    rows = rep.list_my_reports_tree("o/r", tmp_path, account="tester")
     assert rows is not None
     assert [(s.number, s.kind) for s, _ in rows] == [(660, "feedback")]
     assert rows[0][1] == {7: rep.TrackedFix("closed", "the fix", "https://github.com/o/r/issues/7")}
@@ -771,7 +773,7 @@ def test_cli_report_tree(monkeypatch) -> None:
     monkeypatch.setattr(
         rep,
         "list_my_reports_tree",
-        lambda target, root=None: [
+        lambda target, root=None, **k: [
             (
                 rep.ReportSummary(
                     42,
@@ -802,7 +804,7 @@ def test_cli_report_tree_offline_degrades_to_number_and_state(monkeypatch) -> No
     monkeypatch.setattr(
         rep,
         "list_my_reports_tree",
-        lambda target, root=None: [
+        lambda target, root=None, **k: [
             (
                 rep.ReportSummary(42, "fb", "feedback", "open", "2026-08-03"),
                 {7: rep.TrackedFix("unknown")},
@@ -863,7 +865,7 @@ def test_cli_report_list_tags_locally_reported_note(tmp_path: Path, monkeypatch)
     monkeypatch.setattr(
         rep,
         "list_my_reports",
-        lambda t, root=None: [
+        lambda t, root=None, **k: [
             rep.ReportSummary(659, "channel ux", "feedback", "open", "2026-08-10"),
             rep.ReportSummary(700, "unrelated", "bug", "open", "2026-08-09"),
         ],
@@ -884,7 +886,7 @@ def test_cli_report_tree_tags_locally_reported_note(tmp_path: Path, monkeypatch)
     monkeypatch.setattr(
         rep,
         "list_my_reports_tree",
-        lambda t, root=None: [
+        lambda t, root=None, **k: [
             (
                 rep.ReportSummary(659, "channel ux", "feedback", "open", "2026-08-10"),
                 {},
@@ -1600,13 +1602,12 @@ def test_cli_interactive_prompt_blank_omits_and_writes_nothing(tmp_path: Path, m
 def test_list_my_reports_fetches_bodies_and_reads_project_marker(
     monkeypatch,
 ) -> None:
-    monkeypatch.setattr(rep, "current_login", _REAL_CURRENT_LOGIN)
     queries: list[list[str]] = []
 
     def fake(args):
         queries.append(args)
         if args[:3] == ["gh", "api", "user"]:
-            return None  # no login -> attributed query skipped
+            return None
         return [
             {
                 "number": 1,
@@ -1619,7 +1620,7 @@ def test_list_my_reports_fetches_bodies_and_reads_project_marker(
         ]
 
     monkeypatch.setattr(rep, "_gh_json", fake)
-    reports = rep.list_my_reports("o/r")
+    reports = rep.list_my_reports("o/r", account="tester")
     assert reports is not None
     assert reports[0].project == "alpha" and reports[0].workstream == "cli"
     list_query = next(q for q in queries if "list" in q)
@@ -1631,7 +1632,7 @@ def test_cli_report_list_shows_project_per_row(monkeypatch) -> None:
     monkeypatch.setattr(
         rep,
         "list_my_reports",
-        lambda t, root=None: [
+        lambda t, root=None, **k: [
             rep.ReportSummary(1, "a bug", "bug", "open", "2026-08-01", project="alpha")
         ],
     )

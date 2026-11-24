@@ -302,6 +302,23 @@ runner runs behaves as one started from a terminal. A test that needs a run
 inside a run starts one for real, through `run_command` (the lifecycle README,
 "A run inside a run").
 
+Every test runs where GitHub names no account: an autouse fixture,
+`no_account_from_github`, puts first on PATH a `gh` that answers `gh api user`
+and `gh api users/<login>` with none, and hands every other call to the real
+`gh`. It also clears `PM_INVOKER_LOGIN`, and forgets every module's answers, as
+a new process holds none. project-management reads the account the credential
+acts as from the backbone's reading, `pkit account read`, and compares accounts
+through `pkit account compare` ([pkit:ADR-094]). Each test answers those calls
+in its own process, with the backbone's own code, wherever a capability's
+`_lib.backbone` is imported (`in_process.answer_accounts_everywhere`, set up at
+the session's start): the reading asks the `gh` first on PATH, so no test reads
+the account the developer's `gh` is signed in as. A test that sets
+`PM_INVOKER_LOGIN` names the person the agent works for, never the acting
+account (project-management DEC-076). A test that needs GitHub to answer asks
+`service_answers(login, type)`. A fake `gh` of a test's own that answers the
+reading's request, `gh api user --jq` with the login, type and id, answers them
+tab-separated, such as `octocat\tUser\t1`.
+
 ### Built once, copied for each test
 
 **Each shape of adopter is built once per session and copied for every test

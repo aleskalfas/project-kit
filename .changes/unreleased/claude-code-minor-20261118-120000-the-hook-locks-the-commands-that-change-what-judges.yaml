@@ -1,0 +1,20 @@
+component: claude-code
+kind: minor
+custom:
+  category: Security
+  requires_backbone: release
+body: >
+  The permission hook asks, in every mode, auto and bypass mode among them,
+  before a shell call the decision core reads as a command that changes what
+  judges every later call, such as `pkit permissions apply`, `pkit upgrade` or
+  `uv tool upgrade`, and denies `pkit permissions folders name` (ADR-095
+  points 3 and 4, ADR-099 point 1). It judges the PowerShell tool's and the
+  monitor tool's calls so too. It asks, in every mode, before a shell call
+  that asks to run outside the sandbox, or whose request it cannot read. Its
+  judgements stand apart: where the model will not load, the guardrail denies,
+  these verdicts and the ask before a write outside the repository still hold,
+  and where the core cannot load, the ask before leaving the sandbox still
+  does. The baseline settings carry the native locks beside them, asks on the
+  plain forms of those commands and a deny on the naming one, for the shell
+  and the PowerShell tool, so a session asks before them even where the hook
+  is off. The README's "Live permission enforcement" says so.
