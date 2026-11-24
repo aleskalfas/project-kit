@@ -1,0 +1,25 @@
+component: lean-business
+kind: minor
+custom:
+  category: Added
+body: >
+  The lean coach, `lean-coach`, a session's guide through the method (#3426,
+  DEC-004). It loads the capability's skill when the session starts, reads
+  each step's sub-procedure and the skill's rules on judgements again before
+  each step and each judgement, and in its first reply, whatever the person
+  opens with, says where the ideas stand from `pkit lean status`. It is
+  granted only the tools that read and search files, the shell and the tool
+  that loads a skill, so it edits no file and has no web and no other agents;
+  it writes an idea's files only through the `pkit lean` commands, and commits
+  them on the person's word. Where no person answers in its conversation, it
+  writes nothing and asks nothing, and reports where the ideas stand. Start it
+  for one session with `claude --agent lean-coach`, or name it a project's
+  default agent in the project's additions to the Claude Code settings; the
+  capability makes no agent a default. The skill now offers its suggestions,
+  with its recommendation, on each judgement, and the person takes one,
+  changes it or gives their own, save an experiment's estimate, which takes
+  no number or hint until the person's guess is recorded. Any agent that
+  follows it takes a judgement only from the person's own answer in its
+  conversation, never one another session passes on, and explains any part of
+  the method in its own words, the parts the capability leaves for later
+  included.
