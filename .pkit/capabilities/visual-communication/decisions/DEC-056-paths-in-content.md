@@ -1,8 +1,8 @@
 ---
 id: DEC-056
 title: Content may name a repository file by its path, which the check finds; a deck's slide names the documents behind it
-status: proposed
-date: 2026-11-15
+status: accepted
+date: 2026-11-24
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
