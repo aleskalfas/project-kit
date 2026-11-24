@@ -206,12 +206,14 @@ class Session:
     """The session whose shell runs a command, as its adapter declares it.
 
     ``found`` says whether a session runs this command, and ``why`` why not.
+    ``messaging`` says whether the adapter declares messaging between sessions.
     ``process`` is the name the backbone gives its process, and ``address`` its
     messaging address, each None with why."""
 
     adapter: str | None
     found: bool
     why: str | None = None
+    messaging: bool = False
     pid: int | None = None
     process: str | None = None
     process_why: str | None = None
@@ -225,6 +227,7 @@ class Session:
             "adapter": self.adapter,
             "found": self.found,
             "why": self.why,
+            "messaging": self.messaging,
             "process": self.process,
             "process_why": self.process_why,
             "address": self.address,
@@ -295,6 +298,7 @@ def read(
     declared = found.declaration
     if declared is None:
         return Session(None, False, found.why, replies=given)
+    messaging = declared.address_variable is not None
     pid = session_pid(found, env)
     if pid is None:
         return Session(
@@ -302,6 +306,7 @@ def read(
             False,
             f"`{declared.process_variable}` names no process: no session of the adapter "
             f"{declared.adapter} runs this command",
+            messaging,
             replies=given,
         )
     asking = reader(root, found, env, system)
@@ -317,6 +322,7 @@ def read(
         declared.adapter,
         True,
         None,
+        messaging,
         pid,
         process,
         process_why,

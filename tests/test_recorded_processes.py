@@ -253,6 +253,10 @@ def test_the_documents_answer_each_in_order_and_refuse_a_request_of_another_form
         rp.compare_document({"pairs": [[name]]})
     with pytest.raises(rp.FormError):
         rp.compare_document([])
+    with pytest.raises(rp.FormError):
+        rp.read_document({"names": [name, 42]}, _reader(system), system)
+    with pytest.raises(rp.FormError):
+        rp.compare_document({"pairs": [[name, None]]})
 
 
 def test_the_repository_is_the_origin_alike_over_ssh_and_https(tmp_path: Path):

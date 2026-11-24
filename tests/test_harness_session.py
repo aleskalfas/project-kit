@@ -96,9 +96,12 @@ def test_a_declaration_of_another_form_is_refused(
         hs.parse("h", change(document))
 
 
-def test_a_harness_with_no_messaging_declares_only_its_process():
+def test_a_harness_with_no_messaging_declares_only_its_process(tmp_path: Path):
     declared = hs.parse("h", {"schema_version": 1, "process": {"variable": "H_PID"}})
     assert declared.address_variable is None
+    root = _project(tmp_path, {"h": "schema_version: 1\nprocess:\n  variable: H_PID\n"})
+    session = hs.read(root, {"H_PID": "42"}, _live())
+    assert session.found and not session.messaging and session.address is None
     assert hs.reply(hs.Found(declared), "uds:/tmp/x").address is None
 
 
@@ -130,7 +133,7 @@ def test_no_declaration_where_none_one_cannot_be_read_or_two_are(
 def test_the_session_its_process_and_its_address(tmp_path: Path):
     root = _project(tmp_path, {"h": DECLARED})
     session = hs.read(root, ENV, _live())
-    assert session.found
+    assert session.found and session.messaging
     assert session.address == "/tmp/socks/42.sock"
     assert session.process is not None
     parsed = rp.parse(session.process)
@@ -142,6 +145,7 @@ def test_the_session_its_process_and_its_address(tmp_path: Path):
         "adapter",
         "found",
         "why",
+        "messaging",
         "process",
         "process_why",
         "address",

@@ -1684,6 +1684,7 @@ The document, `schema_version: 1`:
 | `adapter` | the adapter whose declaration was read | where no declaration was read |
 | `found` | whether a session of the adapter runs this command | never |
 | `why` | why no session was found, for people | where one was |
+| `messaging` | whether the adapter declares messaging between sessions | never; `false` where no declaration was read |
 | `process` | the name of the session's process | where none was given |
 | `process_why` | why none was given, for people | where one was |
 | `address` | the session's messaging address | where none was given |
@@ -2437,7 +2438,7 @@ Whether a process that a part of the methodology recorded, and did not start, st
 
 **A name** is the one [`harness session`](#harness-session---reply-address---json) gives a session's process: one line of text, tagged with its form, which holds the process's space, its id and, where it could be read, the start time the operating system fixed when it made the process. Its space is held in a form derived for the repository, from its `origin` remote, the same in every clone of it and with no key, so a name may go on the tracker. A repository with no `origin` gets no name. Only the backbone writes names, reads them or compares them.
 
-Each command reads one JSON request on standard input. A request it refuses, such as one that is no JSON or not of the form below, prints no document and exits 1, saying why. Without `--json`, each prints a line for people for each answer.
+Each command reads one JSON request on standard input. A request it refuses, such as one that is no JSON, not of the form below, or holding a name that is no string, prints no document and exits 1, saying why. Without `--json`, each prints a line for people for each answer.
 
 ### `recorded-process read [--json]`
 

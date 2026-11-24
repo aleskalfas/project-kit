@@ -15,7 +15,8 @@ body: >
   --json` answers whether two names name one process. `pkit harness session
   [--reply <address>]... --json` gives the session whose shell runs the
   command, as the registered adapter declares it in a new `session.yaml`
-  (ADR-100 point 9): its process, by a name that holds its process space,
+  (ADR-100 point 9): whether its harness gives messaging between sessions,
+  its process, by a name that holds its process space,
   derived for the repository from its `origin` remote, its id and the start
   time the operating system fixed, and its messaging address, each only once
   a null signal finds that process here (ADR-103 point 5). A name is read on

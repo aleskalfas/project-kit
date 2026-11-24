@@ -645,9 +645,15 @@ def _list(request: object, key: str) -> list[object]:
     return cast(list[object], value)
 
 
+def _names(values: list[object]) -> list[object]:
+    if not all(isinstance(value, str) for value in values):
+        raise FormError("each name is a string")
+    return values
+
+
 def read_document(request: object, reader: Reader, system: System) -> dict[str, Any]:
     """`pkit recorded-process read`'s document for ``request``: ``{"names": [...]}``."""
-    names = _list(request, "names")
+    names = _names(_list(request, "names"))
     answers = read(names, reader, system)
     return {"schema_version": DOCUMENT_VERSION, "answers": [a.document() for a in answers]}
 
@@ -659,6 +665,6 @@ def compare_document(request: object) -> dict[str, Any]:
     for pair in _list(request, "pairs"):
         if not isinstance(pair, list) or len(cast(list[object], pair)) != 2:
             raise FormError("each pair is a list of two names")
-        left, right = cast(list[object], pair)
+        left, right = _names(cast(list[object], pair))
         pairs.append(compare(left, right))
     return {"schema_version": DOCUMENT_VERSION, "pairs": [c.document() for c in pairs]}
