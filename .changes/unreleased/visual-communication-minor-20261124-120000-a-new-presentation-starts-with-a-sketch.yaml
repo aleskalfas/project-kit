@@ -1,0 +1,24 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Added
+body: >
+  A new agent, `graphic-sketcher`, draws the sketch a new presentation starts
+  with (visual-communication DEC-071, #3487). It is granted only the tools
+  that read and write files, reads only the files it is handed, and its body
+  holds no method and no design knowledge. From the piece's words, its takeaways and where it is shown
+  alone, it draws every page by hand outside the engine, into
+  `visual-communication/sketch/<piece>/` in the agent workspace, which is
+  never committed, and its handoff says what it was given and anything else
+  it read. `graphic-designer` starts a new presentation, or one redesigned
+  whole, with that sketch, unless the person skips it, and sketches a piece
+  of another kind only on the person's word. It rebuilds the sketch at once
+  as the piece, by its method, under the piece's brand and with the project's
+  libraries, keeping the sketch's form unless it bends the meaning. Where the
+  brand, the engine or a library cannot carry a part, it draws the nearest
+  that keeps the part's meaning, sends the lack to its owner as a request or
+  a need, and names the lack and its owner in the brief's reason for that
+  part. The reviewer is handed no sketch. At the end of the round, the
+  designer sets the sketch beside the piece, with the sketch session's
+  account and each stand-in. The skill `visual-author` and the capability's
+  README and files page say the same.

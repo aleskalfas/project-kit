@@ -8,6 +8,7 @@ pkit:
         - .pkit/capabilities/visual-communication/package.yaml
         - .pkit/capabilities/visual-communication/agents/graphic-design-reviewer.md
         - .pkit/capabilities/visual-communication/agents/graphic-designer.md
+        - .pkit/capabilities/visual-communication/agents/graphic-sketcher.md
         - .pkit/capabilities/visual-communication/skills/visual-author/*.md
         - .pkit/capabilities/visual-communication/scripts/status.py
         - .pkit/capabilities/visual-communication/scripts/work-paths.py
@@ -96,6 +97,12 @@ pkit:
         - visual-communication:DEC-070#4
         - visual-communication:DEC-070#5
         - visual-communication:DEC-070#6
+        - visual-communication:DEC-071#1
+        - visual-communication:DEC-071#2
+        - visual-communication:DEC-071#3
+        - visual-communication:DEC-071#4
+        - visual-communication:DEC-071#5
+        - visual-communication:DEC-071#6
         - COR-017
         - COR-070#1
         - COR-073#3
@@ -117,6 +124,7 @@ pkit:
         - .pkit/capabilities/visual-communication/files.md#notations
         - .pkit/capabilities/visual-communication/files.md#the-binding
         - .pkit/capabilities/visual-communication/files.md#the-clones-local-folder
+        - .pkit/capabilities/visual-communication/files.md#the-sketch-in-the-agent-workspace
         - .pkit/capabilities/visual-communication/files.md#the-foundations
         - .pkit/capabilities/visual-communication/files.md#the-libraries-the-capability-ships
         - .pkit/capabilities/visual-communication/files.md#the-library-folder
@@ -202,7 +210,7 @@ Visual work made from reusable parts. A *piece*, such as a presentation or a fig
 - **The neutral brand:** a brand to start from, with a value for every shared role and the fonts it draws in ([The neutral brand](files.md#the-neutral-brand)). It gives no logo. Its version being built gives a desktop's, a tablet's, a phone's and a projector's sizes, and an order's two ends, in greys. `pkit visual add neutral` brings it in. Its version 1.0.0 is released, under `releases/neutral/1.0.0/`, and its version being built stays under `libraries/neutral/`.
 - **Five plugins:** the SVG renderer, which draws the previews and the SVG exports; the PDF renderer, which draws a piece as one PDF for each language and combination of modes; the HTML renderer, which draws a piece's pages as real text over shapes in the HTML exports, and whose pages `pkit visual look` draws through a browser; the CSS code writer, which writes a brand out as CSS variables; and the JSON code writer, which writes a brand's resolved values as one JSON document ([Plugins](outputs.md#plugins), [The SVG renderer](outputs.md#the-svg-renderer), [The PDF renderer](outputs.md#the-pdf-renderer), [The HTML renderer](outputs.md#the-html-renderer), [Written code](outputs.md#written-code), [The JSON code writer](outputs.md#the-json-code-writer)).
 - **The check,** the `visual-communication:check` member of `pkit validate` ([In `pkit validate`](checks.md#in-pkit-validate)).
-- **Two agents:** `graphic-designer`, which designs a piece from its brief and builds the project's own libraries ([The designer](#the-designer)), and `graphic-design-reviewer`, which reads a piece's drawn pages and reports what no check measures ([The reviewer](#the-reviewer)).
+- **Three agents:** `graphic-designer`, which designs a piece from its brief and builds the project's own libraries ([The designer](#the-designer)); `graphic-sketcher`, which draws the sketch a new presentation starts with ([The sketch](#the-sketch)); and `graphic-design-reviewer`, which reads a piece's drawn pages and reports what no check measures ([The reviewer](#the-reviewer)).
 - **The skill** `visual-author`, which guides whoever draws a piece, from its first files to pages that read ([Drawing a piece](#drawing-a-piece)).
 - **Its operational rules,** the loaded rule set `VIS` in `rule-sets/vis.md` and the file generated from it, `rules.md` ([COR-070](../../decisions/core/COR-070-capability-loaded-rules.md)). Wherever the capability is installed, every session loads `rules.md` ([A capability's rules](../../rules/README.md#a-capabilitys-rules)). Its rules say how an agent goes on where the session's sandbox stops a look ([visual-communication:DEC-024-outside-programs-sandbox] point 6).
 - **The rules of visual communication,** in two rule sets ([visual-communication:DEC-028-principles-of-visual-communication] point 2). `COMM`, in `rule-sets/comm.md`, asks whether a piece says the right thing. `GRAPHIC`, in `rule-sets/graphic.md`, asks whether it looks right. A project's own rule set may inherit either, as in `inherits: [visual-communication:COMM@2]` ([COR-051](../../decisions/core/COR-051-rule-sets.md) point 7). They bind on no piece yet, since a piece's content is not something rules bind on. Until then they guide whoever designs or judges a piece (DEC-028 point 5).
@@ -518,7 +526,7 @@ Writes a brand out as code, as the declaration `code/<name>.yaml` in the locatio
 
 ## The designer
 
-`graphic-designer` turns a piece's brief into a piece ([visual-communication:DEC-030-design-agents] point 2). It names the content's structure, and the order each page explains in, before it chooses a form. It settles where a page's path starts before it ranks the page's head, its focal point and the action it asks above the rest, takes type, colour and space from the brand's roles, and writes the reason for each choice into the brief. It writes the piece's own file, its content in every language, its brief and its local components. It also builds the project's own libraries, in a version not yet released. It renders, checks and looks only through the commands, as the skill `visual-author` walks them ([Drawing a piece](#drawing-a-piece)). The adapter deploys it as it deploys any agent ([Deploy mechanics](../../agents/README.md#deploy-mechanics)).
+`graphic-designer` turns a piece's brief into a piece ([visual-communication:DEC-030-design-agents] point 2). It names the content's structure, and the order each page explains in, before it chooses a form. It settles where a page's path starts before it ranks the page's head, its focal point and the action it asks above the rest, takes type, colour and space from the brand's roles, and writes the reason for each choice into the brief. It writes the piece's own file, its content in every language, its brief and its local components. It also builds the project's own libraries, in a version not yet released. It renders, checks and looks at a piece only through the commands, as the skill `visual-author` walks them ([Drawing a piece](#drawing-a-piece)). A new presentation, or one redesigned whole, it starts from a sketch, which it reads outside the commands ([The sketch](#the-sketch)). The adapter deploys it as it deploys any agent ([Deploy mechanics](../../agents/README.md#deploy-mechanics)).
 
 **Its grant.** It writes within the location, which the overlay category `visual-communication.work` grants it ([visual-communication:DEC-030-design-agents] point 5):
 
@@ -531,13 +539,24 @@ Where its grant names no location yet, it asks you where the visual work goes, w
 
 To use it:
 
-1. **Ask it for a piece,** saying what it must say, to whom, and where it is shown. It writes the brief's goals and relations from what you say, and shows them to you before it designs against them. Where they give no order in which a page explains, it proposes one from the page's lead or takeaway, and writes it into the brief once you confirm it.
-2. **Let it build.** Where no library draws the design, it extends the project's own library, makes a component for the piece alone, or stops and says what is missing ([visual-communication:DEC-030-design-agents] point 4). It never changes what the piece says to fit what a library draws.
+1. **Ask it for a piece,** saying what it must say, to whom, and where it is shown. It writes the brief's goals and relations from what you say, and shows them to you before it designs against them. Where they give no order in which a page explains, it proposes one from the page's lead or takeaway, and writes it into the brief once you confirm it. A new presentation starts with a sketch drawn from your words, unless you have it skip the sketch ([The sketch](#the-sketch)).
+2. **Let it build.** Where no library draws the design, it extends the project's own library, makes a component for the piece alone, or stops and says what is missing ([visual-communication:DEC-030-design-agents] point 4). In a rebuild of a sketch, it draws the nearest that keeps a part's meaning where it would stop, and stops on a part where nothing near keeps it. It never changes what the piece says to fit what a library draws.
 3. **It runs one round.** [The reviewer](#the-reviewer) reads every page in every language, mode and size. The designer mends once each fault, each brief finding, each break the reviewer labels settled, each fact its source contradicts, and each thing the reviewer says a reader cannot make out where the piece is shown. Then the reviewer reads every page again ([visual-communication:DEC-070-ship-call-and-one-round] points 2 and 3). Where the designer can start agents, it dispatches the reviewer itself. Otherwise it asks you to, and says the piece is not reviewed. It runs no further round of its own.
-4. **Read what it hands you.** It hands you the piece, with the reviewer's second report as written, what it changed and why, each finding it left and why, and each question still open. A finding it judged wrong it leaves, and says why. Any other finding for a person, a note, and a finding the reviewer marked wait for you. Whether the piece ships is your call: the designer never reports it done ([visual-communication:DEC-070-ship-call-and-one-round] point 1).
+4. **Read what it hands you.** It hands you the piece, with the reviewer's second report as written, what it changed and why, each finding it left and why, and each question still open. A piece rebuilt from a sketch comes with the sketch beside it ([The sketch](#the-sketch)). A finding it judged wrong it leaves, and says why. Any other finding for a person, a note, and a finding the reviewer marked wait for you. Whether the piece ships is your call: the designer never reports it done ([visual-communication:DEC-070-ship-call-and-one-round] point 1).
 5. **Ask for mends, or ship it.** Where you ask for mends, name them. The designer mends what you name, the reviewer reads every page again, and the piece comes back to you.
 
 **Whose words it changes.** The brief's goals and relations, each page's lead and title and each takeaway once you have seen them, any word a goal names as yours, and their translations are yours: it changes none of them without your word. It records each lead, title and takeaway it drafts and you have not seen in the brief's record of drafts ([The makers' record of drafts](files.md#the-makers-record-of-drafts)), and changes every other word alone, where each goal and relation still holds ([visual-communication:DEC-070-ship-call-and-one-round] point 4). In mending, it asks you only where a fix would change your words or cut a fact a goal or a relation rests on, or needs a write it may not make, such as to a library the capability ships. You answer, and it makes the change.
+
+### The sketch
+
+A new presentation, or one redesigned whole, starts as a *sketch*: a drawing of every page, made by hand outside the engine ([visual-communication:DEC-071-sketch-and-rebuild] point 1). The designer starts a session of its own for it, `graphic-sketcher`, and hands it only the piece's words, yours or a redesigned piece's content, its takeaways and where it is shown. With no method, no design knowledge, no library and no brand, the session draws every page, in a medium you can open, such as a web page it writes by hand. It is granted only the tools that read and write files, reads only the files it is handed, and writes only the sketch. Where the harness cannot narrow what it reads to those files, its isolation rests on its restraint, and its handoff, which says what it was given and anything else it read, shows a breach. The adapter deploys it as it deploys any agent ([Deploy mechanics](../../agents/README.md#deploy-mechanics)).
+
+- **Which pieces.** A new presentation, and a presentation redesigned whole. A change to some of a piece's pages takes no sketch. A piece of another kind, such as a figure or a poster, starts with one only where you ask for it. You may have the designer skip the sketch on any piece. Both are your word alone: no agent skips a sketch, or asks for one, in your place.
+- **Your words, as given.** The sketch draws the words it is given for the piece, yours or a redesigned piece's content, and changes none of them. The designer puts them into the piece's content from where they came, never from the sketch ([visual-communication:DEC-071-sketch-and-rebuild] point 2).
+- **Where it lies.** In the agent workspace, never committed, and kept at least until your ship call on the piece ([The sketch, in the agent workspace](files.md#the-sketch-in-the-agent-workspace)).
+- **The rebuild.** The designer rebuilds the sketch at once as the piece, by its method, under the piece's brand and with the project's libraries, and writes the brief's reasons. You do not see the sketch first. The rebuild keeps each page's structure, form, hierarchy and arrangement, unless the sketch's form bends the content's meaning, and takes type, colour and space from the brand's roles ([visual-communication:DEC-071-sketch-and-rebuild] point 4).
+- **A stand-in, never a bend.** Where the brand, the engine or a library cannot carry a part, the designer draws the nearest that keeps the part's meaning, and sends the lack to its owner: a request to the owner of a library or a brand it may not write, which it proposes to you as a task, or a need for a tool the engine lacks, which comes to you as a question. The brief's reason for that part names the lack and its owner ([visual-communication:DEC-071-sketch-and-rebuild] point 5).
+- **The round and your call.** The round runs on the rebuilt piece. The reviewer is handed no sketch, and the round mends nothing toward it. With the piece, the designer hands you where the sketch lies, the session's account of what it was given and read, and each stand-in, with what lacks it, its owner and what was drawn in its place. Set the sketch beside the piece: whether the piece keeps what made the sketch good is yours to judge. You may ask for mends toward the sketch, as for any mend, or have the piece start again from a new sketch ([visual-communication:DEC-071-sketch-and-rebuild] point 6).
 
 ## The reviewer
 
