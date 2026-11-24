@@ -101,6 +101,10 @@ from tests.visual_communication_project import (
 PIECE_FILE = f"{PIECE_FOLDER}/piece.yaml"
 CONTENT = f"{PIECE_FOLDER}/content.en.yaml"
 
+#: The fact the check of a text's size states on a piece that names no medium, as every
+#: piece these tests draw does (DEC-055 point 10).
+UNMEASURED = "text-size-unmeasured"
+
 #: A component's file the reader refuses: a flow sequence that never closes.
 UNPARSED = "parts: [\n"
 
@@ -1240,7 +1244,7 @@ def test_content_a_size_hides_is_a_fact_at_that_size_alone(tmp_path: Path) -> No
     [hidden] = [f for f in found if f.code == "size-hidden"]
     assert (hidden.level, hidden.file, hidden.where) == ("fact", "content.en.yaml", "body.note")
     assert hidden.message == f"`{PHONE}`: `body.note` is drawn at `default`, and not at this size"
-    assert {f.code for f in found} == {"size-hidden", "component-experimental"}
+    assert {f.code for f in found} == {"size-hidden", "component-experimental", UNMEASURED}
 
 
 def test_a_piece_on_one_size_states_no_hidden_content(tmp_path: Path) -> None:
@@ -1468,7 +1472,11 @@ def test_the_skeleton_piece_with_its_picture_fails_nothing(tmp_path: Path) -> No
     write_picture(root, framing)
     report = checks.check(root)
     assert not report.failed()
-    assert {f.code for f, _ in report.judged} == {"component-experimental", "picture-role-unvalued"}
+    assert {f.code for f, _ in report.judged} == {
+        "component-experimental",
+        "picture-role-unvalued",
+        UNMEASURED,
+    }
     assert report.summary == [
         "1 piece(s) in `visual`: the scenes of 0 read from their findings record, of 1 "
         "computed now, of 0 not checked."
@@ -2406,7 +2414,11 @@ def test_a_list_drawn_by_its_component_field_and_shared_by_weights_fails_nothing
     report = checks.check(root, only=PIECE)
 
     assert not report.failed()
-    assert {f.code for f, _ in report.judged} == {"component-experimental", "list-clash"}
+    assert {f.code for f, _ in report.judged} == {
+        "component-experimental",
+        "list-clash",
+        UNMEASURED,
+    }
 
 
 def test_content_is_judged_against_a_lists_component_field_and_arrangement_fields(
@@ -2683,7 +2695,7 @@ def test_ties_into_the_patterns_lists_a_slot_and_a_list_a_component_draws_fail_n
     report = checks.check(root, only=PIECE)
 
     assert not report.failed()
-    assert {f.code for f, _ in report.judged} == {"component-experimental"}
+    assert {f.code for f, _ in report.judged} == {"component-experimental", UNMEASURED}
 
 
 def test_a_ties_component_shape_and_key_paths_are_judged_in_the_content(tmp_path: Path) -> None:

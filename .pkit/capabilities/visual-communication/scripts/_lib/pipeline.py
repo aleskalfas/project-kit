@@ -85,6 +85,9 @@ RECORD = "record.yaml"
 FINDINGS_FILE = "findings.yaml"
 EXPORTS_FILE = "exports.yaml"
 
+#: The field of `piece.yaml` that names the media the piece is shown in (DEC-055 point 1).
+MEDIA = "media"
+
 
 #: The byte-order mark a file may open with, which a rewrite of the lock keeps.
 BOM = records.BOM
@@ -228,6 +231,19 @@ class Piece:
         return self.data.get(COPY_PLACE)
 
     @property
+    def media(self) -> dict[str, tuple[str, ...] | None] | None:
+        """The media the piece names, each by its word, with the sizes it shows: None where
+        it shows every size the piece is drawn at, as in the list form (DEC-055 point 1).
+        None where the piece names no medium. Its shape is judged where the file is read
+        (`media_problem`)."""
+        named = self.data.get(MEDIA)
+        if isinstance(named, list):
+            return {str(medium): None for medium in named}
+        if isinstance(named, Mapping):
+            return {str(medium): tuple(map(str, sizes)) for medium, sizes in named.items()}
+        return None
+
+    @property
     def accepted_losses(self) -> list[Mapping[str, Any]]:
         return [
             entry for entry in self.data.get("accept-losses") or [] if isinstance(entry, Mapping)
@@ -279,7 +295,46 @@ def read_piece_file(root: Path, location: str, name: str) -> Piece:
     _require(_is_lock(data.get("lock", {})), shown, "lock", "a mapping of libraries to versions")
     _require(_is_modes(data.get("modes", {})), shown, "modes", "a mapping of axes to modes")
     _require(isinstance(data.get(COPY_PLACE, ""), str), shown, COPY_PLACE, "a path")
+    problem = media_problem(data.get(MEDIA))
+    if problem is not None:
+        raise Refused(f"{shown}: `{MEDIA}` {problem}")
     return Piece(root, location, name, data, {})
+
+
+def media_problem(value: Any) -> str | None:
+    """Why `value`, a piece's `media`, is no naming of its media (DEC-055 point 7); None
+    where it is one, or the piece names none. It takes one of two forms: a list of the
+    capability's words, each once, or a mapping from each word to the sizes it shows, each
+    a name, once under it. Either names one medium at least, and a mapping's medium names
+    one size at least. Whether the piece is drawn at each size a mapping names is judged
+    under its lock (`Project`), and a medium a mapping names twice is a key written twice,
+    which the reader refuses."""
+    if value is None:
+        return None
+    if isinstance(value, Mapping):
+        named: list[Any] = list(value)
+    elif isinstance(value, list):
+        named = value
+    else:
+        return "is neither a list of media nor a mapping of each medium to the sizes it shows"
+    if not named:
+        return "names no medium: name one at least"
+    media = ", ".join(layout.MEDIA)
+    for medium in named:
+        if medium not in layout.MEDIA:
+            return f"names `{medium}`, which is no medium the capability names: {media}"
+    if isinstance(value, list):
+        twice = next((medium for medium in value if value.count(medium) > 1), None)
+        return None if twice is None else f"names `{twice}` twice"
+    for medium, sizes in value.items():
+        if not isinstance(sizes, list) or not sizes:
+            return f"`{medium}` names no size: name each size it shows"
+        for size in sizes:
+            if not is_name(size):
+                return f"`{medium}` names `{size}`, which is no size"
+            if sizes.count(size) > 1:
+                return f"`{medium}` names the size `{size}` twice"
+    return None
 
 
 def read_piece(root: Path, location: str, name: str) -> Piece:
@@ -456,12 +511,36 @@ class Project:
             for key, combination in zip(self.keys, self.combinations, strict=True)
         }
         self.size_keys = sorted(set(self._size_keys.values()), key=keys.key_order)
+        self._drawn_at(piece)
         self._values: dict[str, Any] | None = None
         self.env = ProjectEnv(self)
         drawn = brand_drawings(self.brand)
         self.drawings = drawn.drawings
         self.kept = drawn.kept
         self._choice: layout.Choice | None = None
+
+    def size_of(self, size_key: str) -> str | None:
+        """The size of the key over the size axes `size_key`: the mode it holds on the size
+        axis the locked foundations declare, else that axis's default (DEC-021 point 3,
+        DEC-055 point 1). None where the foundations declare no size axis, or more than one,
+        since a medium's sizes are the modes of one axis."""
+        sized = sizes_at(self.scope.axes, size_key)
+        if len(sized.axes) != 1:
+            return None
+        return sized.mode(next(iter(sized.axes)))
+
+    def _drawn_at(self, piece: Piece) -> None:
+        """Refuses a size the piece's `media` names that the piece is not drawn at, as a
+        mode its brand lacks is refused (DEC-055 point 7)."""
+        drawn = [size for size in (self.size_of(key) for key in self.size_keys) if size]
+        for medium, sizes in (piece.media or {}).items():
+            for size in sizes or ():
+                if size not in drawn:
+                    at = ", ".join(f"`{each}`" for each in drawn) or "no size"
+                    raise Refused(
+                        f"{piece.file(PIECE_FILE)}: `{MEDIA}`: `{medium}` names the size "
+                        f"`{size}`, which the piece is not drawn at: it is drawn at {at}"
+                    )
 
     def label(self, library: str) -> str:
         """`<library>@<version>` of a locked library."""

@@ -112,10 +112,14 @@ from _lib.layout import (
     Facts,
     Instance,
     Node,
+    PageHeight,
     Part,
     Sizes,
+    SmallestText,
     TextRun,
+    page_heights,
     place_top,
+    smallest_text,
     source_of_choice,
 )
 from _lib.text import MEASURED, Broken, Span, paragraphs
@@ -252,7 +256,11 @@ class SceneResult:
     each of its parts that draws a field of the top, which every such page draws alike
     (`Instance.from_the_top`). `shown` holds each concept with a sign that an instance or a
     run names, and whether only its colour tells it apart, which the checks of signs read
-    (`signs.shown`, DEC-036 point 8)."""
+    (`signs.shown`, DEC-036 point 8). `smallest` holds what the piece's top declares of the
+    smallest text size of each medium, and `heights`, for each page by its trace, whether it
+    asks for a height and whether the top's own drawing draws it, which the check of a
+    text's size reads (`text_size`, DEC-055 points 2, 3 and 7). Neither is in the scene, so
+    no renderer reads either."""
 
     scene: Scene
     findings: list[Finding]
@@ -260,6 +268,8 @@ class SceneResult:
     unvalued: dict[str, str] = field(default_factory=dict)
     shared: dict[str, list[str]] = field(default_factory=dict)
     shown: list[signs.Shown] = field(default_factory=list)
+    smallest: SmallestText | None = None
+    heights: dict[str, PageHeight] = field(default_factory=dict)
 
 
 def compute_scene(
@@ -313,6 +323,8 @@ def compute_scene(
         unvalued=emitter.unvalued,
         shared=shared,
         shown=signs.shown(root) if root is not None else [],
+        smallest=smallest_text(ctx, top) if root is not None else None,
+        heights=page_heights(root) if root is not None else {},
     )
 
 

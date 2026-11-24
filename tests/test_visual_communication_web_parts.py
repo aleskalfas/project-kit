@@ -710,6 +710,7 @@ def test_a_site_of_every_part_draws_under_both_brands_from_one_set_of_content_fi
     ]
     assert [code for code, _ in found] == ["picture-role-unvalued"]
     assert starter.on_signs(report.judged) == starter.UNSIGNED
+    assert ("fact", "visual/pieces/site/piece.yaml", "media") in starter.unmeasured(report.judged)
     assert starter.box_levels(report.judged) <= {"attention"}
     in_the_site = {
         finding.code

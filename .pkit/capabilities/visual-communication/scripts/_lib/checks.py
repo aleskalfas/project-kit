@@ -173,6 +173,7 @@ from _lib import (
     outlines,
     records,
     signs,
+    text_size,
     tokens,
 )
 from _lib import pipeline as pl
@@ -2798,6 +2799,7 @@ SCENE_CHECKS = (
     NO_GROUND,
     boxes.NEAR_ALIGNMENT_CHECK,
     boxes.BOX_OVERLAP_CHECK,
+    text_size.CHECK,
     SIZE_WIDTHS,
     BRAND_FORMS,
     signs.LEFT_TO_COLOUR,
@@ -2885,7 +2887,8 @@ def _in_scene(
     """What the checks that run on each scene alone find in one scene, in a fixed order: the
     engine's own findings, content the scene's size hides, contrast as drawn, colour roles the
     brand lacks, the renderers' unaccepted losses, components' statuses, pages with no ground
-    of their own, and the checks of boxes."""
+    of their own, the checks of boxes, and texts smaller than their medium allows, which the
+    check gives each with the scene it holds for (`text_size.found`)."""
     piece = project.piece
     size = result.scene.size_key
     served = [key for key in project.keys if project.size_key(key) == size]
@@ -2904,7 +2907,10 @@ def _in_scene(
         *_of_boxes(scene, steps[size]),
     ]
     pages = [str(page) for page in scene.get("pages", [])]
-    return [_found(check, finding, language, size, pages) for check, finding in checked]
+    return [
+        *(_found(check, finding, language, size, pages) for check, finding in checked),
+        *text_size.found(project, language, result, scene, ENGINE),
+    ]
 
 
 def _over_scenes(
@@ -2961,25 +2967,33 @@ def merged(results: Sequence[tuple[str, SceneResult]], found: Sequence[Found]) -
     reported once, naming its pages (`_once_on_pages`). One that the scenes of every key over
     the size axes find alike is reported once, as it reads, in whichever language finds it.
     Any other is reported for each key whose scenes find it, its message opening with that
-    key, so a finding takes no field for its size. A concept left to its colour is reported
-    once for each version of what draws it (`signs.once_for_each_version`). What the checks
-    that read the scenes together find is reported as they give it."""
+    key, so a finding takes no field for its size. A finding its check gives for every
+    language at one key is read as found there; one it gives for every key, once, as it
+    reads. A concept left to its colour is reported once for each version of what draws it
+    (`signs.once_for_each_version`). What the checks that read the scenes together find is
+    reported as they give it."""
     shared = {(language, result.scene.size_key): result.shared for language, result in results}
     by_size: dict[str, dict[tuple[str, str, str, str, str], Finding]] = {
         size: {} for size in dict.fromkeys(result.scene.size_key for _, result in results)
     }
     in_scene: dict[tuple[str, str], list[Finding]] = {}
     over: dict[SceneCheck, list[Finding]] = {check: [] for check in _OVER_SCENES}
+    everywhere: list[Finding] = []
     for each in found:
         if each.check in over:
             over[each.check].append(each.finding)
+        elif each.size is None:
+            everywhere.append(each.finding)
+        elif each.language is None:
+            by_size[each.size].setdefault(_mark(each.finding), each.finding)
         else:
-            assert each.language is not None and each.size is not None
             in_scene.setdefault((each.language, each.size), []).append(each.finding)
     for (language, size), scene_found in in_scene.items():
         for finding in _once_on_pages(scene_found, shared[language, size]):
             by_size[size].setdefault(_mark(finding), finding)
     unique: dict[tuple[str, str, str, str, str], Finding] = {}
+    for finding in everywhere:
+        unique.setdefault(_mark(finding), finding)
     for size, found_at in by_size.items():
         for mark, finding in found_at.items():
             if all(mark in other for other in by_size.values()):

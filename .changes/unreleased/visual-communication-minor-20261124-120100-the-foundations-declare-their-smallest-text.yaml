@@ -1,0 +1,16 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Added
+body: >
+  The foundations' version being built, 1.2.0, declares the smallest text size
+  of each medium its tops' pages are made for (DEC-055 point 8), each value
+  with its source beside it: 11 px on a screen at hand for the figure, the deck
+  and the site, from the minimum Apple's Human Interface Guidelines give on
+  iOS and iPadOS, and 10.67 px on paper for the figure, 8 pt at the PDF
+  export's 96 px to the inch, from PLOS ONE's figure guidelines. No top
+  declares a room's value until the display image size standard is read, so a
+  piece shown in a room is stated as unmeasured there. A draft that names its
+  media is held to them at its next render. `pkit visual add foundations
+  --being-built` takes it; `pkit visual add foundations` still takes the
+  release 1.1.0.

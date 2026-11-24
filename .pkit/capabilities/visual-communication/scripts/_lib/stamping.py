@@ -48,7 +48,8 @@ _EMPTY: dict[str, Callable[[], Any]] = {"object": dict, "string": str, "array": 
 class Chosen:
     """What a person chooses of a new piece: the fields of its `piece.yaml`, each as
     `piece.md` has it chosen. `modes` holds the modes of each axis it names, in the order
-    given."""
+    given, and `media` the media it is shown in, each with the sizes it shows where it names
+    them (DEC-055 point 1)."""
 
     top: str
     brand: str
@@ -59,6 +60,7 @@ class Chosen:
     exports: tuple[str, ...] = ()
     notations: tuple[str, ...] = ()
     modes: Mapping[str, Sequence[str]] = field(default_factory=dict)
+    media: Sequence[str] | Mapping[str, Sequence[str]] = ()
 
 
 @dataclass(frozen=True)
@@ -87,6 +89,9 @@ def plan(root: Path, location: str, name: str, chosen: Chosen) -> Planned:
     checked. Raises Refused, naming what stops it, so `write` refuses nothing."""
     target = pl.new_piece_folder(root, location, name)
     piece = _piece(chosen)
+    problem = pl.media_problem(piece.get(pl.MEDIA))
+    if problem is not None:
+        raise pl.Refused(f"{pl.PIECE_FILE}: `{pl.MEDIA}` {problem}")
     _refuse_shape(piece, "piece", pl.PIECE_FILE)
     held = libraries.Held(root, location)
     library, component = split_use(chosen.top)
@@ -138,10 +143,15 @@ def _piece(chosen: Chosen) -> dict[str, Any]:
         languages=list(chosen.languages),
         audience=chosen.audience,
         shown=chosen.shown,
-        explains=chosen.explains,
-        exports=list(chosen.exports),
-        state=STATE,
     )
+    if chosen.media:
+        media = chosen.media
+        piece[pl.MEDIA] = (
+            {medium: list(sizes) for medium, sizes in media.items()}
+            if isinstance(media, Mapping)
+            else list(media)
+        )
+    piece.update(explains=chosen.explains, exports=list(chosen.exports), state=STATE)
     if chosen.modes:
         piece["modes"] = {axis: list(modes) for axis, modes in chosen.modes.items()}
     return piece
@@ -149,7 +159,8 @@ def _piece(chosen: Chosen) -> dict[str, Any]:
 
 def _piece_text(piece: Mapping[str, Any]) -> str:
     """`piece` as the text of its file: a line for each field, its schema's name plain, a
-    list in flow, as `piece.md` writes one, and `modes` a block mapping of such lists."""
+    list in flow, as `piece.md` writes one, and `modes`, and `media` where it names sizes, a
+    block mapping of such lists."""
     lines = []
     for key, value in piece.items():
         if key == SCHEMA_FIELD:

@@ -8,7 +8,7 @@ key:
   form: 1
   hash: sha256
   format: 1
-  value: 500abcef151a69453585af8fec87d26a77cb1abc0871af3d1e1200919383fd7b
+  value: 7a17533063cbfe46f034e17fc028465f2d2700725c06cef0783ca1381c1ad2c5
   inputs:
     - file: components/capability.yaml
       sha256: 49ab721151fd9313be944c5458fc6137819d61fbbe1d0bed713a7f6e0c385b4a
@@ -25,15 +25,15 @@ key:
     - library: foundations
       version: 1.2.0
       path: components/deck.yaml
-      sha256: 6f305a7baaac657d95633c7eb39ba90994e208575ab6c6e6ad24be3596338cbb
+      sha256: 9803b1a9bfefd7bf43b4f06404271544eba50f98fa7f8fc53624d436b1625807
     - library: foundations
       version: 1.2.0
       path: components/figure.yaml
-      sha256: 6fe389ad65196cf8d16ee4f09231ae2719608f9487e6418bba6d803eb09dc6a4
+      sha256: 63b950b44b44b55cd699c55124ad69cea4e06709d8047660b2fbc28e5f47ff2a
     - library: foundations
       version: 1.2.0
       path: components/site.yaml
-      sha256: 1fe15655fb6ad6f4ea37004e63c7eeb5c884118ce07dc1eee27861cdb4c5c79b
+      sha256: 84816856beb9ad6ff9b14b4999a9934f379c9fda28a4d6fd6279ebb2e606d12c
     - library: foundations
       version: 1.2.0
       path: library.yaml
@@ -109,7 +109,7 @@ key:
     - library: starter
       version: 1.1.0
       path: README.md
-      sha256: f2a0c2603d9297f094183a67cabe6a90b23e66a5359f69b603190290f783afdc
+      sha256: 86c39fc2aa507fe844900f70107ce3b31abd20aa60da920be889d2d576862e4c
     - library: starter
       version: 1.1.0
       path: components/aside.yaml
@@ -341,3 +341,8 @@ findings:
     message: 'the piece uses `starter/cell`, which is experimental: its library may still change it in any release'
     file: piece.yaml
     where: deck/slides[permissions]/visual/rows[steps]/cells[kind]
+  - code: text-size-unmeasured
+    level: fact
+    message: the piece names no medium it is shown in under `media`, so no text's size was measured, in any language or at any size
+    file: piece.yaml
+    where: media

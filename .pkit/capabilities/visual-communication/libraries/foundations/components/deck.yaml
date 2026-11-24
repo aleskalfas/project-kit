@@ -41,6 +41,23 @@ preferred:
   width: "=@size.slide"
   height: "=@size.slide * 9 / 16"
 
+# The smallest text size of each medium the deck's pages are made for (DEC-055 points 2,
+# 3 and 8).
+# The deck is made for a screen at hand and for a room. On a screen at hand a slide is
+# shown at about its own size, so that value is a fixed length.
+#
+# The screen at hand, 11 px: Apple's Human Interface Guidelines, "Typography", give a
+# minimum font size of 11 pt on iOS and iPadOS and of 10 pt on macOS. A point is the unit
+# those platforms lay out in, which a browser on them takes as one CSS px. One value holds
+# for every screen at hand, so the larger is taken.
+#
+# A room, none: its value waits until the display image size standard (ANSI/INFOCOMM
+# V202.01) is read, since its publisher's page alone does not define the viewing ratio its
+# least shares are given for (DEC-055 point 8). So a deck shown in a room is stated as
+# unmeasured there, and assumes no viewing ratio.
+smallest-text:
+  screen: 11
+
 # The forms a page takes. Each layout declares the slots a page in it fills, and holds the
 # deck's own drawing of it, the layout's default. Each part that places a slot is named
 # after that slot.

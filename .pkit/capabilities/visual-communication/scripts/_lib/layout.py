@@ -25,6 +25,14 @@ DEC-012).
   (DEC-034 point 3). No formula reads it. The top asks for its height through it, never
   under `preferred`: the engine sets the height from the width it asks for and the size's
   proportion, wherever the top lies, and names itself as the height's source;
+- `smallest-text`, on a top alone: the smallest text size of each medium its pages are made
+  for, by the medium's word, one of `MEDIA` (DEC-055 points 2 and 3). Each is a fixed
+  length, a positive number of px, or a share of the page, a formula that gives a length
+  and reads only numbers and the size of the page a run lies on, `:page-width` and
+  `:page-height`, which no other formula reads. It never switches, no brand gives it, and
+  a fixed length for `paper` is refused on a top that declares a physical size, whose
+  brand's width sets its print's scale. The check of a text's size reads it of the piece's
+  top alone (`text_size`);
 - `parts`: drawn in order (below);
 - `lists`: for each list field a `repeat` part of its own repeats over, the fields DEC-010
   gives that list, `{component: <field>, arrangement: {<field>: {words: [<word>, ...],
@@ -388,12 +396,26 @@ STAND_INS: Mapping[str, str] = {"version": "v88", "date": "2088-08-28"}
 COMPONENT_KEYS = (
     "pkit_schema", "schema_version", "status", "about", "fields", "options", "states",
     "colour", "values", "preferred", "parts", "lists", "exposes", "ends", "tokens",
-    "physical-size", "layouts", "draws",
+    "physical-size", "smallest-text", "layouts", "draws",
 )  # fmt: skip
 
 #: The key under which a top whose pages print at one size declares it, its trim width and
 #: height in millimetres (DEC-034 point 3), and the code of every finding on it.
 PHYSICAL_SIZE = "physical-size"
+
+#: The key under which a top declares the smallest text size of each medium its pages are
+#: made for (DEC-055 point 2).
+SMALLEST_TEXT = "smallest-text"
+
+#: The media a page reaches a reader's eye in, by the capability's words, which a piece
+#: names and a top declares a smallest text size for (DEC-055 point 1): a screen at hand,
+#: read at arm's length or nearer; a screen read from across a room, projected or not; and a
+#: printed page. The piece's format names them, so a medium means the same under every top.
+MEDIA = ("screen", "room", "paper")
+
+#: The medium of a printed page, on which a fixed smallest size names a printed size only
+#: where the top declares no physical size (DEC-055 point 3).
+PAPER = "paper"
 
 #: The key under which a component declares its component tokens (DEC-035 point 1).
 TOKENS = "tokens"
@@ -1133,6 +1155,9 @@ class Component:
         # The trim width and height its pages print at, in millimetres, as declared, read
         # before its layouts, whose pages' heights may follow it (DEC-034 point 3).
         self.physical_size = self._physical_size(data)
+        # The smallest text size it declares for each medium, as a top: a fixed length in
+        # px, or a share of the page, its formula (DEC-055 points 2 and 3).
+        self.smallest_text: dict[str, float | fm.Formula] = {}
         exposes = data.get("exposes") or []
         self.exposes: tuple[str, ...] = tuple(exposes) if isinstance(exposes, list) else ()
         # Whether it takes ends: drawn as a tie, it is given two (DEC-011 point 1). One that
@@ -1523,6 +1548,7 @@ class Component:
             self._shape("fields", f"marks a field `{PAGES}`, and declares no layouts")
         self._read_paged_sizes()
         self._read_physical_size(data)
+        self._read_smallest_text(data)
 
     def _read_lies_over(self) -> None:
         """The parts each part names under `lies-over`, which it lies over on purpose
@@ -1600,6 +1626,95 @@ class Component:
                 "declares a physical size, and asks for a height by a formula: the engine sets "
                 "its height from the width it asks for, in the physical size's proportion",
             )
+
+    def _read_smallest_text(self, data: Mapping[str, Any]) -> None:
+        """The smallest text size the top declares for each medium its pages are made for
+        (DEC-055 points 2, 3 and 7): a fixed length, a positive number of px, or a share of
+        the page (`_share`). Each fault is a finding, and its value is not read: the key on
+        a component that is no top, a key that names no medium, a value that is no positive
+        number and no formula, a switch, which a smallest size never takes, and a fixed
+        length for `paper` on a top that declares a physical size, whose brand's width sets
+        the scale it prints at. A brand's drawing that declares one is refused where the
+        drawing is read (`Context._drawing`)."""
+        declared = data.get(SMALLEST_TEXT)
+        if declared is None:
+            return
+        if not self.top:
+            self._shape(
+                SMALLEST_TEXT,
+                "declares a smallest text size, and is no top component: only the piece's "
+                "top declares the smallest size of each medium its pages are made for",
+            )
+            return
+        if not isinstance(declared, Mapping):
+            self._shape(
+                SMALLEST_TEXT, f"`{SMALLEST_TEXT}` takes a value for each medium, by its word"
+            )
+            return
+        for medium, value in declared.items():
+            where = f"{SMALLEST_TEXT}.{medium}"
+            if medium not in MEDIA:
+                self._shape(where, f"names no medium `{medium}`: the media are {', '.join(MEDIA)}")
+            elif isinstance(value, Mapping):
+                self._shape(
+                    where,
+                    f"the smallest size of `{medium}` switches: it is a value, never a switch, "
+                    "so no option and no size chooses it",
+                )
+            elif fm.is_formula(value):
+                share = self._share(where, value)
+                if share is not None:
+                    self.smallest_text[medium] = share
+            elif not _positive(value):
+                self._shape(
+                    where,
+                    f"the smallest size of `{medium}` is `{value}`: it takes a positive number "
+                    "of px, or a formula of the page's size",
+                )
+            elif medium == PAPER and self.physical_size is not None:
+                self._shape(
+                    where,
+                    f"gives `{PAPER}` a fixed smallest size, and declares a physical size: its "
+                    "brand's width sets the scale it prints at, so a fixed length names no "
+                    "printed size; give a share of the page, such as `=:page-height / 100`",
+                )
+            else:
+                self.smallest_text[medium] = float(value)
+
+    def _share(self, where: str, text: str) -> fm.Formula | None:
+        """A smallest text size given as a share of the page, read at `where`: a formula that
+        gives a length, and reads only numbers and the size of the page a run lies on,
+        `:page-width` and `:page-height` (DEC-055 points 3 and 7). Else None, with the
+        formula's own finding."""
+        try:
+            formula = fm.parse(text)
+        except fm.FormulaError as error:
+            self._issue("formula-unreadable", where, str(error))
+            return None
+        for ref in formula.references():
+            if not (isinstance(ref, fm.Engine) and ref.name in fm.PAGE_NAMES):
+                self._issue(
+                    "formula-reach",
+                    where,
+                    f"the formula `{text}` reads `{ref}`: a smallest text size reads only "
+                    "numbers and the size of the page a run lies on, `:page-width` and "
+                    "`:page-height`",
+                )
+                return None
+        try:
+            result = fm.dimension(formula, lambda _: fm.LENGTH)
+        except fm.FormulaError as error:
+            self._issue("formula-dimension", where, str(error))
+            return None
+        if result != fm.LENGTH:
+            self._issue(
+                "formula-dimension",
+                where,
+                f"the formula `{text}` gives {fm.dimension_name(result or 0)} where a length "
+                "belongs",
+            )
+            return None
+        return formula
 
     def _read_options(self, options: Mapping[str, Any]) -> None:
         for name, decl in options.items():
@@ -2702,6 +2817,11 @@ class Component:
                     f"reads `{ref}`, which only the `{CROSS_SIZE}` of a row or a column reads: "
                     "the place of the item it sizes, or how many its list draws"
                 )
+            if isinstance(ref, fm.Engine) and ref.name in fm.PAGE_NAMES:
+                problem = (
+                    f"reads `{ref}`, which only a top's `{SMALLEST_TEXT}` reads: the size of "
+                    "the page a run lies on"
+                )
             if problem:
                 self._issue("formula-reach", where, f"the formula `{text}` {problem}")
                 return
@@ -2765,7 +2885,7 @@ class Component:
         role it cannot read is reported once, in the component; a library's own role the
         brand leaves with no value is reported where `Context.unvalued_at_lock` places it."""
         if isinstance(ref, fm.Engine):
-            return fm.LENGTH if ref.name in ("width", "height") else fm.NUMBER
+            return fm.LENGTH if ref.name in ("width", "height", *fm.PAGE_NAMES) else fm.NUMBER
         if isinstance(ref, fm.Path):
             return fm.LENGTH
         if isinstance(ref, fm.Value):
@@ -3098,6 +3218,11 @@ class Context:
             issues.append(
                 (PHYSICAL_SIZE, PHYSICAL_SIZE, "declares a physical size, and is a drawing: its "
                  "top alone declares the size its pages print at")
+            )  # fmt: skip
+        if SMALLEST_TEXT in data:
+            issues.append(
+                ("component-shape", SMALLEST_TEXT, "declares a smallest text size, and is a "
+                 "drawing: the piece's top alone declares it, and no brand gives it")
             )  # fmt: skip
         draws = data.get(DRAWS)
         top_use = draws.get("top") if isinstance(draws, Mapping) else None
@@ -4590,6 +4715,8 @@ class Instance:
         if isinstance(ref, fm.Engine):
             if ref.name in ("width", "height"):
                 return self.get("size", ref.name)
+            if ref.name in fm.PAGE_NAMES:
+                raise Fault()  # refused when the component was read
             if ref.name in fm.PLACE_NAMES:
                 if at is None:
                     raise Fault()  # refused when the component was read
@@ -5547,3 +5674,90 @@ def placed(ctx: Context, drawing: Component, *, where: str, use: str, piece: boo
         ctx.add(Finding(DRAWING_PLACED, FAILS, message, where=where, extra={"piece": True}))
     else:
         ctx.report(DRAWING_PLACED, message, where=where, use=use)
+
+
+# --- what a share of a page reads (DEC-055) -----------------------------------------------------
+
+
+@dataclass(frozen=True)
+class SmallestText:
+    """What the piece's top declares of the smallest text size of each medium its pages are
+    made for (DEC-055 point 2): the top, by its use, the library version that holds it,
+    `<library>@<version>`, empty for the piece's own, and the value of each medium, a fixed
+    length in px or a share of the page, its formula."""
+
+    top: str
+    library: str
+    sizes: Mapping[str, float | fm.Formula]
+
+
+@dataclass(frozen=True)
+class PageHeight:
+    """Whether a share of a page's height may be read at one page (DEC-055 points 3 and 7):
+    whether the page asks for a height that what it draws does not set (`asks`), and whether
+    the top's own drawing draws it, so the top's file alone shows a share's fault there
+    (`own`)."""
+
+    asks: bool
+    own: bool
+
+
+def smallest_text(ctx: Context, top: str) -> SmallestText | None:
+    """What the piece's top `top` declares of the smallest text size of each medium, read of
+    its own component, whichever drawing draws it (DEC-055 point 2); None where `top` names
+    no component, or one whose file cannot be read, or a drawing, each its own finding."""
+    component = ctx.component(top)
+    if component is None or component.draws is not None:
+        return None
+    return SmallestText(top, ctx.library(top), dict(component.smallest_text))
+
+
+def page_heights(top: Instance) -> dict[str, PageHeight]:
+    """For each page placed below the piece's top `top`, itself among them where it is a
+    page alone, by its trace: whether it asks for a height, and whether the top's own
+    drawing draws it (DEC-055 points 3 and 7).
+
+    A page asks for a height where what it draws does not set it. It does where it gets the
+    height its top asks for, a fixed page (DEC-022 point 3), or where the component that draws
+    it declares a physical size, whose proportion sets its height (DEC-034 point 3), or asks
+    for a height by a formula that reads none of its parts, through a value of its own or
+    directly. A page whose height reads its parts, as a site's pages and the figure do, is as
+    tall as its content, and asks for none."""
+    fixed = top.component.forms and top.component.asks_for("height")
+    found = {}
+    for page in (top, *top.below()):
+        if not page.is_page:
+            continue
+        component = page.component
+        if (fixed and page in top.pages) or component.physical_size is not None:
+            asks = True
+        elif "height" in component.preferred:
+            asks = not _reads_parts(component, component.preferred["height"], frozenset())
+        else:
+            asks = False
+        drawn = component.drawn
+        found[page.trace] = PageHeight(asks, drawn is not None and drawn[0] == top.component.use)
+    return found
+
+
+def _reads_parts(component: Component, value: Any, seen: frozenset[str]) -> bool:
+    """Whether a formula of `component`, or any branch of a switch of formulas, reads one of
+    its parts, directly or through a value of its own; `seen` holds the values already
+    followed, so a loop of values, refused elsewhere, ends."""
+    if isinstance(value, Mapping):
+        return any(
+            _reads_parts(component, each, seen) for key, each in value.items() if key != SWITCH
+        )
+    if not fm.is_formula(value):
+        return False
+    try:
+        formula = fm.parse(value)
+    except fm.FormulaError:
+        return False
+    for ref in formula.references():
+        if isinstance(ref, fm.Path):
+            return True
+        if isinstance(ref, fm.Value) and ref.name not in seen:
+            if _reads_parts(component, component.values.get(ref.name), seen | {ref.name}):
+                return True
+    return False

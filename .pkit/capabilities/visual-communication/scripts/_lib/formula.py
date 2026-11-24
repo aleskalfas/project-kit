@@ -12,7 +12,9 @@ A *formula* is a string that starts with `=` and computes one number. It holds:
   component gets, `:index` and `:count`, an item's place among the items its list
   draws (from 1) and how many it draws, and `:place` and `:places`, which only a row's or a
   column's `cross-size` reads: the place of the item it sizes, from 1, and how many items
-  its list draws (`PLACE_NAMES`);
+  its list draws (`PLACE_NAMES`), and `:page-width` and `:page-height`, which only the
+  formula of a top's smallest text size reads: the size of the page a run lies on
+  (`PAGE_NAMES`);
 - a value of the component, by its name alone: `gap`;
 - a *path*: a part, then each exposed part below it, one name a step, then the
   measure of the frame it reads, one of `x y width height right bottom center
@@ -43,13 +45,19 @@ from functools import lru_cache
 MEASURES = ("x", "y", "width", "height", "right", "bottom", "center", "middle")
 
 #: The engine's names, without their mark.
-ENGINE_NAMES = ("width", "height", "index", "count", "place", "places")
+ENGINE_NAMES = ("width", "height", "index", "count", "place", "places", "page-width", "page-height")
 
 #: The engine's names that only the formula by which a row or a column sizes its items
 #: across their line reads, its `cross-size`: the place of the item it sizes, from 1, and how
 #: many items its list draws (DEC-038 point 2). Whoever reads a formula refuses them in any
 #: other.
 PLACE_NAMES = ("place", "places")
+
+#: The engine's names that only the formula of a top's smallest text size reads: the width
+#: and the height of the page a run lies on, which a share of the page is taken of
+#: (DEC-055 point 3). That formula reads no other name, and whoever reads a formula refuses
+#: them in any other.
+PAGE_NAMES = ("page-width", "page-height")
 
 #: The functions a formula may call, each with the least and the most arguments it takes.
 FUNCTIONS = {"min": (2, None), "max": (2, None), "round": (1, 1)}
@@ -65,7 +73,7 @@ _STEP = rf"{_NAME}(?::first|:last|\[{_ID}\])?"
 _TOKEN = re.compile(
     rf"(?P<number>[0-9]+(?:\.[0-9]+)?)"
     rf"|(?P<role>@{_SEGMENT}(?:\.{_SEGMENT})*)"
-    rf"|(?P<engine>:[a-z]+)"
+    rf"|(?P<engine>:[a-z]+(?:-[a-z]+)*)"
     rf"|(?P<function>(?:min|max|round)\()"
     rf"|(?P<path>(?:\{{{_NAME}\}}|{_STEP})(?:\.{_STEP})*)"
     rf"|(?P<op>[-+*/(),])"
@@ -93,7 +101,7 @@ class DivisionByZero(FormulaError):
 @dataclass(frozen=True)
 class Engine:
     """One of the engine's names: `:width`, `:height`, `:index`, `:count`, `:place`,
-    `:places`."""
+    `:places`, `:page-width`, `:page-height`."""
 
     name: str
 

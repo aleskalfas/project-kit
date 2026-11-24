@@ -305,3 +305,38 @@ def test_a_scene_computed_only_for_its_findings_that_stops_leaves_the_images_dra
         "why": f"it compares this image's scene with that of `en` at `{PHONE}`, and the checks' "
         "code stopped on it: RuntimeError: planted",
     }
+
+
+def test_the_check_of_a_text_s_size_is_named_with_its_reach_and_gives_each_image_its_statement(
+    tmp_path: Path,
+) -> None:
+    """The piece shows its desktop on a screen at hand, which the figure of the foundations'
+    release 1.0.0 declares no smallest size for, and its phone in no medium: each image gets
+    the statement of its own key alone, given for every language (DEC-055 points 10 and 11,
+    DEC-062 points 1 and 2)."""
+    root = on_devices(tmp_path)
+    path = root / "visual" / "pieces" / PIECE / "piece.yaml"
+    piece = YAML(typ="safe").load(path.read_text(encoding="utf-8"))
+    write(path, yaml_text({**piece, "media": {"screen": ["desktop"]}}))
+    report = looked(root, "--every-key")
+    check = checks.text_size.CHECK
+    reach = report["reaches"][check.id]
+    assert reach["statements"] == ["text-size-unmeasured"]
+    assert reach["measures"] == list(check.reach.measures)
+    assert reach["leaves-out"] == list(check.reach.leaves_out)
+    images = {image["key"]: image for image in report["images"]}
+    assert set(images) == {"default", PHONE}
+    stated = {
+        key: [each for each in image["findings"] if each["check"] == check.id]
+        for key, image in images.items()
+    }
+    assert [(each["label"], each["language"], each["key"]) for each in stated["default"]] == [
+        ("text-size-unmeasured", None, "default")
+    ]
+    assert "declares no smallest text size for `screen`" in stated["default"][0]["message"]
+    assert [(each["label"], each["language"], each["key"]) for each in stated[PHONE]] == [
+        ("text-size-unmeasured", None, PHONE)
+    ]
+    assert "shows the size `phone`" in stated[PHONE][0]["message"]
+    for image in images.values():
+        assert check.id in image["measured-by"]

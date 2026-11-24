@@ -507,8 +507,28 @@ UNSIGNED = [
 #: the bottom of its card's box differ by 1.6 px, and fail nothing.
 BOX_LABELS = ("near-alignment", "near-alignment-between-groups", "box-overlap")
 
+#: The fact the check of a text's size states on a piece that names no medium, as no
+#: reference piece does, which the tests read apart (DEC-055 point 10).
+UNMEASURED = "text-size-unmeasured"
+
 #: The labels the tests of the reference pieces' checks read apart from the rest.
-APART = ("component-experimental", *SIGN_LABELS, *BOX_LABELS)
+APART = ("component-experimental", *SIGN_LABELS, *BOX_LABELS, UNMEASURED)
+
+
+def unmeasured(judged: Iterable[tuple[Any, str]]) -> list[tuple[str, str, str]]:
+    """The statements of the check of a text's size among a check's findings, `judged`,
+    each with its level, file and place."""
+    return [
+        (level, finding.file, finding.where)
+        for finding, level in judged
+        if finding.code == UNMEASURED
+    ]
+
+
+def no_medium(pieces: Iterable[str]) -> list[tuple[str, str, str]]:
+    """The statement on each of `pieces`, which names no medium: a fact at its `media`, once
+    for every language and key (DEC-055 point 10)."""
+    return [("fact", f"visual/pieces/{piece}/piece.yaml", "media") for piece in sorted(pieces)]
 
 
 def box_levels(judged: Iterable[tuple[Any, str]]) -> set[str]:
@@ -543,6 +563,7 @@ def test_every_reference_piece_passes_the_check_under_the_test_brand(location: P
         ("fact", "picture-role-unvalued", "visual/libraries/test-brand/1.1.0/", "picture.logo")
     ]
     assert on_signs(report.judged) == UNSIGNED
+    assert unmeasured(report.judged) == no_medium(COMPONENTS)
     assert box_levels(report.judged) <= {"attention"}
     assert not report.failed()
     assert report.summary == [
