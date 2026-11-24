@@ -6,6 +6,8 @@ pkit:
     anchors:
       path:
         - .pkit/capabilities/visual-communication/package.yaml
+        - .pkit/capabilities/visual-communication/agents/graphic-design-reviewer.md
+        - .pkit/capabilities/visual-communication/agents/graphic-designer.md
         - .pkit/capabilities/visual-communication/scripts/add.py
         - .pkit/capabilities/visual-communication/scripts/render.py
         - .pkit/capabilities/visual-communication/scripts/export.py
@@ -56,7 +58,11 @@ pkit:
         - .pkit/capabilities/visual-communication/schemas/code-record.schema.json
         - .pkit/capabilities/visual-communication/schemas/values.schema.json
         - .pkit/capabilities/visual-communication/schemas/values-2.schema.json
+        - .pkit/capabilities/visual-communication/schemas/review.schema.json
+        - .pkit/capabilities/visual-communication/schemas/look-report.schema.json
+        - .pkit/capabilities/visual-communication/scripts/_lib/reading.py
         - tests/fixtures/visual-communication/libraries/tests/1.0.0/components/stamp.yaml
+        - .pkit/capabilities/visual-communication/scripts/_lib/scene_checks.py
       record:
         - visual-communication:DEC-001#2
         - visual-communication:DEC-002#1
@@ -155,6 +161,15 @@ pkit:
         - visual-communication:DEC-039#3
         - visual-communication:DEC-039#4
         - visual-communication:DEC-039#5
+        - visual-communication:DEC-030#2
+        - visual-communication:DEC-030#5
+        - visual-communication:DEC-062#1
+        - visual-communication:DEC-062#2
+        - visual-communication:DEC-063#1
+        - visual-communication:DEC-066#2
+        - visual-communication:DEC-070#2
+        - visual-communication:DEC-070#5
+        - ADR-097
       artefact:
         - .pkit/capabilities/visual-communication/components.md#exposes
         - .pkit/capabilities/visual-communication/components.md#options
@@ -172,16 +187,19 @@ pkit:
         - .pkit/capabilities/visual-communication/files.md#pieceyaml
         - .pkit/capabilities/visual-communication/files.md#rolesyaml
         - .pkit/capabilities/visual-communication/files.md#shapes
+        - .pkit/capabilities/visual-communication/files.md#the-binding
         - .pkit/capabilities/visual-communication/files.md#the-clones-local-folder
         - .pkit/capabilities/visual-communication/files.md#the-lock
         - .pkit/capabilities/visual-communication/files.md#the-browser
+        - .pkit/cli/README.md#validate
+        - .pkit/cli/README.md#machine-readable-output
       source:
         - html-page-print-runs
 ---
 
 # What is made from a piece
 
-Plugins make what the capability gives out. A renderer draws a piece's scenes as previews and exports. A producer makes a picture a piece shows. A code writer writes a brand out as code. What each command reads, writes and refuses as a whole is under *Commands* in the README.
+Plugins make what the capability gives out. A renderer draws a piece's scenes as previews and exports. A producer makes a picture a piece shows. A code writer writes a brand out as code. What each command reads, writes and refuses as a whole is under *Commands* in the README. This page also holds the document `pkit visual pages` prints for a program ([What `pkit visual pages` prints](#what-pkit-visual-pages-prints)).
 
 ## Contents
 
@@ -832,7 +850,8 @@ The check reads this code as it reads any written code (*Written code* in *What 
 
 The *viewing step* draws a piece's pages as images, for a person or an agent to read (DEC-015 point 1). `pkit visual look <piece>` runs it, and `pkit visual pages <piece>` lists what it can draw.
 
-- **No render, and no export.** It moves no lock and keeps no findings. It uses up no version number, writes no `exports.yaml` and records no location.
+- **No render, and no export.** It moves no lock and keeps no findings record. It uses up no version number, writes no `exports.yaml` and records no location.
+- **What the checks found.** It runs the checks a render runs on a scene, by the same code, on the scenes it computes ([Scenes](checks.md#scenes) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->): each key over the size axes of each language it draws, whichever keys it draws, and of each language a check compares. Its report gives each image the findings that hold on it, and lists apart those on no image drawn, such as at a key the run did not draw. It never reads a piece's findings record, which holds what the last render found, on scenes that may differ (DEC-062 point 1).
 - **An export's facts** show as in a [preview](#previews): a number shown is the next export's, which the run leaves for it. Where an image shows a stand-in, the command says so, and why, after what the report says ([The facts of an export](components.md#the-facts-of-an-export)).
 - **Under the lock.** It reads the lock `piece.yaml` holds, and computes the piece's scenes under it (DEC-015 point 4).
 - **It runs no helper or producer.** A produced picture is drawn as it stands, stale or not. One with no variant for the key is left out, as a loss. So is a picture file that is missing or cannot be read.
@@ -883,12 +902,13 @@ Some readers have their browser replace a page's colours with a few of their own
 
 ### When the browser stops
 
-A run stops where no browser runs, where one stops part way, or where its first read fails (DEC-020 point 8). This holds of the start under forced colours too.
+A run stops where no browser runs, where one stops part way, or where its first read fails (DEC-020 point 8). It stops too where it cannot tell a text's ink, in its first read or in a page file, since the browser's pictures of the band around that text do not hold still. This holds of the start under forced colours too.
 
 - **What it writes.** The page files and `report.json`, in the HTML renderer's folder, and no image ([What a run writes](#what-a-run-writes)).
-- **What the report says.** What stopped it, and under which lock. It names what is missing: where the step looked for a browser, or the program it started and what that said.
+- **What the report says.** What stopped it, and under which lock. It names what is missing: where the step looked for a browser, or the program it started and what that said. Where it cannot tell a text's ink, it names the text, the program it started and what that said.
 - **A sandbox.** Where the browser's words show a sandbox, the run says that a sandbox stopped the browser. Otherwise it names what the browser said.
 - **A browser run as root.** Chrome run as root, as a container may run it, refuses to start with its own sandbox on. The run says so, apart from a sandbox, and never turns that sandbox off.
+- **A text's ink that cannot be told.** In each of 3 tries, the browser gave two pictures of the band around a text that differ, though the page stood the same for both. The run stops, rather than guess which picture shows the text's ink. The same look, run again, starts the browser afresh, and its pictures may agree. Of the ways on below, a pipeline's drawings come from a run of their own, and way 3 serves as it does for any stop. Way 2, a person's run, is such a run again.
 - **How to go on.** The command exits 3, and names three ways on, in this order (DEC-024 point 4), and a fourth after a stop under forced colours (DEC-027 point 4):
   1. a build pipeline's drawings of the piece's pages, where the project has its pipeline draw them ([A pipeline's drawings](#a-pipelines-drawings)). They show a pushed commit, not your working tree.
   2. the same look, run once by a person outside any sandbox, such as in their own terminal. This line is addressed to a person. It runs the clone's scripts as they stand, with that person's rights.
@@ -918,6 +938,8 @@ A run replaces what an earlier run left in its own folder, so a folder never mix
 
 `report.json` says what the images cannot show as the renderer set it, and the command prints the same (DEC-015 point 3). It holds the piece, the lock, the renderer with its version, the tool, and the lists below. Each entry but an image's names the language, key and page it lies on.
 
+The schema [`look-report.schema.json`](schemas/look-report.schema.json) fixes the report's form through either renderer: every key below, and its type. The report names no schema of its own, and no check reads it.
+
 - **`images`:** each image, with its frames' file and its pixels. Through the SVG renderer, `on-white` is true where the page draws no ground of its own. Through the HTML renderer, `on-browser-ground` is true there instead. That image lies on the browser's own ground in the mode drawn, not on white, or under a forced palette on that palette's ground.
   - **`band`:** on each band of a page, its `number` from 1, how many the page has, `of`, and its `top` and `height` in the page's px. A page's bands follow one another in order.
   - **`too-wide`:** true on each image of a page too wide for its smallest text to read. Another image holds no such key.
@@ -932,6 +954,18 @@ A run replaces what an earlier run left in its own folder, so a folder never mix
   - `no face`: the file holds no face of its family at its weight, with that family and weight;
   - `font of the machine`: the browser drew it, even in part, in a font of the machine, with each such font.
 - **`profiles`:** through the SVG renderer, each picture a page shows that carries a colour profile, with its element and its file's name. resvg may draw it without its profile, where a browser draws it by it (DEC-025 point 5).
+
+What the checks found on the scenes the run computed (DEC-062 points 1 and 2), through either renderer:
+
+- **`findings`,** on each image: each finding that holds on it. A finding gives its `check`, the id of the check that found it where that check states a [reach](checks.md#scenes) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->, else `null`; its `label`, `level`, `location` and `message`, as validation reads them where the finding lies, save that every overlap is `box-overlap`, with nothing in its message of a part's `lies-over`, whatever names the pair ([parts](components.md#parts), DEC-066 point 2); and its `language`, `key` and `page`, each `null` where it holds in every language, at every key or on no page. Its key is a whole key for a finding of a check of colour that names a combination, as `contrast-drawn` does, once for each it names, and a key over the size axes for any other, which holds alike in every combination its scene serves.
+  - **Which image takes it.** Each image of its language and key, those for every language or every key among them, on its page or on no page. A band takes its page's. A finding the checks give once for several places, as for a concept told by its colour alone, is given to each image that shows one of them.
+  - **A forced image** takes the findings of its language, its key over the size axes and its page, and none of a check of colour that names a combination: its colours are the browser's palette's, which no check measures (DEC-027 point 6).
+  - **Given once.** A loss the report lists under `losses` for the image is not given again.
+- **`measured-by`,** on each image: the id of each check that measured it. A check measured an image where it states a reach and ran on the image's scene, and the checks' code stopped neither on that scene nor, for a check that compares scenes, on one it compares. A check of colour measures no forced image. A check that states no reach measured no image, though its findings are given.
+- **`not-measured`,** on each image: each check that states a reach and did not measure it, its `check` and `why`. Where the checks' code stops on a scene, the run still draws its images, and says here why no check measured them. A scene the run computes only for its findings stops no image it draws.
+- **`on-no-image`:** each finding the run gives to no image drawn, as above, for each key it holds for. Draw its language, key or page to see it.
+- **`reaches`:** the reach of each check that states one, by its id, as the code that ran states it: its `labels`, the axes it `compares` across, whether it is a check of `colour`, the kinds of place it `measures` and `leaves-out`, and what it `states` as a fact where it could measure nothing, with each such statement's label, `statements`.
+- **`capability`:** the capability's `name` and the `version` that ran the checks.
 
 Through the HTML renderer the report holds these too:
 
@@ -959,6 +993,23 @@ A refused run leaves its renderer's folder as it was. The fonts it held in a tem
 
 A version not yet released under a final or a published piece's lock refuses no run: the lock holds, and the piece draws.
 
+### What `pkit visual pages` prints
+
+`pkit visual pages <piece> --json` lists what a look can draw, as one JSON document. It keeps to the rule the CLI reference states for a document a command prints for a program ([Machine-readable output](../../cli/README.md#machine-readable-output)): a key, or a value of a set, may be added, one goes only as a breaking change of the capability, and none comes to mean anything else. The document carries no version. Where the command refuses, it prints none and exits 1.
+
+- **`piece`:** the piece's name, as given.
+- **`languages`:** the piece's languages, its source language first.
+- **`keys`:** the key of each of its combinations ([Keys of combinations](files.md#keys-of-combinations)).
+- **`drawn-by-default`:** what a look draws where no flag picks: `language`, the source language, and `key`, the first key in key order.
+- **`pages`:** for each language, by its name, the trace id of each page at the key drawn by default, in page order, so a page's number is its place from 1.
+- **`renderer`:** the renderer a look reads the piece through by default: `html` where the piece declares `html`, and `svg` otherwise ([named no reading](../../cli/README.md#machine-readable-output)).
+- **`tools.svg`:** the SVG renderer's tool, with its `name`, `resvg`, its `version`, and `wheel`, the version of the resvg-py wheel that holds it.
+- **`tools.html`:** the browser a look through the HTML renderer would start, which the command finds and never starts ([The browser](files.md#the-browser)):
+  - `program`: its path, or `null` where it finds none, so a look through the HTML renderer stops.
+  - `named`: whether the configuration names it.
+  - `looked`: each place it looked where it found none, and empty where it found one.
+  - `forced-palettes`: the palettes a look draws with `--forced-colours`, `light` and `dark` ([named no reading](../../cli/README.md#machine-readable-output); [Under forced colours](#under-forced-colours)).
+
 ### A pipeline's drawings
 
 A project's build pipeline may draw each piece's HTML pages on every change it checks, such as a pull request (DEC-024 point 5). An agent whose session cannot run the browser then reads those. Whether the pipeline does so is the project's choice. No setting of the capability's says so, and the capability ships no pipeline file.
@@ -974,3 +1025,13 @@ A project's build pipeline may draw each piece's HTML pages on every change it c
 - **A folder of its own.** Never fetch them into `look/`, where a look replaces its renderer's folder ([What a run writes](#what-a-run-writes)). Read the fetched folder as a look's folder, `report.json` first.
 - **The hosts it reaches.** In a session's sandbox, each host the fetch needs is the project's own allowance to add. The capability declares none.
 - **A run the permission model confines,** such as a builder's, reaches no such host. Only the SVG renderer's pages remain in it.
+
+### Where the review's reports are kept
+
+[The reviewer](README.md#the-reviewer) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle --> writes a report for each reading of a piece. It writes no file: it replies with the report, and whoever dispatched it keeps the report whole, as it was written, and commits none of it.
+
+- **A person, or a session,** keeps it in `.pkit/capabilities/visual-communication/project/local/reviews/<piece>/reading-<n>.md`, `<n>` counting the piece's readings from 1. That folder lies in the clone's local folder, as the look's images do ([The clone's local folder](files.md#the-clones-local-folder); DEC-015 point 4). A look replaces its own folder, and leaves this one.
+- **The designer** keeps the reports of its round in a file of its own in the agent workspace, since its grant names nothing inside the methodology's folder ([visual-communication:DEC-030-design-agents] point 5).
+- **The second reading of a round** is told the file that keeps the first's report, and reads it only once its own findings are written. It then says of each finding of the first whether the page still shows it ([visual-communication:DEC-070-ship-call-and-one-round] point 5).
+- **Kept as written.** Nobody summarises, filters or answers a report before it is kept, or before the second reading reads it. The round hands the person the second report as the reviewer wrote it (DEC-070 point 2).
+- **Not validated.** `pkit validate` checks no kept report, though the document it opens with names its schema ([The binding](files.md#the-binding)).

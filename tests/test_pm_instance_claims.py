@@ -547,7 +547,6 @@ def _guard(ic, gh: FakeGitHub, clone, bypass: str | None = None, dry_run: bool =
         verb="edit-issue",
         flag="--bypass-owner",
         bypass=bypass,
-        invoker=ME,
         dry_run=dry_run,
         run=gh,
     )
@@ -636,7 +635,7 @@ def test_a_bypass_posts_its_reason_once(ic, root: Path) -> None:
     assert first.bypassed and second.bypassed
     assert not first.refused
     (audit,) = _audits(gh)
-    assert audit.startswith("<!-- pkit-audit -->\nBypassed by me <me@example.com>: its session")
+    assert audit.startswith("<!-- pkit-audit -->\nBypassed: its session")
     assert "The clash guard was bypassed: #7 is owned by instance 3, and this clone" in audit
     assert first.line.startswith("[warn] ownership: #7 is owned by instance 3, and --bypass-owner")
 
@@ -1436,3 +1435,93 @@ def test_read_owner_of_an_issue_it_cannot_read_is_none(ic, root: Path) -> None:
     gh = FakeGitHub(failing={"view"})
     gh.add(7)
     assert ic.read_owner(7, _clone(ic, root), {}, run=gh) is None
+
+
+# ---- a credential that names no user's account (DEC-076 point 4) ------------------
+
+#: The credential of an App installation's token, which names no user's account.
+AN_APP = SimpleNamespace(names_user=False, unresolved=False)
+#: A credential GitHub gave no answer for.
+UNANSWERED = SimpleNamespace(names_user=False, unresolved=True)
+
+READS_ONLY = (
+    "a clone under a credential that names no user's account takes no part in instance "
+    "ownership, since none of its claims would count (DEC-076 point 4)"
+)
+
+
+def _no_user(ic, root: Path, credential=AN_APP):
+    return ic.this_clone(root, None, credential=ic.credential_of(credential))
+
+
+def test_an_apps_clone_with_an_instance_id_only_reads(ic, root: Path, no_topology) -> None:
+    importlib.import_module("_lib.instance_identity").write_instance_id(root, 2)
+    clone = _no_user(ic, root)
+    assert clone is not None
+    assert (clone.instance, clone.login, clone.reads_only, clone.quiet) == (
+        ic.NO_INSTANCE,
+        None,
+        True,
+        False,
+    )
+    assert clone.named() == "a clone under a credential that names no user's account"
+
+
+def test_an_apps_clone_with_no_id_only_reads_and_says_nothing(ic, root: Path, no_topology) -> None:
+    clone = _no_user(ic, root)
+    assert clone is not None and clone.reads_only and clone.quiet
+
+
+def test_an_apps_clone_claims_and_releases_nothing_and_asks_github_nothing(
+    ic, root: Path, no_topology
+) -> None:
+    importlib.import_module("_lib.instance_identity").write_instance_id(root, 2)
+    clone = _no_user(ic, root)
+    gh = FakeGitHub()
+    gh.add(7)
+    claimed = ic.claim(7, clone, {}, run=gh)
+    released = ic.release(7, clone, {}, run=gh)
+    assert claimed.outcome == ic.NOT_CLAIMED
+    assert claimed.line == f"[note] ownership: #7 is not claimed: {READS_ONLY}."
+    assert released.outcome == ic.NOT_RELEASED
+    assert released.line == f"[note] ownership: #7 is not released: {READS_ONLY}."
+    assert ic.claim_plan(clone) == f"not claimed: {READS_ONLY}"
+    assert gh.calls == []
+
+
+def test_a_quiet_clone_that_only_reads_prints_no_line(ic, root: Path, no_topology, capsys) -> None:
+    gh = FakeGitHub()
+    gh.add(7)
+    ic.say(ic.claim(7, _no_user(ic, root), {}, run=gh))
+    assert capsys.readouterr() == ("", "")
+
+
+def test_the_guard_reads_the_owner_for_an_apps_clone(ic, root: Path, no_topology) -> None:
+    """The clone claims nothing, yet an issue an instance owns is refused it as any
+    clone is refused it (DEC-076 point 4)."""
+    gh = FakeGitHub()
+    gh.add(7, assignees=("alice",))
+    gh.post(7, _stamp(ic, "claim", 3), author="alice")
+    decision = _guard(ic, gh, _no_user(ic, root))
+    assert decision.outcome == ic.REFUSED
+    assert "#7 is owned by instance 3 of @alice" in decision.line
+    assert "this clone is a clone under a credential that names no user's account" in (
+        decision.line
+    )
+
+
+def test_an_unresolved_identity_on_a_clone_with_an_id_acts_as_no_instance(
+    ic, root: Path, no_topology
+) -> None:
+    importlib.import_module("_lib.instance_identity").write_instance_id(root, 2)
+    with pytest.raises(ic.Unconfirmed, match="this clone holds an instance id"):
+        ic.this_clone(root, None, login_cause=FORBIDDEN, credential=ic.credential_of(UNANSWERED))
+
+
+def test_an_unresolved_identity_on_a_clone_with_no_id_only_reads(
+    ic, root: Path, no_topology
+) -> None:
+    clone = ic.this_clone(
+        root, None, login_cause=FORBIDDEN, credential=ic.credential_of(UNANSWERED)
+    )
+    assert clone is not None and clone.reads_only and clone.quiet

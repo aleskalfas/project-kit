@@ -78,10 +78,12 @@ from project_kit.friction_git import (
 )
 from project_kit.working_tree import nul_separated
 
-#: The version of the document `render_json` returns, under the rule every reading
-#: document of the `friction` group follows: raised when a key a reader relies on
-#: changes its meaning or goes, never for a key added. What `all_inside` counts is part
-#: of its meaning, since a reader gates on it. Version 1 counted the artefacts'
+#: The version of the document `render_json` returns. It rises only when one of the
+#: document's own keys, or a value of one of its sets, goes, a break the changeset
+#: declares at `major`; never for a key or a value added. No key or value comes to
+#: mean anything else, in place or by coming back (ADR-097 points 4 and 5). Version 2
+#: marks a meaning changed before that rule, which stands under it (point 5): what
+#: `all_inside` counts, since a reader gates on it. Version 1 counted the artefacts'
 #: `revalidated` blocks and `revisited` lists; version 2 counts answer files the change
 #: adds (COR-062 point 3; ADR-068 point 5).
 SINCE_SCHEMA_VERSION = 2

@@ -1,0 +1,16 @@
+component: project-management
+kind: major
+custom:
+  category: Changed
+body: >
+  `create-issue` is refused, with exit 2, where the configuration declares a
+  board (`has_projects_v2_board: true`) and gives no number of 1 or more
+  for the board, read as a number: `projects_v2_board_id` missing, `null`, `0` or `""`
+  (#3244, DEC-019). Such a filing had no board to add the issue to, and was
+  filed onto none where the number was missing, or read a board no project
+  has where it was `0` or `""`. The refusal comes before
+  anything is written or asked and before a board is read, `--dry-run`
+  included, and names `projects_v2_board_id` as the key to set. A `--board`
+  in that case meets its own refusal first, which now names a `0` or `""`
+  as no board's number. This breaks a filing in a project whose
+  configuration declares a board with no number for it.

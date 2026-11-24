@@ -1,0 +1,20 @@
+component: project-management
+kind: major
+custom:
+  category: Changed
+body: >
+  Whoever runs a command is the user's account GitHub names for the
+  credential, ahead of `PM_INVOKER_LOGIN` and git's email (#3175, DEC-021 and
+  DEC-022). Every command asks `gh api user` first, once per process, and
+  where GitHub answers with an account of type `User`, that login alone is
+  the invoker: a closed membership gate matches it against each member's
+  `github_login`, without regard to case, whatever git's email and the
+  variable name, and it is the default assignee, the account `--me` names,
+  `start-work`'s assignee, the claims' and seats' holder and the journal's
+  actor. This breaks a project whose agent acts under a user's account and
+  names the person it works for in `PM_INVOKER_LOGIN`: the variable is now
+  ignored there, with a one-time warning. git's email and the variable count
+  only where GitHub names no user's account, as before. `show-members` says
+  where the login came from. `add-member` looks each login up and writes it as
+  GitHub spells it, refusing one GitHub knows no account by, and its
+  duplicate check ignores case. The README's "Who runs a command" says so.

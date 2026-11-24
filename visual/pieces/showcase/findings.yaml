@@ -8,7 +8,7 @@ key:
   form: 1
   hash: sha256
   format: 1
-  value: 0d9a346c15bf2d8ab3a0b2ade250aba4380b2ee013bf87361da42ff3213e5d04
+  value: d862d9da1e77dbae0fcfe54c022b300cf4607c778675ecafe5876584e9467909
   inputs:
     - file: components/capability.yaml
       sha256: 49ab721151fd9313be944c5458fc6137819d61fbbe1d0bed713a7f6e0c385b4a
@@ -109,7 +109,7 @@ key:
     - library: starter
       version: 1.1.0
       path: README.md
-      sha256: 617a18adeed285318d34448749d5b266b1fc8f2ec02726a2b1d048b039a2e47d
+      sha256: d4d3dd9f95f7af8a39867252c9e3c6c3fa4d5a28c4c15175a6bf3788184ad163
     - library: starter
       version: 1.1.0
       path: components/aside.yaml
@@ -133,7 +133,7 @@ key:
     - library: starter
       version: 1.1.0
       path: components/connector.yaml
-      sha256: abdc1b7f912a7eff607ea48d0d3d7b89010fd91db07ad2192068e677cb4c9a5d
+      sha256: 5e801c88c9d85e0c3bcc7658f69670052f5256acad259e0bbf6568bf1af1eb5f
     - library: starter
       version: 1.1.0
       path: components/field.yaml
@@ -157,7 +157,7 @@ key:
     - library: starter
       version: 1.1.0
       path: components/layers.yaml
-      sha256: 4c6fb8dbfce7148faaecbe18ba69609682d4cb73d6ca802dfbcd9f8036d3edc3
+      sha256: 0aaff4cff00034209d5c414409e251ac0cf2726959459cbc8ac634368765414b
     - library: starter
       version: 1.1.0
       path: components/legend.yaml
@@ -213,7 +213,7 @@ key:
     - library: starter
       version: 1.1.0
       path: roles.yaml
-      sha256: 6f583607c22621ff8a30c63813d92968e3afc4890aa49021f02929ac751a5623
+      sha256: 9b29298c1fb10586117f1bab90e2d5e761b5d6005310bef0237263bd4b6ff2c2
 findings:
   - code: size-width
     level: attention
@@ -232,11 +232,32 @@ findings:
     message: 'the piece uses `piece/wiring`, which is experimental: its library may still change it in any release'
     file: piece.yaml
     where: deck/slides[connect]/visual
+  - code: near-alignment
+    level: attention
+    message: "the gaps down in `deck/slides[connect]/visual` nearly agree: 16 px, between `deck/slides[connect]/visual/fillers` and `deck/slides[connect]/visual/gains`; and 19.99 px, between `deck/slides[connect]/visual/frame` and `deck/slides[connect]/visual/evidence`: 3.99 px apart, more than a pixel of rounding and less than the brand's smallest step of space, `space.1`, 4 px"
+    file: piece.yaml
+    where: deck/slides[connect]/visual
+    fix: where it is a fault, put the parts on one line, or a step of space apart, where its fix belongs; where it is meant, leave it
+    who: the reviewer, `graphic-design-reviewer`, who judges on the image whether the place is a fault or is meant
   - code: component-experimental
     level: fact
     message: 'the piece uses `piece/capability`, which is experimental: its library may still change it in any release'
     file: piece.yaml
     where: deck/slides[connect]/visual/opener[project-management]
+  - code: near-alignment-between-groups
+    level: attention
+    message: "at `deck/slides[connect]/visual/slots` and `deck/slides[connect]/visual/fillers`, parts of different groups nearly line up down, by more than a pixel of rounding and less than the brand's smallest step of space, `space.1`, 4 px: `deck/slides[connect]/visual/slots[doc-check]/name` and `deck/slides[connect]/visual/fillers[living-docs]/sign`, their tops 2 px apart; `deck/slides[connect]/visual/slots[doc-check]/name` and `deck/slides[connect]/visual/fillers[living-docs]/role`, their bottoms 2 px apart"
+    file: piece.yaml
+    where: deck/slides[connect]/visual/slots
+    fix: where it is a fault, put the parts on one line, or a step of space apart, where its fix belongs; where it is meant, leave it
+    who: the reviewer, `graphic-design-reviewer`, who judges on the image whether the place is a fault or is meant
+  - code: near-alignment-between-groups
+    level: attention
+    message: "at `deck/slides[connect]/visual/slots` and `deck/slides[connect]/visual/fillers`, parts of different groups nearly line up down, by more than a pixel of rounding and less than the brand's smallest step of space, `space.1`, 4 px: `deck/slides[connect]/visual/slots[use-cases]/name` and `deck/slides[connect]/visual/fillers[software-analysis]/name`, their tops 2 px apart"
+    file: piece.yaml
+    where: deck/slides[connect]/visual/slots
+    fix: where it is a fault, put the parts on one line, or a step of space apart, where its fix belongs; where it is meant, leave it
+    who: the reviewer, `graphic-design-reviewer`, who judges on the image whether the place is a fault or is meant
   - code: component-experimental
     level: fact
     message: 'the piece uses `piece/slot`, which is experimental: its library may still change it in any release'
@@ -272,6 +293,20 @@ findings:
     message: 'the piece uses `starter/code`, which is experimental: its library may still change it in any release'
     file: piece.yaml
     where: deck/slides[install]/visual/panels#1
+  - code: near-alignment-between-groups
+    level: attention
+    message: "at `deck/slides[install]/visual/under/panels#2/panels` and `deck/slides[install]/visual/under/panels#2/under`, parts of different groups nearly line up across, by more than a pixel of rounding and less than the brand's smallest step of space, `space.1`, 4 px: `deck/slides[install]/visual/under/panels#2/panels#1/entries[core]/box` and `deck/slides[install]/visual/under/panels#2/under/command/text`, their centres 1.26 px apart"
+    file: piece.yaml
+    where: deck/slides[install]/visual/under/panels#2/panels
+    fix: where it is a fault, put the parts on one line, or a step of space apart, where its fix belongs; where it is meant, leave it
+    who: the reviewer, `graphic-design-reviewer`, who judges on the image whether the place is a fault or is meant
+  - code: near-alignment-between-groups
+    level: attention
+    message: "at `deck/slides[install]/visual/under/panels#2/panels` and `deck/slides[install]/visual/under/panels#2/under`, parts of different groups nearly line up across, by more than a pixel of rounding and less than the brand's smallest step of space, `space.1`, 4 px: `deck/slides[install]/visual/under/panels#2/panels#1/entries[yours]/label` and `deck/slides[install]/visual/under/panels#2/under/command/box`, their right edges 1.17 px apart"
+    file: piece.yaml
+    where: deck/slides[install]/visual/under/panels#2/panels
+    fix: where it is a fault, put the parts on one line, or a step of space apart, where its fix belongs; where it is meant, leave it
+    who: the reviewer, `graphic-design-reviewer`, who judges on the image whether the place is a fault or is meant
   - code: component-experimental
     level: fact
     message: 'the piece uses `starter/legend`, which is experimental: its library may still change it in any release'

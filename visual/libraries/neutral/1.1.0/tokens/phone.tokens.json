@@ -9,5 +9,24 @@
         "unit": "px"
       }
     }
+  },
+  "type": {
+    "$type": "typography",
+    "title": {
+      "$description": "A page's title at 32 px, twice the body, so a long word still fits a phone's width, and a page's head stays apart from the heads of its parts.",
+      "$value": {
+        "fontFamily": "{font.heading}",
+        "fontSize": {
+          "value": 32,
+          "unit": "px"
+        },
+        "fontWeight": 600,
+        "letterSpacing": {
+          "value": 0,
+          "unit": "px"
+        },
+        "lineHeight": 1.25
+      }
+    }
   }
 }

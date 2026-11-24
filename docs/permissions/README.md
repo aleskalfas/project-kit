@@ -10,7 +10,7 @@ pkit:
         - .pkit/schemas/privilege-catalog.yaml
         - .pkit/permissions/project/grants.yaml
         - .pkit/adapters/claude-code/settings/project/settings.json
-      record: [COR-028, COR-047, ADR-002, ADR-003, ADR-004, ADR-005, ADR-007, ADR-016, ADR-021, ADR-025, ADR-032]
+      record: [COR-028, COR-047, ADR-002, ADR-003, ADR-004, ADR-005, ADR-007, ADR-016, ADR-021, ADR-025, ADR-032, ADR-095, ADR-099]
       artefact:
         - ACT-operator
         - UC-027
@@ -154,17 +154,18 @@ The model is meant for agents that work with nobody watching each call. You do n
 
 ## How a tool call is decided
 
-Each tool call an agent makes goes through the harness's permission hook, which has the decision core decide it: allow, deny or abstain. The model, its privilege catalog and its decision core are harness-neutral, and `pkit permissions explain` reads the model alone.
+Each tool call an agent makes goes through the harness's permission hook, which has the decision core decide it: allow, deny, ask or abstain. The model, its privilege catalog and its decision core are harness-neutral, and `pkit permissions explain` reads the model alone.
 
 ```mermaid
 flowchart TD
   accTitle: How a tool call is decided
-  accDescr: An agent's tool call goes to the harness's permission hook, Claude Code's today, which has the decision core decide it. The core reads the permission model, and its verdict is allow, deny or abstain. On allow the call runs, and on deny it is refused, with no prompt for either. On abstain, the harness's native rules decide: they run the call or refuse it, and otherwise the harness may ask you.
+  accDescr: An agent's tool call goes to the harness's permission hook, Claude Code's today, which has the decision core decide it. The core reads the permission model, and its verdict is allow, deny, ask or abstain. On allow the call runs, and on deny it is refused, with no prompt for either. On ask, you are asked in every mode. On abstain, the harness's native rules decide: they run the call or refuse it, and otherwise the harness may ask you.
   call["An agent's tool call"] --> hook["The harness's permission hook, Claude Code's today"]
   hook --> core["The decision core"]
   model[("The permission model")] --> core
   core -->|allow| runs["The call runs, unasked"]
   core -->|deny| refused["The call is refused, unasked"]
+  core -->|ask| interlock["You are asked, in every mode"]
   core -->|abstain| rules["The harness's own rules"]
   rules -->|allowed| runs
   rules -->|denied| refused
@@ -174,12 +175,15 @@ flowchart TD
 - **The hook.** The harness passes each tool call to the hook before the call runs, once you turn enforcement on ("Turning it on" below). The hook gives the harness the verdict, and nothing for an abstain. Claude Code's hook prints the verdict as JSON ([the adapter's README, "Live permission enforcement"](../../.pkit/adapters/claude-code/README.md#live-permission-enforcement-permission-hookpy)).
 - **The decision core** reads the permission model at each call, and gives one verdict. The model holds the guardrails, and the grants of the active profile, of your project and of each installed capability ([the reference, "Grants and verdicts"](../../.pkit/permissions/README.md#grants-and-verdicts)). The guardrails deny recursive deletion, `sudo` and rewriting published history to every agent and to you ([the reference, "Privileges and how they are recognized"](../../.pkit/permissions/README.md#privileges-and-how-they-are-recognized)).
 - **Allow** runs the call with no prompt. **Deny** refuses it, and the harness asks nobody. A deny wins over every allow, whatever the order of the grants.
+- **Ask** puts the call to you in every mode, auto and bypass mode among them. The core asks so before a command that changes what judges later calls, such as `pkit permissions apply` ([the reference, "Grants and verdicts"](../../.pkit/permissions/README.md#grants-and-verdicts)). It also denies an agent's call that names a folder where the hook puts no ask, which you name from your own terminal.
 - **Abstain** leaves the call to the harness's native rules: the allows and denies in its settings, which it enforces itself. The adapter writes them from its baseline and from the model (COR-028 point 2). A call they neither allow nor deny goes to the harness's permission mode, which may ask you.
-- **What else decides.** Where no grant covers a call, the posture decides: the default, `lenient`, abstains, and `strict` denies. A fault in the hook gives an abstain. The harness's native denies still refuse the forms of the guardrails' commands they name ([the reference, "Grants and verdicts"](../../.pkit/permissions/README.md#grants-and-verdicts)).
+- **What else decides.** Where no grant covers a call, the posture decides: the default, `lenient`, abstains, and `strict` denies. A fault in the hook drops only the judgement that rests on it, and never denies. The harness's native rules still refuse the forms of the guardrails' commands they name. They also ask before the plain forms of the commands the core asks on ([the reference, "Grants and verdicts"](../../.pkit/permissions/README.md#grants-and-verdicts)).
 - **The CLI reads the same model** as the hook, so `explain` shows what the hook decides on ([the same section](../../.pkit/permissions/README.md#grants-and-verdicts)).
-- **When the hook asks.** Claude Code's hook asks you rather than abstain in two cases:
+- **When the hook asks.** Claude Code's hook asks you rather than abstain in these cases:
   - a call that may hide a guardrail, outside auto and bypass mode ([the reference, "A deny holds against the forms of its command"](../../.pkit/permissions/README.md#a-deny-holds-against-the-forms-of-its-command)). In those two modes you chose not to be asked ([the adapter's README, "Live permission enforcement"](../../.pkit/adapters/claude-code/README.md#live-permission-enforcement-permission-hookpy)).
   - an `Edit` or `Write` to an absolute path outside the session's repository, in every mode ([the adapter's README, "Live permission enforcement"](../../.pkit/adapters/claude-code/README.md#live-permission-enforcement-permission-hookpy))
+  - a runner's command the core cannot read, which may change what judges later calls, outside auto and bypass mode ([the adapter's README, "Live permission enforcement"](../../.pkit/adapters/claude-code/README.md#live-permission-enforcement-permission-hookpy))
+  - a shell call that asks to run outside the sandbox, in every mode ([the adapter's README, "Live permission enforcement"](../../.pkit/adapters/claude-code/README.md#live-permission-enforcement-permission-hookpy))
 
 ### Why some commands still prompt
 
@@ -259,7 +263,7 @@ pkit permissions setup autonomy
 
 Each task shows its commands with their output. Each fence starts from a fresh project where pkit is installed and no profile is active, so a task grants what it shows.
 
-Some tasks pass a call to the hook by hand, to show its verdict without a Claude Code session. Claude Code passes each call to the hook's standard input as a JSON document. The document holds the tool in `tool_name`, its input in `tool_input` and the session's mode in `permission_mode`. The hook prints an allow or a deny, and nothing when it abstains.
+Some tasks pass a call to the hook by hand, to show its verdict without a Claude Code session. Claude Code passes each call to the hook's standard input as a JSON document. The document holds the tool in `tool_name`, its input in `tool_input` and the session's mode in `permission_mode`. The hook prints an allow, a deny or an ask, and nothing when it abstains.
 
 ### Find out why a call prompted
 

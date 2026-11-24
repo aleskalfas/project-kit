@@ -182,6 +182,26 @@ def test_forged_marker_from_another_account_is_ignored(io) -> None:
     assert not res.claimed
 
 
+@pytest.mark.parametrize("login", ["robot[bot]", "Robot[BOT]", "app/robot"])
+def test_a_marker_from_an_account_spelled_as_a_bots_never_counts(io, login) -> None:
+    """Not even on an issue assigned to that account, which the service lets
+    some bots be (DEC-079 point 2)."""
+    comments = [_comment(io, event="claim", instance=2, author=login)]
+    res = io.resolve_owner(comments=comments, labels=[], assignee_login=login)
+    assert not res.claimed
+
+
+def test_a_log_comment_from_a_bot_never_counts(io) -> None:
+    """The log's reader gives a bot's login with its suffix (DEC-079 point 2)."""
+    body = io.format_event_comment(event="claim", instance=2)
+    log = sys.modules["_lib.comment_log"]
+    at = "2026-07-07T12:00:00Z"
+    bots = log.LogComment(id=1, author="robot[bot]", created_at=at, body=body, author_type="Bot")
+    users = log.LogComment(id=1, author="alice", created_at=at, body=body, author_type="User")
+    assert not io.resolve_owner(comments=[bots], labels=[], assignee_login="robot[bot]").claimed
+    assert io.resolve_owner(comments=[users], labels=[], assignee_login="alice").claimed
+
+
 def test_no_assignee_means_no_authentic_marker(io) -> None:
     comments = [_comment(io, event="claim", instance=2, author="alice")]
     res = io.resolve_owner(comments=comments, labels=[], assignee_login=None)

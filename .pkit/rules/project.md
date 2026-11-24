@@ -12,3 +12,7 @@
 ## Commits
 
 4. **Sign every commit you make in this repository, and never switch signing off;** if a commit fails to sign, wait a minute before the one retry core rule 21 allows (project-kit#1648).
+
+## Visual work
+
+5. **Run no design loop in project-kit beyond the visual-communication capability's one round.** A *design loop* changes how a piece, a library or a brand looks (its layout, forms, type, colour or space), has a review or another critic read the result, and lets what that reading finds choose the next change. No session starts, resumes or dispatches one, in the repository or in any copy of it, save the designer's one round of mends (visual-communication DEC-070 point 2), and no critic but the capability's reviewer steers a change to how a piece, a library or a brand looks. Two things are outside this rule: a change to words, facts or translations that leaves the layout as it is, and drawing the designs a test grades, which never become another piece's, a library's or a brand's. A person may still ask for one further round, which mends what they name (DEC-070 point 2). DEC-070 binds the capability's designer alone; this rule binds every session, since project-kit authors the capability and its own pieces are what the review is tested on (project-kit#3478).

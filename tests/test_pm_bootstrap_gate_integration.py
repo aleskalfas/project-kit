@@ -251,9 +251,12 @@ def test_exempt_verbs_are_usable_un_bootstrapped(
 # --- a bootstrapped project is unaffected --------------------------------
 
 
-def test_bootstrapped_project_is_unaffected(tmp_path: Path) -> None:
+def test_bootstrapped_project_is_unaffected(tmp_path: Path, service_answers) -> None:
     """The whole point of the stamp: with it present the gate is silent and the
-    script proceeds exactly as before (here, to its dry-run plan)."""
+    script proceeds exactly as before (here, to its dry-run plan). GitHub answers
+    that the credential acts as `ci-bot`, a user's account, so `create-issue`
+    makes it the assignee with no lookup of its own (DEC-079 point 1)."""
+    service_answers("ci-bot")
     cap = _project(tmp_path)
     _bootstrap(cap)
     proc = _run(

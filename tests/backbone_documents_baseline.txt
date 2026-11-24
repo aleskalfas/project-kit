@@ -1,0 +1,4 @@
+# The backbone commands that print a document for a program and whose documents no
+# contract pins yet, in tests/test_backbone_documents.py or a module it gathers
+# (ADR-097 point 7). It names none: every such command has its contracts pinned. Nothing
+# is ever added: a command not listed, a new one included, has its contracts pinned there.

@@ -1,0 +1,19 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Added
+body: >
+  The starter's version being built, 1.1.0, draws a note's leader apart from a
+  link, and lets `layers` set notes on both sides of its stack (#3414). Its
+  `connector` gains the option `weight`, its words `thick`, the default, and
+  `thin`, and the role `starter.leader`, the width of a thin connector's line,
+  which defaults to the foundations' `stroke.thin`, an edge's width. A leader
+  drawn `thin` with `arrow: none` reads lighter than the links between the
+  items its note explains. Its `layers` gains the list `left-notes`, a column
+  of notes to the left of the stack, as `notes` stands to its right, so two
+  notes whose leaders would cross in one column stand on two sides. A
+  connector that names no `weight`, and a `layers` with no `left-notes`, draw
+  as before. The starter's README names what its ties keep, and why: a tie
+  leaves each end by the side that faces the other, ties with corners turn
+  halfway, the notes of a column share the stack's height, and no component
+  draws a picture with points.

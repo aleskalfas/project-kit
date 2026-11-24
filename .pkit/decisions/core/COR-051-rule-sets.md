@@ -69,12 +69,12 @@ A rule's id is `RS-<SET>-NNN`: the family prefix, the rule set's name, and a num
 - A **superseded** rule names its successor and binds nothing.
 - A **withdrawn** rule is retired without a successor and binds nothing.
 - Superseded and withdrawn rules stay in place with their ids.
-- Accepting a rule is a reviewed change, like accepting a decision record under the decision-record specification's acceptance gate. Where that path involves a person, an agent may draft rules and propose their acceptance, but it is the person's review that accepts them.
+- Accepting a rule is a reviewed change, like accepting a decision record under the decision-record specification's acceptance gate. Where that path involves a person, an agent may draft rules and propose their acceptance, but it is the person's review that accepts them, or, where the delegation setting lets it, the delegate's acceptance under the tests COR-072 sets (refinement per COR-072).
 - A successor sits in the same rule set, or in a set that inherits it. It binds wherever its own set's rules bind (point 7), which may be less than where the rule it replaces bound. A set that inherits the replaced rule's set, but not the successor's, loses the rule. A supersession requires a new major, so that set's pin falls behind, and the loss is reviewed before the pin is updated (point 7).
 
 ### 5. Origins, checked deterministically
 
-Every accepted rule carries an origin: when it was decided, by whom, and why, in the decider's words. Alternatively, the origin may cite a decision record for a rule whose reasoning outgrows a line. An origin may also cite a **source**: a captured record of where the quoted words were said, of a kind some capability resolves as an anchor kind. Validation fails unless all of the following hold:
+Every accepted rule carries an origin: when it was decided, by whom, and why, in the decider's words. For a rule the delegate accepted, the decider is the person whose agreement the rule carries out, the words are the agreement's, marked where an agent wrote them, and the origin says the delegate accepted it; or the origin cites, as the next sentence allows, a decision record that a person or the delegate accepted (refinement per COR-072). Alternatively, the origin may cite a decision record for a rule whose reasoning outgrows a line. An origin may also cite a **source**: a captured record of where the quoted words were said, of a kind some capability resolves as an anchor kind. Validation fails unless all of the following hold:
 - every accepted rule has a complete origin;
 - a cited decision record exists, and is accepted whenever the rule is accepted;
 - a cited source resolves through the anchor kind a capability registered for it (COR-050). A source kind with no installed resolver is reported as unresolved-kind, never silently passed;

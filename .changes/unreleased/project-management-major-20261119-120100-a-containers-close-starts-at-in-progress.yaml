@@ -1,0 +1,19 @@
+component: project-management
+kind: major
+custom:
+  category: Changed
+body: >
+  `close-issue <N> --mode=cascade-eligibility-close` closes a container only
+  from In Progress, where DEC-006's table starts a container's close (#3248).
+  It closed and journaled one from wherever it stood. A container in Todo or
+  Backlog, behind the work under it, is refused, exit 1, naming the moves of
+  its own that bring it level, `move-issue <N> --to in-progress`, after
+  `promote-issue <N>` from Todo, or the won't-do close for dropped work
+  (DEC-075). An open container at Review or Done, a state set outside the
+  lifecycle, is refused, naming its state to set by hand. Where the board
+  holds the state, a card that places the container nowhere is refused, exit
+  3 where the board could not be read and 1 otherwise, nothing guessed
+  (DEC-051 point 6). Each refusal writes nothing, `--dry-run` included. A
+  project that keeps no position for the state, under a `derive` binding or
+  a state the map leaves out or marks unsupported, is checked for none. This
+  breaks the close of a container that does not stand at In Progress.
