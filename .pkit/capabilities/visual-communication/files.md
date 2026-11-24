@@ -349,11 +349,11 @@ It removes each folder whole, then takes each entry out of the list as text ([Th
 A new presentation that the designer designs, or one it redesigns whole, starts as a *sketch*: a drawing of every page, which the agent `graphic-sketcher` draws by hand outside the engine (DEC-071 point 1). The sketch is no file of the visual work:
 
 - **Where.** In the agent workspace of the checkout the designer works in, at `.agent-workspace/visual-communication/sketch/<piece>/`, a folder for each piece, named as the piece is. That is the capability's own folder in the workspace ([the permissions README, "The agent workspace"](../../permissions/README.md#the-agent-workspace)). None of it lies in the location, or in the clone's local folder (DEC-071 point 3).
-- **Never committed.** Nothing in the agent workspace is committed, so no file of the sketch is.
+- **Never committed.** Nothing in the agent workspace is committed, so no file of the sketch is ([the permissions README, "The agent workspace"](../../permissions/README.md#the-agent-workspace)).
 - **Who writes it.** `graphic-sketcher`, in a medium it draws freely and you can open, such as a web page it writes by hand. Its handoff names each file it wrote.
 - **Who reads it.** The designer, to rebuild it as the piece, and you. No command, check or review reads it, and none of the capability's formats apply to it. Once the rebuild is drawn, nothing draws from it: the piece's source is its content and its libraries.
-- **How long.** It is kept at least until your ship call on the piece. A later sketch of the same piece replaces it. The workspace's removal command does not reach it, since it refuses a path under a capability's own folder.
-- **One checkout.** It lies in the checkout the designer worked in, apart from the pages the viewing step drew. Copy it to read it on another machine.
+- **How long.** It is kept at least until your ship call on the piece. A later sketch of the same piece replaces it. The workspace's removal command does not reach it, since it refuses a path under a capability's own folder ([the permissions README, "The agent workspace"](../../permissions/README.md#the-agent-workspace)).
+- **One checkout.** It lies only in the checkout the designer worked in, in its agent workspace, not with the pages the viewing step drew. Copy it to read it on another machine.
 
 ## Names, ids and the binding
 
