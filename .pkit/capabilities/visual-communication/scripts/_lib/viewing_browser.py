@@ -330,6 +330,7 @@ GROUND = """(marks, ground, alone) => {
     [${marks.layer}], [${marks.ground}], [${marks.sign}], [${marks.span}]:not([${alone}]) {
       visibility: hidden !important}
     [${marks.span}] {background: none !important}
+    [${marks.span}]::before {display: none !important}
     html, body, [${marks.page}] {background: ${ground} !important}`;
   document.head.append(style);
 }"""
@@ -988,6 +989,7 @@ def _strength_draws() -> tuple[str, ...]:
         f"{page} *{{visibility:hidden!important}}{marked}{{visibility:visible!important}}"
         f"{marked} [{MARKS['sign']}]{{visibility:hidden!important}}"
         f"[{MARKS['span']}]{{background:none!important}}"
+        f"[{MARKS['span']}]::before{{display:none!important}}"
         f"html,body,{page}{{background:{STRENGTH[1]}!important}}"
     )
     return tuple(
@@ -1366,6 +1368,9 @@ STRUT = 32
 TEXT_WIDTH = 464
 SIZE = 14
 
+#: The custom property that holds a run's ground on its span, as the renderer's (DEC-039 point 3).
+RUN_GROUND = "--_ground"
+
 #: The rules of the planted file, which a test holds to the renderer's.
 PLANTED_SHEET = "".join(
     (
@@ -1375,10 +1380,13 @@ PLANTED_SHEET = "".join(
         f"{{margin-top:{html_declaration.DECLARATION['pages']['gap']}px}}",
         f"[{MARKS['layer']}]{{position:absolute;left:0;top:0;width:100%;height:100%;"
         "pointer-events:none}",
-        f"[{MARKS['text']}]{{position:absolute;top:0}}",
+        f"[{MARKS['text']}]{{position:absolute;top:0;isolation:isolate}}",
         f"[{MARKS['line']}]{{position:absolute;left:0;width:100%;font-size:0;line-height:0;"
         "white-space:pre}",
         f"[{MARKS['strut']}]{{display:inline-block;width:0}}",
+        f"[{MARKS['span']}]{{position:relative}}",
+        f"[{MARKS['span']}]::before{{content:'';position:absolute;inset:0;z-index:-1;"
+        f"border-radius:inherit;background:var({RUN_GROUND})}}",
         f"[{MARKS['ground']}]{{position:absolute;top:0;display:none;pointer-events:none}}",
         "[data-inset]{display:none}",
     )
@@ -1397,6 +1405,7 @@ PLANTED_FORCED_SHEET = "".join(
         f"[{MARKS['ground']}]{{display:block;background:{FORCED_COLOURS['grounds']['colour']}}}",
         f"[{MARKS['line']}]{{forced-color-adjust:none}}",
         f"[{MARKS['span']}]{{forced-color-adjust:auto;background:none!important}}",
+        f"[{MARKS['span']}]::before{{display:none}}",
         f"[data-inset]{{display:inline;fill:{FORCED_COLOURS['opaque-fills']}}}",
     )
 )
@@ -2025,7 +2034,7 @@ def _planted_line(spans: Sequence[_Planted], top: float, size: float, forced: bo
     def style(span: _Planted) -> str:
         kept = forced and span.colour == UNPAINTED and not span.forced
         ground = (
-            f";background:#000000;padding:0 {_share(2)}" if span.marked or span.grounded else ""
+            f";{RUN_GROUND}:#000000;padding:0 {_share(2)}" if span.marked or span.grounded else ""
         )
         return (
             f"font-family:{span.family};font-size:{_share(size)};font-weight:{span.weight};"

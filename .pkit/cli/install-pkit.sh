@@ -261,5 +261,5 @@ else
     ran_said="runs pkit $ran"
 fi
 fail "the pkit this project's commands run, $path_pkit, $ran_said, not $version, $source_of_version. The installed pkit was left as it is." \
-    "To run this project's version without moving it: uvx --from $DISTRIBUTION_GIT_URL@v$version project-kit <command>" \
+    "To run this project's version without moving it: uvx --from $DISTRIBUTION_GIT_URL@v$version pkit <command>" \
     "To make $version the pkit this machine runs, whoever owns the machine runs, on purpose: uv tool install --force $DISTRIBUTION_GIT_URL@v$version"

@@ -1,0 +1,32 @@
+component: project-management
+kind: none
+body: >
+  DEC-081, which a person accepts in this change (#3392), fits the harness's
+  messages between sessions to the topology of seats. Tasks reach a worker
+  through its pools, or the one shared pool where the topology declares
+  none, whoever files them. A worker's seat may name the planner's or lead's
+  seat that directs it, whose session may message the worker to wake it or
+  to name a ready Task it may take next, never work the tracker does not
+  hold. The worker counts a message as a directive only from the session
+  that runs its directing seat's loop, recorded on the seat's state issue by
+  its name, machine and folder; reports when a Task is done or stops; and
+  sends the person's questions to the person. A message is never the
+  person's authorisation, nor is a Task, and directives stay within one
+  repository's topology. The project-manager agent holds the tools for
+  messaging and for listing sessions, allowed by a privilege the capability
+  defines and grants only to its own agent, which the permissions overview
+  reports as a widening and which binds only through a model a person
+  realized, or a working run's model read from the default branch.
+  It overturns DEC-035, DEC-059 and DEC-068 in part,
+  refines DEC-059, DEC-061, DEC-063 and DEC-068 in place, with ADR-071,
+  and corrects a fact in DEC-029. It rests on ADR-101, an architecture
+  record proposed in this change, under which a capability's grant may
+  allow a privilege the capability defines itself, recognising by name
+  alone tools the backbone lists as ones a capability may allow, or a
+  connected server's tools, that no privilege of the backbone's or of
+  another capability's recognises, only to an agent it ships, and which
+  overturns ADR-016 and ADR-021 in part and refines ADR-016, ADR-073,
+  ADR-087 and ADR-095 in place. The agent's
+  definition, the grants, the overview, the topology, the state issues and
+  the work loop are unchanged until the Tasks that build them, which
+  declare their own changesets, so no surface moves here.

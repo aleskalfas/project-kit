@@ -2,7 +2,9 @@ component: software-engineering
 kind: patch
 body: >
   The code-review panel and the software engineer run on project-management
-  1.0.0. Its breaking change, filing refusing another board where the board
-  holds the state (#3254), reaches nothing this capability calls.
+  1.0.0. Its two breaking changes reach nothing this capability calls:
+  filing refusing another board where the board holds the state (#3254), and
+  whoever runs a command being the user's account GitHub names for the
+  credential, ahead of `PM_INVOKER_LOGIN` (#3175).
 runs_on_capabilities:
   project-management: release

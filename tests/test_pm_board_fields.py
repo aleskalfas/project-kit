@@ -7,11 +7,14 @@ axis: it turns the names an adopter already speaks (board number, `Priority`,
   * the argv each read issues (host/owner threading is the `gh` helper's job; the
     seam must ask for the right thing),
   * name → id matching, including the case-insensitive fallback,
-  * the failure contract: `ok=False` with gh's stderr VERBATIM (the missing
-    `read:project` scope is the likeliest board failure and its remedy is in that
-    text), and
-  * the membership case — a successful card lookup that found no card is
-    `ok=True, item_id=None`, distinct from a failed read.
+  * the failure contract: `ok=False` with the service's words verbatim (the
+    missing `read:project` scope is the likeliest board failure and its remedy
+    is in that text), and the way out,
+  * what counts as the board's answer ([pkit:ADR-096] point 1): an answer that
+    names the configured board, and an absence only where a witness in the same
+    request shows the board answered, and
+  * the membership case — a card lookup the board answered that found no card
+    is `ok=True, item_id=None`, distinct from a failed read.
 
 Every `gh` invocation is a fake runner; nothing here touches a network.
 """
@@ -27,6 +30,7 @@ from pathlib import Path
 import pytest
 
 from tests.pm_board_archive import reads_archived
+from tests.pm_board_graphql import GraphBoard, done, flag_value, flag_values, query_of
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
@@ -150,19 +154,131 @@ def test_url_owner_reads_the_owner_a_url_names(bf, url, owner) -> None:
     assert bf.url_owner(url) == owner
 
 
+# --- the board, answering the seam's GraphQL reads ----------------------------
+
+#: The repository the issues of these tests lie in, by its node id.
+REPOSITORY = "R_repo"
+#: An issue of the same repository with a card on the board: the witness that
+#: the credential's reads see the board ([pkit:ADR-096] point 1).
+WITNESS = "I_witness"
+
+
+class _Board(GraphBoard):
+    """Board #7 of `an-org`, node `PVT_1`, as a test sets it.
+
+    ``cards`` maps an issue's node id to its own cards on every board, each as
+    `(item id, board node, option)`, the option `(id, name)` or None. Every
+    issue lies in :data:`REPOSITORY`, whose page of recent issues holds the
+    witness unless ``witness`` is False. ``more`` names the issues whose own
+    cards run past the page their read takes."""
+
+    def __init__(
+        self,
+        *,
+        fields: list[dict] | None = None,
+        cards: dict[str, list[tuple[str, str, tuple[str, str] | None]]] | None = None,
+        witness: bool = True,
+        more: tuple[str, ...] = (),
+    ) -> None:
+        super().__init__(node="PVT_1", number=7, owner="an-org")
+        self._fields_held = list(fields or [])
+        self.cards = dict(cards or {})
+        self.witness = witness
+        self.more = set(more)
+
+    def fields(self) -> list[dict]:
+        return self._fields_held
+
+    def own_cards(self, issue_id: str, value_field: str | None) -> list[dict] | None:
+        if issue_id == WITNESS:
+            return [{"id": "PVTI_witness", "project": {"id": self.node}}]
+        if issue_id not in self.cards:
+            return None
+        return [
+            {
+                "id": item_id,
+                "project": {"id": project_id},
+                "fieldValueByName": (
+                    {"optionId": option[0], "name": option[1]} if option and value_field else None
+                ),
+            }
+            for item_id, project_id, option in self.cards[issue_id]
+        ]
+
+    def more_cards(self, issue_id: str) -> bool:
+        return issue_id in self.more
+
+    def repository_of(self, issue_id: str) -> str | None:
+        return REPOSITORY
+
+    def recent_issues(self, repository_id: str, order: str) -> list[str]:
+        return [WITNESS] if self.witness and order == "created" else []
+
+
+def _graph_runner(board: GraphBoard, *, calls: list | None = None, fail_at: int | None = None):
+    """A fake `gh` whose GraphQL reads the board answers. `fail_at` is the read,
+    counted from 0, that fails whole with `HTTP 502`."""
+
+    def run(args, config, *, fallback_owner=None, check=False):
+        if calls is not None:
+            calls.append(list(args))
+        if fail_at is not None and len(board.graph_calls) == fail_at:
+            board.graph_calls.append(list(args))
+            return done(args, 1, stderr="HTTP 502")
+        return board.reply(args)
+
+    return run
+
+
 # --- project node id --------------------------------------------------------
+
+
+def _identity(node: str = "PVT_board7", number: int = 7, owner: str = "an-org") -> str:
+    """The board's own answer to `gh project view --format json`: its names."""
+    return json.dumps({"id": node, "number": number, "owner": {"login": owner}})
 
 
 def test_read_project_node_id_resolves_the_board_number(bf) -> None:
     calls: list = []
     lookup = bf.read_project_node_id(
-        BOARD_CONFIG,
-        owner="an-org",
-        gh_call=_runner(json.dumps({"id": "PVT_board7"}), calls=calls),
+        BOARD_CONFIG, owner="an-org", gh_call=_runner(_identity(), calls=calls)
     )
     assert lookup.ok is True and lookup.node_id == "PVT_board7"
     assert calls[0]["args"] == ["gh", "project", "view", "7", "--format", "json"]
     assert calls[0]["fallback_owner"] == "an-org"
+
+
+@pytest.mark.parametrize(
+    ("answer", "config", "says"),
+    [
+        pytest.param(
+            json.dumps({"id": "PVT_board7"}), BOARD_CONFIG, "names board #None", id="no-number"
+        ),
+        pytest.param(
+            _identity(number=8), BOARD_CONFIG, "names board #8, not #7", id="another-number"
+        ),
+        pytest.param(
+            _identity(owner="someone"),
+            BOARD_CONFIG,
+            "a board of someone, not of an-org",
+            id="another-owner",
+        ),
+        pytest.param(
+            _identity(),
+            {**BOARD_CONFIG, "projects_v2_node_id": "PVT_stored"},
+            "the board PVT_board7, not PVT_stored",
+            id="another-node",
+        ),
+    ],
+)
+def test_read_project_node_id_counts_only_an_answer_naming_the_configured_board(
+    bf, answer, config, says
+) -> None:
+    """A stored node is a name the answer must agree with, never the answer
+    ([pkit:ADR-096] point 1)."""
+    lookup = bf.read_project_node_id(config, gh_call=_runner(answer))
+    assert lookup.ok is False and lookup.node_id is None and lookup.named is True
+    assert says in (lookup.error or "")
 
 
 def test_read_project_node_id_refuses_without_a_configured_board(bf) -> None:
@@ -171,17 +287,15 @@ def test_read_project_node_id_refuses_without_a_configured_board(bf) -> None:
     assert "has_projects_v2_board" in (lookup.error or "")
 
 
-def test_read_project_node_id_surfaces_stderr_verbatim(bf) -> None:
+def test_read_project_node_id_gives_the_services_words(bf) -> None:
     stderr = "error: could not resolve to a ProjectV2 with the number 7"
     lookup = bf.read_project_node_id(BOARD_CONFIG, gh_call=_runner(returncode=1, stderr=stderr))
-    assert lookup.ok is False and lookup.error == stderr
+    assert lookup.ok is False and stderr in (lookup.error or "")
+    assert lookup.named is False
 
 
 def test_resolve_project_node_id_is_the_lossy_form(bf) -> None:
-    assert (
-        bf.resolve_project_node_id(BOARD_CONFIG, gh_call=_runner(json.dumps({"id": "PVT_board7"})))
-        == "PVT_board7"
-    )
+    assert bf.resolve_project_node_id(BOARD_CONFIG, gh_call=_runner(_identity())) == "PVT_board7"
     assert bf.resolve_project_node_id(BOARD_CONFIG, gh_call=_runner(returncode=1)) is None
 
 
@@ -189,27 +303,45 @@ def test_resolve_project_node_id_is_the_lossy_form(bf) -> None:
 
 
 def test_read_fields_returns_fields_with_their_options(bf) -> None:
-    calls: list = []
-    read = bf.read_fields(
-        BOARD_CONFIG, owner="an-org", gh_call=_runner(json.dumps(FIELD_LIST_PAYLOAD), calls=calls)
-    )
-    assert read.ok is True
+    board = _Board(fields=FIELD_LIST_PAYLOAD["fields"])
+    read = bf.read_fields(BOARD_CONFIG, gh_call=_graph_runner(board))
+    assert read.ok is True and read.project_id == "PVT_1"
     assert bf.field_names(read.fields) == ["Title", "Priority"]
-    assert calls[0]["args"] == ["gh", "project", "field-list", "7", "--format", "json"]
+    assert [o["name"] for o in read.fields[1]["options"]] == ["High", "Low"]
+    [argv] = board.graph_calls
+    assert "repositoryOwner(login: $owner)" in query_of(argv)
+    assert (flag_value(argv, "owner"), flag_value(argv, "number")) == ("an-org", "7")
 
 
-def test_read_fields_surfaces_a_missing_scope_verbatim(bf) -> None:
+def test_read_fields_addresses_a_stored_node_and_counts_it_only_where_the_board_names_it(
+    bf,
+) -> None:
+    board = _Board(fields=FIELD_LIST_PAYLOAD["fields"])
+    stored = bf.read_fields(
+        {**BOARD_CONFIG, "projects_v2_node_id": "PVT_1"}, gh_call=_graph_runner(board)
+    )
+    assert stored.ok is True and flag_value(board.graph_calls[0], "board") == "PVT_1"
+    stale = bf.read_fields(
+        {**BOARD_CONFIG, "projects_v2_node_id": "PVT_stale"}, gh_call=_graph_runner(board)
+    )
+    assert stale.ok is False and stale.fields == ()
+    assert "PVT_stale" in (stale.error or "")
+
+
+def test_read_fields_surfaces_a_missing_scope_in_the_services_words(bf) -> None:
     stderr = (
         "error: your authentication token is missing required scopes "
         "[read:project]. To request it, run: gh auth refresh -s read:project"
     )
-    read = bf.read_fields(BOARD_CONFIG, gh_call=_runner(returncode=1, stderr=stderr))
-    assert read.ok is False and read.error == stderr
+    board = _Board()
+    board.failing["fields"] = stderr
+    read = bf.read_fields(BOARD_CONFIG, gh_call=_graph_runner(board))
+    assert read.ok is False and stderr in (read.error or "")
 
 
 def test_read_fields_reports_non_json_output(bf) -> None:
     read = bf.read_fields(BOARD_CONFIG, gh_call=_runner("not json"))
-    assert read.ok is False and "non-JSON" in (read.error or "")
+    assert read.ok is False and "returned no data" in (read.error or "")
 
 
 def test_read_fields_missing_gh_binary_is_a_failure_not_a_crash(bf) -> None:
@@ -257,125 +389,82 @@ def test_option_names_lists_what_the_field_offers(bf) -> None:
 # --- the card (item) lookup -------------------------------------------------
 
 
-def _items_payload(*pairs: tuple[str, str]) -> str:
-    return json.dumps(
-        {
-            "data": {
-                "node": {
-                    "projectItems": {
-                        "nodes": [
-                            {"id": item_id, "project": {"id": project_id}}
-                            for item_id, project_id in pairs
-                        ]
-                    }
-                }
-            }
-        }
-    )
-
-
 def test_resolve_item_id_finds_the_card_on_the_right_board(bf) -> None:
-    calls: list = []
+    board = _Board(
+        cards={"I_issue42": [("PVTI_other", "PVT_other", None), ("PVTI_card42", "PVT_1", None)]}
+    )
     lookup = bf.resolve_item_id(
         BOARD_CONFIG,
         issue_node_id="I_issue42",
-        project_node_id="PVT_board7",
-        gh_call=_runner(
-            _items_payload(("PVTI_other", "PVT_other"), ("PVTI_card42", "PVT_board7")),
-            calls=calls,
-        ),
+        project_node_id="PVT_1",
+        gh_call=_graph_runner(board),
     )
     assert lookup.ok is True and lookup.item_id == "PVTI_card42"
-    argv = calls[0]["args"]
-    assert argv[:3] == ["gh", "api", "graphql"]
-    assert "issue=I_issue42" in argv
+    [argv] = board.graph_calls
+    assert flag_values(argv, "ids[]") == ["I_issue42"]
+    assert flag_value(argv, "board") == "PVT_1"
 
 
 def test_resolve_item_id_reports_the_membership_case_as_no_card(bf) -> None:
-    """A successful read that found no card on THIS board: `ok=True, item_id=None` —
-    the caller refuses with a remediation rather than treating it as a read error."""
+    """A read that found no card on THIS board, a witness showing the board
+    answered: `ok=True, item_id=None` — the caller refuses with a remediation
+    rather than treating it as a read error."""
+    board = _Board(cards={"I_issue42": [("PVTI_other", "PVT_other", None)]})
     lookup = bf.resolve_item_id(
         BOARD_CONFIG,
         issue_node_id="I_issue42",
-        project_node_id="PVT_board7",
-        gh_call=_runner(_items_payload(("PVTI_other", "PVT_other"))),
+        project_node_id="PVT_1",
+        gh_call=_graph_runner(board),
     )
     assert lookup.ok is True and lookup.item_id is None
 
 
-def test_resolve_item_id_surfaces_a_scope_failure_verbatim(bf) -> None:
+def test_resolve_item_id_tells_no_absence_without_a_witness(bf) -> None:
+    """An issue's own cards list only what the credential may see, so with no
+    issue of the repository showing a card on the board, an absence is no
+    answer ([pkit:ADR-096] point 1)."""
+    board = _Board(cards={"I_issue42": []}, witness=False)
+    lookup = bf.resolve_item_id(
+        BOARD_CONFIG,
+        issue_node_id="I_issue42",
+        project_node_id="PVT_1",
+        gh_call=_graph_runner(board),
+    )
+    assert lookup.ok is False and lookup.item_id is None and lookup.named is True
+    assert "no issue this read saw from the repository shows a card" in (lookup.error or "")
+
+
+def test_resolve_item_id_surfaces_a_scope_failure_in_the_services_words(bf) -> None:
     stderr = (
         "your token has not been granted the required scopes to execute this query. "
         "missing: 'read:project'"
     )
+    board = _Board(cards={"I_issue42": []})
+    board.failing["cards"] = stderr
     lookup = bf.resolve_item_id(
         BOARD_CONFIG,
         issue_node_id="I_issue42",
-        project_node_id="PVT_board7",
-        gh_call=_runner(returncode=1, stderr=stderr),
+        project_node_id="PVT_1",
+        gh_call=_graph_runner(board),
     )
-    assert lookup.ok is False and lookup.error == stderr
+    assert lookup.ok is False and stderr in (lookup.error or "")
     assert lookup.item_id is None
 
 
 def test_resolve_item_id_includes_archived_cards_in_the_query(bf) -> None:
     """An archived card still has field values worth writing; reporting it as "not on
     the board" would send the adopter to add a duplicate."""
-    calls: list = []
+    board = _Board(cards={"I_issue42": []})
     bf.resolve_item_id(
         BOARD_CONFIG,
         issue_node_id="I_issue42",
-        project_node_id="PVT_board7",
-        gh_call=_runner(_items_payload(), calls=calls),
+        project_node_id="PVT_1",
+        gh_call=_graph_runner(board),
     )
-    query = next(a for a in calls[0]["args"] if a.startswith("query="))
-    assert "includeArchived: true" in query
+    assert "includeArchived: true" in query_of(board.graph_calls[0])
 
 
 # --- the workstream mutators' reads (#1940) ----------------------------------
-
-
-def test_read_field_options_returns_each_option_in_full(bf) -> None:
-    payload = {
-        "data": {
-            "node": {
-                "options": [
-                    {"id": "opt_cli", "name": "cli", "color": "BLUE", "description": "The CLI."},
-                    {"id": "opt_docs", "name": "docs", "color": "GRAY", "description": ""},
-                ]
-            }
-        }
-    }
-    calls: list = []
-    read = bf.read_field_options(
-        BOARD_CONFIG, field_id="PVTSSF_ws", gh_call=_runner(json.dumps(payload), calls=calls)
-    )
-    assert read.ok is True
-    assert read.options[0] == {
-        "id": "opt_cli",
-        "name": "cli",
-        "color": "BLUE",
-        "description": "The CLI.",
-    }
-    assert [o["name"] for o in read.options] == ["cli", "docs"]
-    assert calls[0]["args"][:3] == ["gh", "api", "graphql"]
-    assert "field=PVTSSF_ws" in calls[0]["args"]
-
-
-def test_read_field_options_surfaces_stderr_verbatim(bf) -> None:
-    stderr = "your token has not been granted the required scopes: read:project"
-    read = bf.read_field_options(
-        BOARD_CONFIG, field_id="F", gh_call=_runner(returncode=1, stderr=stderr)
-    )
-    assert read.ok is False
-    assert read.error == stderr
-
-
-def test_read_field_options_refuses_a_payload_with_no_options(bf) -> None:
-    read = bf.read_field_options(
-        BOARD_CONFIG, field_id="F", gh_call=_runner(json.dumps({"data": {"node": None}}))
-    )
-    assert read.ok is False
 
 
 def _card(item_id: str, number: int | None, option_id: str | None) -> dict:
@@ -385,14 +474,18 @@ def _card(item_id: str, number: int | None, option_id: str | None) -> dict:
 
 
 def _page(cards: list[dict], *, next_cursor: str | None = None) -> str:
+    """One page of a walk of board #7's cards, under the board's own answer."""
     return json.dumps(
         {
             "data": {
-                "node": {
+                "board": {
+                    "id": "PVT_1",
+                    "number": 7,
+                    "owner": {"login": "an-org"},
                     "items": {
                         "pageInfo": {"hasNextPage": bool(next_cursor), "endCursor": next_cursor},
                         "nodes": cards,
-                    }
+                    },
                 }
             }
         }
@@ -452,7 +545,7 @@ def test_read_items_with_option_fails_rather_than_counting_in_part(bf) -> None:
         gh_call=_runner(returncode=1, stderr="boom"),
     )
     assert read.ok is False
-    assert read.error == "boom"
+    assert "boom" in (read.error or "")
 
 
 # --- every card, with its value (#2276) ---------------------------------------
@@ -529,6 +622,61 @@ def test_read_items_leaves_a_state_issues_card_out(bf) -> None:
         gh_call=_runner(_page([state, _issue_card("I1", 1)])),
     )
     assert [i.number for i in read.items] == [1]
+    assert [i.number for i in read.set_aside] == [9]
+
+
+def _withheld(item_id: str, option: str | None = None, *, value_read: bool = True) -> dict:
+    """A card whose issue lies in a repository the credential may not read."""
+    card: dict = {"id": item_id, "type": "REDACTED", "content": None}
+    if value_read:
+        card["fieldValueByName"] = {"optionId": option, "name": "x"} if option else {}
+    return card
+
+
+def test_a_withheld_card_is_kept_apart_from_the_cards_counted(bf) -> None:
+    """The board returns a card whose issue the credential may not read with
+    nothing of its issue: it is withheld, never counted ([pkit:ADR-096] point 2)."""
+    read = bf.read_items(
+        BOARD_CONFIG,
+        project_node_id="PVT_1",
+        field_name="Status",
+        gh_call=_runner(_page([_withheld("W1"), _issue_card("I1", 1)])),
+    )
+    assert read.ok is True
+    assert [i.item_id for i in read.items] == ["I1"]
+    assert [(i.item_id, i.withheld) for i in read.withheld] == [("W1", True)]
+
+
+def test_a_withheld_card_that_may_hold_the_option_is_named_with_it(bf) -> None:
+    """A withheld card holding the option, or whose value the board did not
+    return, may hold it; one holding another option does not."""
+    cards = [
+        _withheld("W_cli", "opt_cli"),
+        _withheld("W_docs", "opt_docs"),
+        _withheld("W_unread", value_read=False),
+    ]
+    read = bf.read_items_with_option(
+        BOARD_CONFIG,
+        project_node_id="PVT_1",
+        field_name="Workstream",
+        option_id="opt_cli",
+        gh_call=_runner(_page(cards)),
+    )
+    assert [i.item_id for i in read.withheld] == ["W_cli", "W_unread"]
+
+
+def test_a_walk_counts_only_an_answer_naming_the_configured_board(bf) -> None:
+    """A page whose board's own answer names another board answers nothing."""
+    page = json.loads(_page([_issue_card("I1", 1)]))
+    page["data"]["board"]["number"] = 8
+    read = bf.read_items(
+        BOARD_CONFIG,
+        project_node_id="PVT_1",
+        field_name="Status",
+        gh_call=_runner(json.dumps(page)),
+    )
+    assert read.ok is False and read.items == ()
+    assert "names board #8, not #7" in (read.error or "")
 
 
 def test_read_items_surfaces_stderr_verbatim(bf) -> None:
@@ -538,7 +686,7 @@ def test_read_items_surfaces_stderr_verbatim(bf) -> None:
         field_name="Status",
         gh_call=_runner(returncode=1, stderr="missing: 'read:project'"),
     )
-    assert read.ok is False and read.error == "missing: 'read:project'"
+    assert read.ok is False and "missing: 'read:project'" in (read.error or "")
 
 
 def test_read_items_names_the_issue_each_card_holds_by_its_node_id(bf) -> None:
@@ -583,88 +731,48 @@ def test_read_items_reads_an_archived_card_as_any_other(bf) -> None:
 # --- one issue's card, and the option it holds (#2271) --------------------------
 
 
-def _issue_node(
-    issue_id: str,
-    *cards: tuple[str, str, tuple[str, str] | None],
-    more: bool = False,
-) -> dict:
-    """One issue as `nodes(ids:)` gives it: its cards on every board, and
-    whether more cards follow the page."""
-    nodes = [
-        {
-            "id": item_id,
-            "project": {"id": project_id},
-            "fieldValueByName": {"optionId": option[0], "name": option[1]} if option else None,
-        }
-        for item_id, project_id, option in cards
-    ]
-    return {"id": issue_id, "projectItems": {"pageInfo": {"hasNextPage": more}, "nodes": nodes}}
-
-
-def _item_value_payload(*cards: tuple[str, str, tuple[str, str] | None]) -> str:
-    return json.dumps({"data": {"nodes": [_issue_node("I_1", *cards)]}})
-
-
-def _asked_ids(args: list[str]) -> list[str]:
-    """The issue node ids a read of the issues' cards asked for, in order."""
-    return [
-        args[i + 1].removeprefix("ids[]=")
-        for i, arg in enumerate(args[:-1])
-        if arg == "-f" and args[i + 1].startswith("ids[]=")
-    ]
+def _read_value(bf, board: _Board, issue: str = "I_1"):
+    return bf.read_item_value(
+        BOARD_CONFIG,
+        issue_node_id=issue,
+        project_node_id="PVT_1",
+        field_name="Status",
+        gh_call=_graph_runner(board),
+    )
 
 
 def test_read_item_value_reads_the_option_the_issues_card_holds(bf) -> None:
-    calls: list = []
-    read = bf.read_item_value(
-        BOARD_CONFIG,
-        issue_node_id="I_1",
-        project_node_id="PVT_1",
-        field_name="Status",
-        gh_call=_runner(
-            _item_value_payload(
+    board = _Board(
+        cards={
+            "I_1": [
                 ("PVTI_other", "PVT_2", ("opt_x", "Done")),
                 ("PVTI_1", "PVT_1", ("opt_ip", "In Progress")),
-            ),
-            calls=calls,
-        ),
+            ]
+        }
     )
+    read = _read_value(bf, board)
     assert (read.ok, read.item_id, read.option_id, read.option_name) == (
         True,
         "PVTI_1",
         "opt_ip",
         "In Progress",
     )
-    assert "field=Status" in calls[0]["args"] and _asked_ids(calls[0]["args"]) == ["I_1"]
+    [argv] = board.graph_calls
+    assert flag_value(argv, "field") == "Status" and flag_values(argv, "ids[]") == ["I_1"]
 
 
 def test_read_item_value_keeps_no_card_unset_and_unread_apart(bf) -> None:
     """Three answers the caller tells apart (ADR-053 point 5): no card on this
-    board, a card whose field is unset, and a read that failed."""
-    no_card = bf.read_item_value(
-        BOARD_CONFIG,
-        issue_node_id="I_1",
-        project_node_id="PVT_1",
-        field_name="Status",
-        gh_call=_runner(_item_value_payload(("PVTI_other", "PVT_2", None))),
-    )
-    unset = bf.read_item_value(
-        BOARD_CONFIG,
-        issue_node_id="I_1",
-        project_node_id="PVT_1",
-        field_name="Status",
-        gh_call=_runner(_item_value_payload(("PVTI_1", "PVT_1", None))),
-    )
-    unread = bf.read_item_value(
-        BOARD_CONFIG,
-        issue_node_id="I_1",
-        project_node_id="PVT_1",
-        field_name="Status",
-        gh_call=_runner(returncode=1, stderr="missing: 'read:project'"),
-    )
+    board, a witness showing it, a card whose field is unset, and a read that
+    failed."""
+    no_card = _read_value(bf, _Board(cards={"I_1": [("PVTI_other", "PVT_2", None)]}))
+    unset = _read_value(bf, _Board(cards={"I_1": [("PVTI_1", "PVT_1", None)]}))
+    failing = _Board(cards={"I_1": []})
+    failing.failing["cards"] = "missing: 'read:project'"
+    unread = _read_value(bf, failing)
     assert (no_card.ok, no_card.item_id) == (True, None)
     assert (unset.ok, unset.item_id, unset.option_name) == (True, "PVTI_1", None)
-    assert (unread.ok, unread.error) == (False, "missing: 'read:project'")
+    assert unread.ok is False and "missing: 'read:project'" in (unread.error or "")
 
 
 def test_read_item_value_refuses_a_payload_with_no_cards(bf) -> None:
@@ -681,15 +789,9 @@ def test_read_item_value_refuses_a_payload_with_no_cards(bf) -> None:
 def test_an_archived_card_still_places_its_issue(bf) -> None:
     """Both reads ask for the issue's archived cards, so an archived card is the
     issue's card on the board, for one issue and for many (ADR-053 point 5)."""
-    calls: list = []
-    bf.read_item_value(
-        BOARD_CONFIG,
-        issue_node_id="I_1",
-        project_node_id="PVT_1",
-        field_name="Status",
-        gh_call=_runner(_item_value_payload(), calls=calls),
-    )
-    query = next(a for a in calls[0]["args"] if a.startswith("query="))
+    board = _Board(cards={"I_1": []})
+    _read_value(bf, board)
+    query = query_of(board.graph_calls[0])
     assert "includeArchived: true" in query
     assert "items(first" not in query
 
@@ -698,73 +800,44 @@ def test_an_archived_card_still_places_its_issue(bf) -> None:
 def test_cards_past_one_page_without_the_boards_card_are_a_failed_read(bf, read) -> None:
     """An issue on more boards than one page holds, whose card on this board is
     not among them, is never taken for an issue with no card."""
-    payload = json.dumps(
-        {"data": {"nodes": [_issue_node("I_1", ("PVTI_x", "PVT_9", None), more=True)]}}
-    )
+    board = _Board(cards={"I_1": [("PVTI_x", "PVT_9", None)]}, more=("I_1",))
     if read == "one":
-        result = bf.read_item_value(
-            BOARD_CONFIG,
-            issue_node_id="I_1",
-            project_node_id="PVT_1",
-            field_name="Status",
-            gh_call=_runner(payload),
-        )
+        result = _read_value(bf, board)
     else:
         result = bf.read_issue_cards(
             BOARD_CONFIG,
             issue_node_ids=["I_1"],
             project_node_id="PVT_1",
             field_name="Status",
-            gh_call=_runner(payload),
+            gh_call=_graph_runner(board),
         )
     assert result.ok is False
     assert result.error is not None and "more than 100 boards" in result.error
 
 
 def test_the_boards_card_on_a_first_page_with_more_to_follow_is_read(bf) -> None:
-    payload = json.dumps(
-        {"data": {"nodes": [_issue_node("I_1", ("PVTI_1", "PVT_1", ("o", "Todo")), more=True)]}}
-    )
-    read = bf.read_item_value(
-        BOARD_CONFIG,
-        issue_node_id="I_1",
-        project_node_id="PVT_1",
-        field_name="Status",
-        gh_call=_runner(payload),
-    )
+    board = _Board(cards={"I_1": [("PVTI_1", "PVT_1", ("o", "Todo"))]}, more=("I_1",))
+    read = _read_value(bf, board)
     assert (read.ok, read.item_id, read.option_name) == (True, "PVTI_1", "Todo")
 
 
 # --- the listed issues' cards, in batches (#2271) --------------------------------
 
 
-def _cards_runner(calls: list, *, fail_batch: int | None = None, null: str | None = None):
-    """A fake `gh` answering each read of the issues' cards: issue `I_<n>` has a
-    card on `PVT_1` whose Status is `S<n>` where n is even, and none where it is
-    odd. `fail_batch` is the read, counted from 0, that fails, and `null` the id
-    GitHub resolves to no node."""
-
-    def run(args, config, *, fallback_owner=None, check=False):
-        calls.append(list(args))
-        if fail_batch is not None and len(calls) - 1 == fail_batch:
-            return subprocess.CompletedProcess(args, 1, stdout="", stderr="HTTP 502")
-        nodes = []
-        for issue_id in _asked_ids(args):
-            n = int(issue_id.removeprefix("I_"))
-            if issue_id == null:
-                nodes.append(None)
-            elif n % 2 == 0:
-                nodes.append(_issue_node(issue_id, (f"PVTI_{n}", "PVT_1", (f"o{n}", f"S{n}"))))
-            else:
-                nodes.append(_issue_node(issue_id))
-        stdout = json.dumps({"data": {"nodes": nodes}})
-        return subprocess.CompletedProcess(args, 0, stdout=stdout, stderr="")
-
-    return run
+def _listed_board(count: int, *, null: str | None = None) -> _Board:
+    """Issues `I_1` to `I_<count>`: each even one has a card on the board whose
+    Status is `S<n>`, each odd one none, and `null` names no issue."""
+    cards: dict[str, list[tuple[str, str, tuple[str, str] | None]]] = {}
+    for n in range(1, count + 1):
+        issue = f"I_{n}"
+        if issue == null:
+            continue
+        cards[issue] = [(f"PVTI_{n}", "PVT_1", (f"o{n}", f"S{n}"))] if n % 2 == 0 else []
+    return _Board(cards=cards)
 
 
 def test_the_listed_issues_cards_are_read_in_batches_of_a_hundred(bf) -> None:
-    calls: list = []
+    board = _listed_board(150)
     ids = [f"I_{n}" for n in range(1, 151)]
 
     read = bf.read_issue_cards(
@@ -772,46 +845,175 @@ def test_the_listed_issues_cards_are_read_in_batches_of_a_hundred(bf) -> None:
         issue_node_ids=ids,
         project_node_id="PVT_1",
         field_name="Status",
-        gh_call=_cards_runner(calls),
+        gh_call=_graph_runner(board),
     )
 
     assert read.ok
-    assert [len(_asked_ids(args)) for args in calls] == [100, 50]
+    assert [len(flag_values(argv, "ids[]")) for argv in board.graph_calls] == [100, 50]
     assert set(read.cards) == set(ids)
     assert (read.cards["I_4"].item_id, read.cards["I_4"].option_name) == ("PVTI_4", "S4")
     assert (read.cards["I_3"].ok, read.cards["I_3"].item_id) == (True, None)
-    query = next(a for a in calls[0] if a.startswith("query="))
+    query = query_of(board.graph_calls[0])
     assert "nodes(ids: $ids)" in query and "includeArchived: true" in query
 
 
 def test_a_listing_with_no_issues_reads_nothing(bf) -> None:
-    calls: list = []
+    board = _listed_board(0)
     read = bf.read_issue_cards(
         BOARD_CONFIG,
         issue_node_ids=[],
         project_node_id="PVT_1",
         field_name="Status",
-        gh_call=_cards_runner(calls),
+        gh_call=_graph_runner(board),
     )
-    assert read.ok and dict(read.cards) == {} and calls == []
+    assert read.ok and dict(read.cards) == {} and board.graph_calls == []
 
 
 @pytest.mark.parametrize(
-    ("fail_batch", "null", "says"),
+    ("fail_at", "null", "says"),
     [
         (1, None, "HTTP 502"),
-        (None, "I_120", "no issue for the node id I_120"),
+        (None, "I_120", "the issue I_120 could not be read"),
     ],
 )
-def test_a_failed_batch_or_a_null_node_fails_the_whole_listing(bf, fail_batch, null, says) -> None:
+def test_a_failed_batch_or_a_null_node_fails_the_whole_listing(bf, fail_at, null, says) -> None:
     """Whole or nothing: the issues of a failed batch are never taken for issues
     with no card, and neither is an id GitHub resolves to no issue."""
+    board = _listed_board(150, null=null)
     read = bf.read_issue_cards(
         BOARD_CONFIG,
         issue_node_ids=[f"I_{n}" for n in range(1, 151)],
         project_node_id="PVT_1",
         field_name="Status",
-        gh_call=_cards_runner([], fail_batch=fail_batch, null=null),
+        gh_call=_graph_runner(board, fail_at=fail_at),
     )
     assert read.ok is False and dict(read.cards) == {}
     assert read.error is not None and says in read.error
+
+
+def test_read_items_marks_each_archived_card(bf) -> None:
+    """The walk asks each card whether it is archived, which the board's views
+    hide, and marks it so: the sync names an open issue whose only card is
+    archived (DEC-072 points 1 and 4)."""
+    archived = _issue_card("I2", 2)
+    archived["isArchived"] = True
+    shown = _issue_card("I1", 1)
+    shown["isArchived"] = False
+    calls: list = []
+
+    read = bf.read_items(
+        BOARD_CONFIG,
+        project_node_id="PVT_1",
+        field_name="Status",
+        gh_call=_runner(_page([shown, archived, _issue_card("I3", 3)]), calls=calls),
+    )
+
+    assert [(i.item_id, i.archived) for i in read.items] == [
+        ("I1", False),
+        ("I2", True),
+        ("I3", False),
+    ]
+    assert " isArchived " in query_of(calls[0]["args"])
+
+
+# --- one card, by the id an add answered with (DEC-072 point 3) -------------
+
+
+class _CardBoard(_Board):
+    """Board #7 holding the cards ``by_id`` names, each `(board node, option,
+    archived)`, the option `(id, name)` or None."""
+
+    def __init__(self, by_id: dict[str, tuple[str, tuple[str, str] | None, bool]]) -> None:
+        super().__init__()
+        self.by_id = by_id
+
+    def card_by_id(self, item_id: str, value_field: str | None) -> dict | None:
+        if item_id not in self.by_id:
+            return None
+        project, option, archived = self.by_id[item_id]
+        card: dict = {"id": item_id, "isArchived": archived, "project": {"id": project}}
+        if value_field is not None:
+            card["fieldValueByName"] = (
+                {"optionId": option[0], "name": option[1]} if option else None
+            )
+        return card
+
+
+def _read_card(bf, board: GraphBoard, item_id: str = "PVTI_9", **kw):
+    calls: list = []
+    read = bf.read_card(
+        BOARD_CONFIG,
+        item_id=item_id,
+        project_node_id="PVT_1",
+        field_name="Status",
+        gh_call=_graph_runner(board, calls=calls, **kw),
+    )
+    return read, calls
+
+
+def test_read_card_reads_the_card_and_its_status_beside_the_boards_own_read(bf) -> None:
+    board = _CardBoard({"PVTI_9": ("PVT_1", ("opt_todo", "Todo"), True)})
+
+    read, calls = _read_card(bf, board)
+
+    assert (read.ok, read.found, read.option_id, read.option_name, read.archived) == (
+        True,
+        True,
+        "opt_todo",
+        "Todo",
+        True,
+    )
+    [call] = calls
+    assert "board: node(id: $board)" in query_of(call)
+    assert "card: node(id: $item)" in query_of(call)
+    assert flag_value(call, "item") == "PVTI_9" and flag_value(call, "field") == "Status"
+
+
+def test_read_card_with_no_status_is_found_with_none(bf) -> None:
+    read, _ = _read_card(bf, _CardBoard({"PVTI_9": ("PVT_1", None, False)}))
+    assert (read.ok, read.found, read.option_name) == (True, True, None)
+
+
+@pytest.mark.parametrize(
+    "by_id",
+    [
+        pytest.param({}, id="no-such-card"),
+        pytest.param({"PVTI_9": ("PVT_other", None, False)}, id="a-card-on-another-board"),
+    ],
+)
+def test_read_card_not_found_is_an_answer_only_where_the_board_answered(bf, by_id) -> None:
+    read, _ = _read_card(bf, _CardBoard(by_id))
+    assert (read.ok, read.found, read.error) == (True, False, None)
+
+
+def test_read_card_with_an_error_on_the_card_is_a_board_that_did_not_answer(bf) -> None:
+    board = _CardBoard({"PVTI_9": ("PVT_1", None, False)})
+    board.placed["card"] = "Resource not accessible by integration"
+
+    read, _ = _read_card(bf, board)
+
+    assert read.ok is False and read.found is False
+    assert "Resource not accessible by integration" in (read.error or "")
+
+
+def test_read_card_on_a_board_that_did_not_answer_finds_nothing(bf) -> None:
+    board = _CardBoard({"PVTI_9": ("PVT_1", None, False)})
+    board.placed["board"] = "Could not resolve to a node"
+
+    read, _ = _read_card(bf, board)
+
+    assert read.ok is False and read.found is False
+    assert "Could not resolve to a node" in (read.error or "")
+
+
+def test_read_card_that_fails_whole_says_what_gh_said(bf) -> None:
+    read, _ = _read_card(bf, _CardBoard({}), fail_at=0)
+    assert read.ok is False and "HTTP 502" in (read.error or "")
+
+
+def test_read_card_with_no_board_configured_reads_nothing(bf) -> None:
+    def no_call(*args, **kwargs):
+        raise AssertionError("no board is read where none is configured")
+
+    read = bf.read_card({}, item_id="PVTI_9", project_node_id="PVT_1", gh_call=no_call)
+    assert read.ok is False and read.named is True

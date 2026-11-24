@@ -6,6 +6,8 @@ date: 2026-07-07
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
+> **Partially superseded by [project-management:DEC-078-one-actor-per-act].** Under every credential, an audit record's actor is its act's actor, the account the credential acts as, in the backbone's one spelling of accounts, with no display name and no email, and where the commands know no acting account it is empty. Overturned: point 1's "login + display name; email where the source has it". The rest stands.
+
 **In plain terms:** the capability posts audit comments today from several places in
 several ad-hoc one-line formats — `Promoted Todo → Backlog …`, `Bypassed by …`,
 `Handoff: @from → @to …`. This record replaces those scattered strings with **one
@@ -84,8 +86,11 @@ adopter's.
 The
 kit default uses GitHub-native alert callouts to carry event class visually
 (routine → `[!NOTE]`, an override happened → `[!WARNING]`, terminal → `[!IMPORTANT]`),
-a bold title line, and a consistent `actor · timestamp` metadata line, with the
-reason as body text. **Authorisation events** (promote, bypass, handoff) render the
+a bold title line, and a consistent metadata line, which shows the timestamp and
+no actor, since a comment's actor is the account that posts it, while a project's
+own template stays its own (DEC-078 point 2) (refinement per
+[project-management:DEC-078-one-actor-per-act]), with the reason as body text.
+**Authorisation events** (promote, bypass, handoff) render the
 full callout; **routine, high-frequency events** (ownership claim / abandon churn)
 render a compact one-liner, so the timeline is not flooded. The **exact default
 aesthetic is confirmed against a live rendered ticket** during implementation, not

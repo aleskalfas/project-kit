@@ -332,4 +332,4 @@ Check your work as you go:
 
 - **`pkit validate`** passes the definition whether or not its checks are written, as the first fence shows. `pkit process status` and `pkit process can-move` show whether they answer.
 - **An unwritten gate refuses only its own move.** The subject's other moves stay open, each on its own gate, or on none.
-- **Name the actor on every call.** `pkit process status` and `pkit process can-move` check gates as `operator` unless given `--actor`, and `pkit process move` checks them as your `gh` login. Name one actor on each, or they can disagree ([the engine page, "The operations"](../../.pkit/process/engine.md#the-operations)).
+- **Name the actor on every call.** `pkit process status`, `pkit process can-move` and `pkit process move` take no actor by default. With no `--actor`, a gate whose sign-off names its signer is not judged, and refuses its move. Name the same actor on each call, as your sign-off names people, or the three can disagree ([the engine page, "The operations"](../../.pkit/process/engine.md#the-operations)).

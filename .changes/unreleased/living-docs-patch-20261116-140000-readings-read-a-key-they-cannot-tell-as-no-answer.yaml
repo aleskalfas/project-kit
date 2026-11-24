@@ -1,0 +1,21 @@
+component: living-docs
+kind: patch
+custom:
+  category: Fixed
+body: >
+  Validation, the documentation-check filler and the page stamp read each
+  backbone document by its keys, as ADR-097 point 3 says. A key they read that
+  is missing, null where the CLI reference does not print it null, or of
+  another type, and a value they do not know of a set they decide on, such as
+  an artefact's `kind` or a place's `source`, are an answer they cannot tell
+  anything from, never a default. So the places, where the rules bind or the
+  records a page mentions cannot be read, the readers point is unresolved, and
+  the documentation-check point gives no answer. Before, `pkit friction
+  artefacts` read a file without `path` as the file `None`, one without
+  `excluded` as included and an artefact of another kind as a whole document,
+  and `pkit rule-sets reach` read an artefact without its path or rules as one
+  on which no rule binds. The readers point holds its readers only where each
+  filler is `taken` or `passed over`. A page with a finding of a kind the
+  capability does not know is not judged, and a part anchor of a kind no
+  mention stands on is skipped, as the CLI reference has a reader do. A root
+  of an audience the capability serves no space in is not read.

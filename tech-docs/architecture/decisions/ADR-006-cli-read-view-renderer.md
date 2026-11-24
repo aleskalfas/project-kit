@@ -72,10 +72,13 @@ the *mechanical half of how a read-view renders*.
 
 The module lives in
 `src/project_kit/` because its only consumer is the global `pkit` CLI. This is
-the **inverse** of [ADR-003](ADR-003-permission-core-code-home.md)'s constraint
-(the decision core is propagated *because* an in-tree hook must import it without
-the global runtime); the renderer has no such consumer, so it is **not** a second
-member of ADR-003's "neutral propagated shared code" category.
+the **inverse** of [ADR-003](ADR-003-permission-core-code-home.md)'s constraint:
+the decision core is propagated *because* a hook read from the project's tree, as
+a working run's is ([ADR-073](ADR-073-builder-runs.md) point 2), must import it
+without the global runtime (ADR-003). A project's sessions run it from a copy of
+the installed release ([ADR-095](ADR-095-hook-out-of-reach.md) point 2). The
+renderer has no such consumer, so it is **not** a second member of ADR-003's
+"neutral propagated shared code" category.
 
 ## Rationale
 

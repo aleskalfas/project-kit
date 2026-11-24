@@ -26,7 +26,9 @@ seam 9, with a custom property of its own (DEC-032 point 5): a scene of no step 
 drew it, but for the renderer's version it names. Version 1.9.0 came to draw, under forced
 colours alone, a ground for each line of a text, beneath the lines of its run of texts, and a
 fill's edge inside the fill (DEC-039 points 1 to 4): each file holds the rules for them, and
-each text its lines' grounds. Version 1.10.0 came to write a text's frame, a line's ground and
+each text its lines' grounds. Version 1.10.0 came to draw, outside forced colours, each run's
+ground by its span's `::before`, in a stacking context of each text's own (DEC-039 point 3):
+the same scene draws another file. It also came to write a text's frame, a line's ground and
 a line's strut as percentages of the box each lies in, not in `cqw`, which Firefox's print
 took from the sheet's area (project-kit#3012): every file's lengths are written so.
 """
@@ -340,7 +342,7 @@ def test_each_text_is_one_element_at_its_frame_and_none_lies_in_svg() -> None:
     assert px(frame["left"], 200) == pytest.approx(10, abs=WITHIN)
     assert px(frame["margin-top"], 200) == pytest.approx(5, abs=WITHIN)
     assert px(frame["width"], 200) == pytest.approx(100, abs=WITHIN)
-    assert rule(root, "text") == "position:absolute;top:0"
+    assert rule(root, "text") == "position:absolute;top:0;isolation:isolate"
 
 
 def test_each_line_is_a_child_placed_alone_that_never_wraps() -> None:
@@ -798,8 +800,10 @@ def test_the_file_sets_no_colour_around_its_pages() -> None:
     (DEC-026 point 5), and nothing lies around it."""
     root = read(scene(box("figure/back"), TITLE))
     rules = re.sub(r"@font-face\{[^}]*\}", "", sheet(root))
-    # Print's page, and under forced colours a line's ground and a span's, which is none.
+    # A run's ground, which a span's `::before` draws; print's page; and under forced colours
+    # a line's ground and a span's, which is none.
     assert re.findall(r"background[^:]*:[^;}]*", rules) == [
+        f"background:var({html.RUN_GROUND})",
         f"background:{html.GROUND_COLOUR}",
         f"background:{html.GROUND_COLOUR}",
         "background:none!important",
@@ -1273,9 +1277,12 @@ PINNED = (
     "body{margin:0}[data-page]{position:relative;container-type:inline-size;margin:0 "
     "auto}[data-page]+[data-page]{margin-top:24px}[data-layer]{position:absolute;"
     "left:0;top:0;width:100%;height:100%;pointer-events:none}"
-    "[data-text]{position:absolute;top:0}[data-line]{position:absolute;left:0;width:100%;"
-    "font-size:0;line-height:0;white-space:pre}[data-strut]{display:inline-block;"
-    "width:0}[data-ground]{position:absolute;top:0;display:none;pointer-events:none}"
+    "[data-text]{position:absolute;top:0;isolation:isolate}[data-line]{position:absolute;"
+    "left:0;width:100%;font-size:0;line-height:0;white-space:pre}[data-strut]{"
+    "display:inline-block;width:0}[data-span]{position:relative}[data-span]::before{"
+    "content:'';position:absolute;inset:0;z-index:-1;border-radius:inherit;"
+    "background:var(--_ground)}[data-ground]{position:absolute;top:0;display:none;"
+    "pointer-events:none}"
     "[data-inset]{display:none}@media print{[data-page]{break-inside:avoid;background:Canvas;"
     "-webkit-print-color-adjust:exact;print-color-adjust:exact}}"
     "@media (forced-colors:active){[data-layer] [stroke]{stroke:CanvasText}"
@@ -1284,7 +1291,7 @@ PINNED = (
     '[data-layer] ellipse[fill="var(--surface)"]:not([stroke]){fill:CanvasText}'
     "[data-ground]{display:block;background:Canvas}[data-line]{forced-color-adjust:none}"
     "[data-span]{forced-color-adjust:auto;background:none!important}"
-    "[data-inset]{display:inline;fill:Canvas}}</style>\n"
+    "[data-span]::before{display:none}[data-inset]{display:inline;fill:Canvas}}</style>\n"
     "</head>\n"
     '<body><svg width="0" height="0" style="position:absolute"><defs><marker '
     'id="pkit-arrow-end--ink" viewBox="0 0 10 10" refX="0" refY="5" markerWidth="5" '
@@ -1884,6 +1891,7 @@ def test_a_ground_takes_no_pointer_and_draws_only_under_forced_colours() -> None
     # with no ground of their own.
     assert "[data-line]{forced-color-adjust:none}" in forced(root)
     assert "[data-span]{forced-color-adjust:auto;background:none!important}" in forced(root)
+    assert "[data-span]::before{display:none}" in forced(root)
 
 
 #: Shapes filled in a colour opaque in every key, with no stroke: a box, a rounded box, an
@@ -2401,7 +2409,9 @@ def test_a_file_of_other_pages_holds_no_keyline_and_no_backdrop(drawn: dict[str,
     """Point 2: the scene's root says it, and a file of pages that are none holds no rule of
     fixed pages, on screen or in print (DEC-026 point 3)."""
     root = read(drawn)
-    assert not re.search(r"outline|border|color-mix|padding|max-width|@media screen", sheet(root))
+    # A run's ground takes its span's rounded corners (`border-radius`), which is no border.
+    unfixed = r"outline|border(?!-radius)|color-mix|padding|max-width|@media screen"
+    assert not re.search(unfixed, sheet(root))
     for reader in (SCREEN, PRINT):
         got = kept(root, reader)
         assert (got["html"], got["body"]) == ({}, {"margin": "0"})

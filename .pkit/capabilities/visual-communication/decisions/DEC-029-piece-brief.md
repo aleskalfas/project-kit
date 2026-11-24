@@ -6,7 +6,7 @@ date: 2026-11-08
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
-**In plain terms:** a piece may keep a *brief*, one file in its folder beside its content. The content says what the piece shows, in each language. The brief says what the content does not. It says what each picture must make visible, what the piece is for, and a page's point where the page states none. It also says why each choice of its design was made, each reason naming the design principle it rests on. It also keeps its makers' record of the drafts the asker has not seen (refinement per [visual-communication:DEC-042-grades-bar-and-loop] point 7). It is written for whoever makes or reviews the piece, never shown and never translated. It has a part for the whole piece and a part for each page, so it serves a deck, a figure and a site alike. No command changes what it says.
+**In plain terms:** a piece may keep a *brief*, one file in its folder beside its content. The content says what the piece shows, in each language. The brief says what the content does not. It says what each picture must make visible, what the piece is for, and a page's point where the page states none. It also says why each choice of its design was made, each reason naming the design principle it rests on. It also keeps its makers' record of the drafts the asker has not seen (refinement per [visual-communication:DEC-070-ship-call-and-one-round] point 4). It is written for whoever makes or reviews the piece, never shown and never translated. It has a part for the whole piece and a part for each page, so it serves a deck, a figure and a site alike. No command changes what it says.
 
 ## Context
 
@@ -30,7 +30,7 @@ The capability's files are written so that a later refinement can read them as a
 
 ## Decision
 
-**A piece may keep one brief: a file of its own in the piece's folder, in the capability's format, which no renderer reads and no command changes the meaning of. It holds what the content does not: the relations each picture must show, the piece's goals, a page's takeaway where the page has no lead, and the reasons for its design, each naming the principle it rests on, and also its makers' record of the drafts the asker has not seen (refinement per [visual-communication:DEC-042-grades-bar-and-loop] point 7). It has a part for the whole piece and a part for each page it speaks of, keyed by the page's id, and it has no language of its own.**
+**A piece may keep one brief: a file of its own in the piece's folder, in the capability's format, which no renderer reads and no command changes the meaning of. It holds what the content does not: the relations each picture must show, the piece's goals, a page's takeaway where the page has no lead, and the reasons for its design, each naming the principle it rests on, and also its makers' record of the drafts the asker has not seen (refinement per [visual-communication:DEC-070-ship-call-and-one-round] point 4). It has a part for the whole piece and a part for each page it speaks of, keyed by the page's id, and it has no language of its own.**
 
 ### 1. One brief for each piece, in its folder
 
@@ -42,7 +42,7 @@ The capability's files are written so that a later refinement can read them as a
 
 ### 2. It holds what the content does not
 
-A brief holds four things of the piece's intent, and a record of drafts, which is no intent and holds a digest of each draft's text, never the text, as [visual-communication:DEC-042-grades-bar-and-loop] point 7 decides:
+A brief holds four things of the piece's intent, and a record of drafts, which is no intent and holds a digest of each draft's text, never the text, as [visual-communication:DEC-070-ship-call-and-one-round] point 4 decides:
 - **Relations.** A *relation* is what a picture must make visible between the parts it shows. Examples are levels that each rest on the one below, a flow read in one direction, and kinds of one thing kept apart. It says so in words, and names the parts it relates as point 3 says.
 - **Goals.** What the piece, or one page, must achieve with its audience, such as what the audience can do after it.
 - **A takeaway, only where a page has no lead.** A page's *takeaway* is the one point a reader should leave it with. A page's *lead* is the text its content gives to state the page's point, such as a slide's lead under its title. No field declares which text that is, so whether a page has a lead is read from its content, by whoever designs or reviews it. Where it has one, the lead is its takeaway, and the brief does not restate it. A cover or a section page often has none. Whether a lead states the point well is a reviewer's to judge, against the page's relations and goals.
@@ -69,14 +69,14 @@ What a brief never holds:
 - **Keyed by page, for every kind of work.** Every piece has pages, while a page's fields are the slots of its layout, which differ from one top component to another (DEC-001 point 4). So the same shape serves a deck, a figure and a site.
 - **A page or item it names carries an id** in the content, as whatever another part of the piece names does (DEC-001 point 3). A brief names an item by its key path, as a tie's end names one: the fields and ids that lead to it, never its place in a list ([visual-communication:DEC-011-tie-ends] point 3). A page's part starts the path at its page. The part for the whole piece starts it at the content's top, so it reaches a page alone, or a field of the top such as a site's shared header.
 - **What it names in words.** A part inside a local component, or an element of shared content the piece reads (DEC-001 point 3), it names in words, since the key path reaches only the piece's own content.
-- **An entry of the record of drafts** names its lead, title or takeaway by page, kind and language, with the digest. The record lies in the page's part, or in the part for the whole piece on a piece of one page. Whoever designs the piece records a draft as it drafts it, and clears it once the asker has seen it (refinement per [visual-communication:DEC-042-grades-bar-and-loop] point 7).
+- **An entry of the record of drafts** names its lead, title or takeaway by page, kind and language, with the digest. The record lies in the page's part, or in the part for the whole piece on a piece of one page. Whoever designs the piece records a draft as it drafts it, and clears it once the asker has seen it (refinement per [visual-communication:DEC-070-ship-call-and-one-round] point 4).
 - **A reason** holds its aspect, by one of the six names of point 2, the part it is about, its text, and the principle it rests on.
 - **Room kept for a later reading.** Its top, and each mapping in it, keeps the methodology's container's key free, as a content file does (DEC-002 point 4).
 - **An addition to the format.** A piece without a brief reads as before, so the brief needs no new format number ([visual-communication:DEC-003-change-over-time] point 1).
 
 ### 4. Who writes it, and what reads it
 
-- **People write it,** or an agent working for one. Its goals and relations come from whoever asks for the piece. Its reasons are written by whoever designs it, as they design. The asker's words are the goals and relations, and among others a lead, title or takeaway whose text no longer matches its recorded digest or that the record lists nothing for. Every other word is whoever designs the piece's to change within the goals and relations (refinement per [visual-communication:DEC-042-grades-bar-and-loop] point 7).
+- **People write it,** or an agent working for one. Its goals and relations come from whoever asks for the piece. Its reasons are written by whoever designs it, as they design. The asker's words are the goals and relations, and among others a lead, title or takeaway whose text no longer matches its recorded digest or that the record lists nothing for. Every other word is whoever designs the piece's to change within the goals and relations (refinement per [visual-communication:DEC-070-ship-call-and-one-round] point 4).
 - **No command changes what it says.** A command may carry it with the rest of the piece, and changes nothing it says. Such a command copies a whole piece into a new one ([visual-communication:DEC-017-final-and-published-states] point 8), or moves the location. A rewrite into a new format that a person asks for carries it too (DEC-003 point 2). An id renamed in the content fails the brief until a person mends it (point 5).
 - **Nothing it holds is drawn.** No renderer, export or producer reads it. A change to it moves no lock, changes no scene, and stales no output.
 - **Read by people and by a reviewer,** who judges the drawn pages against it. How the capability's agents write and read it is decided with them.

@@ -10,7 +10,8 @@ of the width it gets. A form holds no action, and a field in error and a button 
 be pressed take their colour family. A line's length is capped by a shared role with a
 default, a brand restyles a button through a role of the starter's, and a header shows the
 brand's logo where the brand gives one. A site that draws every part draws under both brands
-from one set of content files.
+from one set of content files, and each of its pages draws its title, in a type of its own,
+larger than every other text on the page (DEC-068 point 3).
 
 The pieces are the web parts' reference pieces under `tests/fixtures/visual-communication/
 starter/`, and the site of every part under `tests/fixtures/visual-communication/web/`. The
@@ -687,7 +688,10 @@ def test_a_site_of_every_part_draws_under_both_brands_from_one_set_of_content_fi
     """The site places every web part, in its header, its main parts and its footer. Each
     brand draws it at each of its sizes with no finding, from the same content files, and it
     passes the check with no finding but the brand's fact that it gives no logo, beside the
-    reference pieces' calls for attention on their concepts' signs."""
+    reference pieces' calls for attention on their concepts' signs and on the places the
+    checks of boxes name. Those in the site lie between groups alone (visual-communication
+    DEC-067), such as a narrow header's links beside a page's buttons: its siblings take
+    none."""
     placed = {
         str(element.get("component", "")).removeprefix("starter/")
         for (name, _, _), scene in scenes.items()
@@ -702,8 +706,138 @@ def test_a_site_of_every_part_draws_under_both_brands_from_one_set_of_content_fi
     found = [
         (finding.code, finding.file)
         for finding, level in report.judged
-        if finding.code != "component-experimental" and finding.code not in starter.SIGN_LABELS
+        if finding.code not in starter.APART
     ]
     assert [code for code, _ in found] == ["picture-role-unvalued"]
     assert starter.on_signs(report.judged) == starter.UNSIGNED
+    assert starter.box_levels(report.judged) <= {"attention"}
+    in_the_site = {
+        finding.code
+        for finding, _ in report.judged
+        if finding.code in starter.BOX_LABELS and finding.file == "visual/pieces/site/piece.yaml"
+    }
+    assert in_the_site <= {"near-alignment-between-groups"}
     assert not report.failed()
+
+
+# --- a page's title, apart from every other head -------------------------------------------------
+
+#: The starter's type of a page's title, which its `title` alone sets (DEC-008 point 2).
+TITLE_TYPE = "starter.type.title"
+
+
+def runs(element: Mapping[str, Any]) -> list[Mapping[str, Any]]:
+    """Each run of a text element, in its order."""
+    return [run for paragraph in element.get("paragraphs") or [] for run in paragraph]
+
+
+def texts(page: Mapping[str, Any]) -> list[Mapping[str, Any]]:
+    """Each text a page draws."""
+    return [element for element in starter.elements(page) if element.get("type") == "text"]
+
+
+def test_a_pages_title_takes_a_type_of_its_own_which_no_other_component_reads() -> None:
+    """The starter gives a page's title a type of its own, which only its `title` reads. Its
+    default is the shared type of a page's title, which a brand released before it owes no
+    value, since it defaults to the heading (DEC-004 point 7, DEC-008 point 2)."""
+    components = starter.COMPONENTS.items()
+    readers = sorted(name for name, component in components if TITLE_TYPE in json.dumps(component))
+    assert readers == ["title"]
+    assert starter.OWN[TITLE_TYPE] == {"type": "typography", "default": "{type.title}"}
+    assert starter.SHARED["type.title"] == {"type": "typography", "default": "{type.heading}"}
+
+
+def test_each_page_of_the_site_draws_its_title_larger_than_every_other_text(
+    under: Path, scenes: Mapping[tuple[str, str, str], Mapping[str, Any]]
+) -> None:
+    """Each page of the site opens with its title, the one text it sets in the starter's type
+    of a page's title. Under each brand, at each size and in each language, the title is
+    larger than every other text the page draws: each section's head, the form's and the
+    table's, the heads of the table's cells, and the site's own title in the header and the
+    head in the footer. So the page's head stands apart from every head of its parts by its
+    size, never by its place alone (visual-communication DEC-068 point 3). The colour scheme
+    and the contrast change colours alone, and in every combination of them, at each size,
+    the type of the title is larger than every other type the site draws."""
+    drawn_in: set[str] = set()
+    checked = 0
+    for (name, language, size), scene in scenes.items():
+        if name != "site":
+            continue
+        for page in pages(scene):
+            found = texts(page)
+            titles = [text for text in found if any(r["style"] == TITLE_TYPE for r in runs(text))]
+            assert [text["id"] for text in titles] == [f"{page['id']}/main/sections[head]/title"]
+            [title] = titles
+            assert {run["style"] for run in runs(title)} == {TITLE_TYPE}
+            smallest = min(float(run["font-size"]) for run in runs(title))
+            for text in found:
+                if text is title:
+                    continue
+                drawn_in |= {str(run["style"]) for run in runs(text)}
+                for run in runs(text):
+                    assert float(run["font-size"]) < smallest, (language, size, text["id"])
+            checked += 1
+    assert checked == 3 * len(starter.LANGUAGES) * 3
+    assert "starter.type.head" in drawn_in
+    values = drawn_piece(under, "site").values()
+    resolved = {path: token["values"] for path, token in values["tokens"].items()}
+    for key in values["keys"]:
+        title = resolved[TITLE_TYPE][key]["fontSize"]
+        for style in sorted(drawn_in):
+            other = resolved[style][key]["fontSize"]
+            assert other["unit"] == title["unit"], (key, style)
+            assert other["value"] < title["value"], (key, style)
+
+
+# --- a page's lead, in the lead type ---------------------------------------------------------
+
+#: The starter's type of the lead under a page's title, which its `title` alone sets
+#: (visual-communication DEC-072 point 3).
+LEAD_TYPE = "starter.type.lead"
+
+
+def test_a_pages_lead_takes_a_type_of_its_own_which_no_other_component_reads() -> None:
+    """The starter gives the lead under a page's title a type of its own, which only its
+    `title` reads. Its default is the shared type of running text read before the body,
+    which a brand released before it owes no value, since it defaults to the body
+    (visual-communication DEC-072 points 1 and 3)."""
+    components = starter.COMPONENTS.items()
+    readers = sorted(name for name, component in components if LEAD_TYPE in json.dumps(component))
+    assert readers == ["title"]
+    assert starter.OWN[LEAD_TYPE] == {"type": "typography", "default": "{type.lead}"}
+    assert starter.SHARED["type.lead"] == {"type": "typography", "default": "{type.body}"}
+
+
+def test_each_page_of_the_site_sets_its_lead_alone_in_the_lead_type(
+    under: Path, scenes: Mapping[tuple[str, str, str], Mapping[str, Any]]
+) -> None:
+    """Each page of the site sets the lead under its title, and no other text, in the
+    starter's type of the lead, at each size and in each language. The neutral brand gives
+    the lead type a size above its body's, so it draws the lead larger than a section's
+    text, set in the body, in every combination. The test brand gives it none, so it sets
+    the lead as the body (`files.md`, *The neutral brand*; visual-communication DEC-072
+    point 3)."""
+    checked = 0
+    for (name, language, size), scene in scenes.items():
+        if name != "site":
+            continue
+        for page in pages(scene):
+            leads = [
+                text for text in texts(page) if any(r["style"] == LEAD_TYPE for r in runs(text))
+            ]
+            assert [text["id"] for text in leads] == [f"{page['id']}/main/sections[head]/lead"], (
+                language,
+                size,
+            )
+            checked += 1
+    assert checked == 3 * len(starter.LANGUAGES) * 3
+    drawn = drawn_piece(under, "site")
+    values = drawn.values()
+    resolved = {path: token["values"] for path, token in values["tokens"].items()}
+    for key in values["keys"]:
+        lead, body = resolved[LEAD_TYPE][key], resolved["type.body"][key]
+        if drawn.piece.data["brand"] == "neutral":
+            assert lead["fontSize"]["unit"] == body["fontSize"]["unit"], key
+            assert lead["fontSize"]["value"] > body["fontSize"]["value"], key
+        else:
+            assert lead == body, key

@@ -6,7 +6,8 @@ body: >
   The HTML renderer writes a text's frame, a line's ground and a line's strut as percentages of
   the box each lies in, rather than in `cqw`, so Firefox's print keeps a page's text on its
   shapes where the page prints narrower or wider than the sheet's area, at another scale of the
-  print dialog, and under a page rule. The renderer rises to 1.10.0, and the seam stays at 9.
+  print dialog, and under a page rule. This joins the HTML renderer's 1.10.0, which a run's
+  ground beneath its lines raises it to (#3114), with no raise of its own, and the seam stays at 9.
   In Firefox a run is still laid out at the size the paper area gives, so a line's later runs
   may start off their place, and a page that runs on past a sheet still loses its shapes there
   (#3012).

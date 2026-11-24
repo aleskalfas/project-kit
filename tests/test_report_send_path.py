@@ -15,6 +15,7 @@ from click.testing import CliRunner
 
 import project_kit.cli as cli_mod
 import project_kit.report as rep
+from project_kit.acting_account import Reading
 from project_kit.cli import main
 from project_kit.report import REPORT_TARGET, SendPayload
 
@@ -26,7 +27,9 @@ def _pinned_seams(monkeypatch):
     ensurable, #663). Tests override."""
     monkeypatch.setattr(cli_mod, "_resolve_report_context", lambda *a, **k: (None, None))
     monkeypatch.setattr(rep, "gh_authenticated", lambda: False)
-    monkeypatch.setattr(rep, "current_login", lambda: "tester")
+    monkeypatch.setattr(
+        rep, "posting_account", lambda: Reading(account="tester", kind="user", login="tester")
+    )
     monkeypatch.setattr(rep, "ensure_kind_label", lambda *a, **k: True)
 
 
@@ -774,3 +777,90 @@ def test_stage_ids_do_not_collide(target: Path) -> None:
     b = rep.stage_report(target, kind="bug", title="t", payload=payload)
     assert a.draft_id != b.draft_id
     assert len(rep.list_staged(target)) == 2
+
+
+# --- the account it posts as (ADR-094 point 6) ----------------------------
+
+
+_UNNAMED = Reading(
+    cause="integration-refused",
+    reason="the service refused `gh api user` because the credential is an integration's",
+)
+
+
+@pytest.mark.usefixtures("at_a_terminal")
+def test_a_post_names_a_bots_account_as_a_bots(target: Path, monkeypatch) -> None:
+    monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
+    monkeypatch.setattr(
+        rep,
+        "posting_account",
+        lambda: Reading(account="robot[bot]", kind="bot", login="robot[bot]"),
+    )
+    monkeypatch.setattr(
+        rep, "file_report_via_gh", lambda t, **k: f"https://github.com/{t}/issues/7"
+    )
+    res = CliRunner().invoke(main, ["report", "bug", "--title", "t", "--body", "b"], input="y\n")
+    assert res.exit_code == 0, res.output
+    assert "as @robot[bot], a bot's account" in res.output
+    assert f"Post as @robot[bot] to {REPORT_TARGET}?" in res.output
+
+
+@pytest.mark.usefixtures("at_a_terminal")
+def test_a_post_whose_account_is_not_named_keeps_the_draft(target: Path, monkeypatch) -> None:
+    # Where the reading names no account, nothing is posted, even with a person at
+    # the terminal to confirm: the payload is kept as a draft, and the run says why.
+    posted = {"v": False}
+    monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
+    monkeypatch.setattr(rep, "posting_account", lambda: _UNNAMED)
+    monkeypatch.setattr(
+        rep, "file_report_via_gh", lambda *a, **k: posted.__setitem__("v", True) or "x"
+    )
+    res = CliRunner().invoke(main, ["report", "bug", "--title", "t", "--body", "b"], input="y\n")
+    assert res.exit_code == 0, res.output
+    assert posted["v"] is False
+    assert "Not posted: pkit cannot tell which account it would post as" in res.output
+    assert "integration's" in res.output
+    assert "Post as" not in res.output
+    [draft] = rep.list_staged(target)
+    assert f"pkit report submit {draft.draft_id}" in res.output
+
+
+@pytest.mark.usefixtures("at_a_terminal")
+def test_submit_whose_account_is_not_named_keeps_the_draft(target: Path, monkeypatch) -> None:
+    draft_id = _stage_via_cli(target)
+    posted = {"v": False}
+    monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
+    monkeypatch.setattr(rep, "posting_account", lambda: _UNNAMED)
+    monkeypatch.setattr(
+        rep, "file_report_via_gh", lambda *a, **k: posted.__setitem__("v", True) or "x"
+    )
+    res = CliRunner().invoke(main, ["report", "submit", draft_id], input="y\n")
+    assert res.exit_code == 1
+    assert posted["v"] is False
+    assert "cannot tell which account it would post as" in res.output
+    assert rep.load_staged(target, draft_id) is not None
+
+
+def test_the_listing_whose_account_is_not_named_says_so(monkeypatch) -> None:
+    monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
+    monkeypatch.setattr(rep, "posting_account", lambda: _UNNAMED)
+    monkeypatch.setattr(
+        rep, "_gh_json", lambda args: pytest.fail(f"the listing asked GitHub: {args}")
+    )
+    res = CliRunner().invoke(main, ["report"])
+    assert res.exit_code == 1
+    assert "pkit cannot tell whose reports to list" in res.output
+
+
+def test_the_listing_lists_by_the_reading_account(monkeypatch) -> None:
+    asked: list[list[str]] = []
+    monkeypatch.setattr(rep, "_gh_json", lambda args: asked.append(args) or [])
+    assert rep.list_my_reports("o/r", account="robot[bot]") == []
+    authored = asked[0]
+    # The service's search names a bot's account `app/<name>` (ADR-094 point 3,
+    # "Requests"); a user's goes by its login.
+    assert authored[authored.index("--author") + 1] == "app/robot"
+    assert "@me" not in authored
+    asked.clear()
+    rep.list_my_reports("o/r", account="alice")
+    assert asked[0][asked[0].index("--author") + 1] == "alice"
