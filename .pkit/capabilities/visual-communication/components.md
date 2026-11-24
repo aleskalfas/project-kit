@@ -490,7 +490,7 @@ fields:
       x-pkit-pages: true
 tokens:
   title: {type: typography, default: '{type.heading}'}
-  lead: {type: typography, default: '{type.body}'}
+  lead: {type: typography, default: '{type.lead}'}
 layouts:
   slide:
     slots:
