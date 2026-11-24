@@ -11,9 +11,9 @@ each tied to one slot on the right, so their `to` ends meet the slot's left side
   end to end, drawn by the SVG renderer and the PDF renderer;
 - a group that cannot be drawn clear, drawn spread and stated: no room, two of its ties that
   would cross, a crossing it would add, and a part placed by the measures that does not fit;
-- ties that form no group: drawn otherwise, a straight part beside one with corners, a
-  radius that reads a line's frame, stated; straight and alike, drawing as without a trunk,
-  and nothing said;
+- ties that form no group: drawn otherwise, one drawing a part the other does not, a
+  straight part beside one with corners, a radius that reads a line's frame, stated;
+  straight and alike, drawing as without a trunk, and nothing said;
 - the two measures of a line's own stretch, which read the frame's centre on a line that
   shares nothing, and a part placed by them, kept off the stretch its tie shares;
 - a part placed otherwise that stands on a shared stretch, found in its component;
@@ -429,6 +429,35 @@ def test_ties_that_draw_otherwise_form_no_group_and_it_is_stated() -> None:
         "top/links[as]: the ties `top/links[as]`, `top/links[bs]` meet the left side of "
         "`top/slots[s]` at their end `to`, and form no group, so share no trunk: "
         "`top/links[bs]` draws otherwise than `top/links[as]`, by its component"
+    )
+    assert points(result, "top/links[as]/l")[-1] == (272, 42.67)
+
+
+@pytest.mark.parametrize(
+    ("paints", "named"),
+    [({"fill": "surface"}, "t.fill"), ({}, "t.fill")],
+    ids=["painted", "unpainted"],
+)
+def test_ties_of_which_one_draws_a_part_the_other_does_not_form_no_group(
+    paints: dict[str, str], named: str
+) -> None:
+    """A part whose `when` holds on the second tie alone gives it paints the first has
+    none of, painted or not, and the two draw otherwise."""
+    shown = {**tag("=@space.1", "=@space.1"), "box": paints, "when": "note"}
+    noted = block(
+        arrow(t=shown)["parts"],
+        ends=True,
+        fields={"note": {"type": "string"}},
+    )
+    links = [
+        link("as", "steps[a]", "slots[s]"),
+        link("bs", "steps[b]", "slots[s]", note="the second"),
+    ]
+    result = drawn("ab", "to", slot_y="=@space.4", links=links, components={"arrow": noted})
+
+    [said] = facts(result, UNGROUPED)
+    assert said.message.endswith(
+        f"`top/links[bs]` draws otherwise than `top/links[as]`, by its paint `{named}`"
     )
     assert points(result, "top/links[as]/l")[-1] == (272, 42.67)
 

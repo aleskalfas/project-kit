@@ -6432,12 +6432,20 @@ def _ungrouped(ties: Sequence[Instance]) -> tuple[bool, _Unclear | None]:
 
 
 def _differs(first: Mapping[str, Any], second: Mapping[str, Any]) -> str | None:
-    """What two ties' looks (`Instance.look`) differ by, in words; None where they are one."""
+    """What two ties' looks (`Instance.look`) differ by, in words; None where they are one.
+    A look holds paints only for the parts its tie draws, so a part one tie draws and the
+    other does not, as by a `when` on a field of the tie, differs by its paints, even where
+    it paints nothing."""
     for what, value in first.items():
-        if second[what] == value:
+        other = second[what]
+        if other == value:
             continue
         if what == "paints":
-            named = next(key for key in value if value.get(key) != second[what].get(key))
+            named = next(
+                key
+                for key in {**value, **other}
+                if key not in value or key not in other or value[key] != other[key]
+            )
             return f"paint `{named}`"
         return what
     return None
