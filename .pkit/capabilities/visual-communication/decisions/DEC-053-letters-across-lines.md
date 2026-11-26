@@ -1,8 +1,8 @@
 ---
 id: DEC-053
 title: The check names a text whose letters touch across its lines, and the engine keeps the brand's line step
-status: proposed
-date: 2026-11-15
+status: accepted
+date: 2026-11-26
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
