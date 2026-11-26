@@ -14,7 +14,7 @@ pkit:
         - .pkit/capabilities/living-docs/schemas/config.schema.json
         - .pkit/capabilities/living-docs/schemas/reading-evidence.schema.json
         - .pkit/capabilities/living-docs/skills/**
-      record: ["living-docs:DEC-001", COR-005, COR-030, COR-049, COR-050, COR-051, "COR-052#4", "COR-052#6", COR-053, "project-management:DEC-053", "project-management:DEC-056", "living-docs:DEC-002", "living-docs:DEC-003"]
+      record: ["living-docs:DEC-001", COR-005, COR-030, COR-049, COR-050, COR-051, "COR-052#4", "COR-052#6", COR-053, "project-management:DEC-053", "project-management:DEC-056", "living-docs:DEC-002", "living-docs:DEC-003", "ADR-079#2"]
       artefact:
         - RS-LDOC-003
         - .pkit/capabilities/living-docs/pages.md#
@@ -204,6 +204,8 @@ value:
 
 **What it reads.** It declares that it reads history, `reads: [history]` on its `commands:` entry, so `pkit validate` and `pkit status` name the commit it read HEAD at. It reads no base: the base a pull request is compared with bounds the work-tracking check's diff, never this command.
 
+**Its pages alone.** The command hands the check its pages, and the check judges no other artefact. Each page is judged by the whole check's one judgement of an artefact, under the conditions the CLI reference gives. The check's measures stay the whole repository's, so the uncovered surface is read whole ([the CLI reference, "friction check --all"](../../cli/README.md#friction-check---all---json)).
+
 **Whether it blocks.** The work-tracking capability decides whether `friction` obligations block. With project-management they are advisory until `doc_check.sources.friction: enforcing` is set. A repository with no commit yet owes nothing.
 
 **When it gives no answer,** never "nothing owed":
@@ -211,7 +213,8 @@ value:
 - **A commit git cannot read.** The command asks git nothing itself: whether HEAD has a commit it reads from the core (`head` in `pkit repository base --json`). Where git cannot read a commit that is there, the command gives no answer. Such is a repository git refuses as unsafe, or a missing object.
 - **A shallow clone.** If a page's friction lies beyond a shallow clone's history, the check reports itself unresolved, rather than pass on fewer obligations. Fetch the full history.
 - **A page left unjudged:** one whose anchor's resolver gave no answer (`no-answer`, state `unresolved`). The same holds for a page in a state this capability does not know, which it never takes for current. `pkit friction explain <page>` says why.
-- **A run past its bound.** The command reads the whole check, so the command's time grows with the repository's history and answers. A run the backbone's bound ends gives no answer ([the lifecycle README, "How a data point resolves"](../../lifecycle/README.md#how-a-data-point-resolves)). project-management's inert policy for the point is `fail`, so the point is then unresolved ([project-management:DEC-053-doc-check-slot], COR-052 point 6).
+- **A check that judged other artefacts.** The command reads back which artefacts the check was asked to judge. Any list but the pages it handed gives no answer, since a list cut short reads like a whole one.
+- **A run past its bound.** The check reads the repository's history and answer files, so the command's time grows with both. A run the backbone's bound ends gives no answer ([the lifecycle README, "How a data point resolves"](../../lifecycle/README.md#how-a-data-point-resolves)). project-management's inert policy for the point is `fail`, so the point is then unresolved ([project-management:DEC-053-doc-check-slot], COR-052 point 6).
 - **A friction document of another version.** The friction check's answer carries a `schema_version`. The command does not read one other than 1. One without the key, from a backbone before it, reads as 1 ([the CLI reference, "Friction checks"](../../cli/README.md#friction-checks)).
 
 **An anchor nothing resolves.** A page left unjudged only by an anchor of a kind nothing installed resolves (`unresolved-kind`) is different. That anchor is a declaration to mend, not an obligation of this change. It is mended in one of three ways:

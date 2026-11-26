@@ -1,0 +1,19 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  `pkit friction check --all` takes a selection of the artefacts it judges:
+  `--artefact <location>`, repeatable, and `--artefacts-from <file>`, a list
+  of locations one a line, `-` for standard input, never a terminal. It
+  judges only the artefacts named, each by the whole check's one judgement,
+  exactly as the whole check judges it, and an empty list judges none. The
+  measures and the count of answer files stay the whole repository's. The
+  check may read the list as late as just before it judges, so a caller may
+  start it and write the list once it knows it (ADR-079 point 2). The
+  document gains `selection`: `null` for the whole check, else `named`, the
+  locations named, and `absent`, those HEAD holds no artefact at. Under a
+  selection, and only there, `answers.prunable` is `null`, since which answer
+  files a prune would remove reads every artefact's answers, and the human
+  view's header says what was judged. A run without the options prints the
+  document as before, `selection` added. The CLI reference says so.
