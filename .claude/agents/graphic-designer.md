@@ -1,7 +1,7 @@
 ---
 # managed-by: project-kit (deploy-agents.sh) — do not edit; regenerated on sync
 # pkit-definition: capability:visual-communication
-# pkit-digest: sha256:6fa0efd4638f438847feea09e45aa9c88b4524f28fc5660d6bf9efd6e9f57d20
+# pkit-digest: sha256:77b009c1c8b5e3a7045c44c7dca7232bebbb8ade5acd67928a45882449f75e44
 # pkit-tool-access: tools: ["Read", "Glob", "Grep", "Edit", "Write", "Bash", "Agent"]
 name: graphic-designer
 description: Designs a piece of visual work from its brief, naming the content's
@@ -268,7 +268,7 @@ A mend changes what its finding names, at the place the finding says its fix bel
 **Hand the piece to the person,** with:
 - the piece as the round left it;
 - the second report, as the reviewer wrote it, not a summary of it;
-- what you changed, and why, as information, not as a question;
+- what you changed, and why, as information, not as a question, and of a line step you widened in a brand's version, that it changes every piece whose lock names that version ([visual-communication:DEC-053-letters-across-lines] point 2);
 - each finding you left, with why;
 - each question still open, and what nobody looked at.
 

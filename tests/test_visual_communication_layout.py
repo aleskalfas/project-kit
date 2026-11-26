@@ -34,7 +34,12 @@ in memory and read through an in-memory `Env` (`tests/visual_engine.py`):
 - fields of runs (DEC-012 points 1 to 3 and 8): a terminal's line in three styles, a
   sentence with one phrase set apart, a run's concept under a state, a field whose only
   run holds no text under a condition, a slot of a page's layout; each mark, switch and
-  reading of a field of runs the component may not hold.
+  reading of a field of runs the component may not hold;
+- fields of paths (DEC-056 points 1, 4 and 5): a list of paths shown a path to a
+  paragraph, filled where it holds a path; each mark and reading of a field of paths the
+  component may not hold; a list that holds no items, runs or paths, which asks the
+  component's owner for attention; the deck's documents, under its footer, in the type of
+  code, with no label, a slide that gives none drawn as before.
 """
 
 from __future__ import annotations
@@ -42,6 +47,7 @@ from __future__ import annotations
 from typing import Any
 
 from tests.visual_engine import (
+    ROLES,
     RUN_FONTS,
     RUN_ROLES,
     SEMIBOLD,
@@ -1840,3 +1846,212 @@ def test_a_format_1_layouts_slot_takes_no_mark_the_field_it_names_takes_it() -> 
     )
 
     assert issues(component) == [(SHAPE, f"layouts.frame.slots.say.{RUNS}")]
+
+
+# --- fields of paths, and lists that hold no items (DEC-056) --------------------------------
+
+PATHS = "x-pkit-paths"
+PATH_LIST = {"type": "array", "minItems": 1, "items": {"type": "string"}, PATHS: True}
+UNMARKED = "list-unmarked"
+
+
+def test_a_field_of_a_path_or_of_a_list_of_paths_reads_with_no_issue() -> None:
+    assert marked({"type": "string", PATHS: True}) == []
+    assert marked(PATH_LIST) == []
+    assert marked({"type": ["array"], "items": {"type": ["string"]}, PATHS: True}) == []
+
+
+def test_a_mark_of_paths_lies_on_a_field_of_a_path_or_a_list_of_paths_alone() -> None:
+    at = f"fields.properties.say.{PATHS}"
+
+    for schema in (
+        {"type": "string", PATHS: "yes"},
+        {"type": "string", PATHS: False},
+        {"type": "string", PATHS: True, RUNS: ["one"]},
+        {"type": ["string", "null"], PATHS: True},
+        {"type": "string", "enum": ["a.md"], PATHS: True},
+        {"type": "array", PATHS: True},
+        {"type": "array", "items": {"type": "object"}, PATHS: True},
+        {"type": "array", "items": {"type": "string", "const": "a.md"}, PATHS: True},
+        {PATHS: True},
+    ):
+        assert marked(schema) == [(SHAPE, at)], schema
+
+
+def test_a_mark_of_paths_below_a_field_or_on_all_of_them_or_reached_by_a_ref_is_refused() -> None:
+    below = {
+        "type": "array",
+        "items": {"type": "object", "properties": {"doc": {"type": "string", PATHS: True}}},
+    }
+    component = top({}, fields={"lines": below})
+    component["fields"][PATHS] = True
+
+    assert issues(component) == [
+        (SHAPE, f"fields.{PATHS}"),
+        (SHAPE, f"fields.properties.lines.items.properties.doc.{PATHS}"),
+    ]
+    assert marked(PATH_LIST, fields={"other": {"$ref": "#/properties/say"}}) == [
+        (SHAPE, "fields.properties.other.$ref")
+    ]
+
+
+def test_a_list_of_paths_is_shown_by_a_text_part_never_repeated_over_or_passed_on() -> None:
+    shown = {"t": {"text": {"content": "say", "style": "type.body"}}}
+
+    repeat = {"repeat": "say", "draw": "lab/chip", "row": {}}
+    repeated = marked(PATH_LIST, parts={**shown, "r": repeat})
+    passed = marked(PATH_LIST, parts={**shown, "p": {"use": "lab/inner", "fields": {"x": "say"}}})
+    conditioned = marked(PATH_LIST, parts={**shown, "b": {**box(), "when": "say"}})
+    # A field of one path is text, which a part may pass on as any text.
+    one = marked(
+        {"type": "string", PATHS: True},
+        parts={**shown, "p": {"use": "lab/inner", "fields": {"x": "say"}}},
+    )
+
+    assert repeated == [(SHAPE, "parts.r.repeat")]
+    assert passed == [(SHAPE, "parts.p.fields.x")]
+    assert conditioned == []
+    assert one == []
+
+
+def test_a_format_1_layouts_slot_takes_no_mark_of_paths_the_field_it_names_takes_it() -> None:
+    component = top(
+        {"t": {"text": {"content": "say", "style": "type.body"}}},
+        fields={"say": PATH_LIST},
+        layouts={"frame": {"slots": {"say": {PATHS: True}}}},
+    )
+
+    assert issues(component) == [(SHAPE, f"layouts.frame.slots.say.{PATHS}")]
+
+
+def unmarked(schema: dict[str, Any], **fields: Any) -> list[tuple[str, str]]:
+    """What asks the owner of a component for attention, by code and key path, where its
+    field `notes` takes `schema` beside `fields`."""
+    data = top({}, fields={"notes": schema, **fields})
+    component = layout.Component("lab/x", data, layout.Context(FakeEnv(), "en"))
+    return [(code, where) for code, where, _ in component.attention]
+
+
+def test_a_list_whose_entries_may_be_no_mappings_with_neither_mark_asks_for_attention() -> None:
+    at = "fields.properties.notes"
+
+    for schema in (
+        {"type": "array"},
+        {"type": "array", "items": {"type": "string"}},
+        {"type": "array", "items": {"type": ["object", "string"]}},
+        {"type": ["array", "null"], "items": {}},
+    ):
+        assert unmarked(schema) == [(UNMARKED, at)], schema
+    for schema in (
+        {"type": "array", "items": {"type": "object"}},
+        PATH_LIST,
+        PAGES_FIELD,
+        {"type": "string"},
+    ):
+        assert unmarked(schema) == [], schema
+    # Items a local `$ref` leads to are read where it leads.
+    item = {"type": "object", "properties": {"id": {"type": "string"}}}
+    assert unmarked({"type": "array", "items": {"$ref": "#/properties/item"}}, item=item) == []
+
+
+def test_a_list_that_holds_no_items_is_a_finding_for_its_components_owner_never_failing() -> None:
+    notes = {"type": "array", "items": {"type": "string"}}
+    component = top({"t": label("head")}, fields={"head": {"type": "string"}, "notes": notes})
+
+    result = draw({"head": "A", "notes": ["one"]}, components=lab(top=component))
+
+    found = finding(result, UNMARKED)
+    assert (found.level, found.where, found.who) == (
+        "attention",
+        "fields.properties.notes",
+        "the component's owner",
+    )
+    assert found.extra == {"component": "lab/top"}
+
+
+#: A component that shows its field of paths `docs` in one text part, shown only where the
+#: field is filled.
+DOCUMENTS = top(
+    {"docs": {**label("docs"), "when": "docs", "width": "=:width"}},
+    fields={"docs": PATH_LIST},
+)
+
+
+def test_a_text_part_shows_a_list_of_paths_a_path_to_a_paragraph() -> None:
+    given = ["docs/one.md", "src/two.py"]
+
+    result = draw({"docs": given}, components=lab(top=DOCUMENTS))
+
+    assert result.findings == []
+    docs = result.scene.find("top/docs")
+    assert docs is not None
+    assert [[run["text"] for run in each] for each in docs.properties["paragraphs"]] == [
+        [path] for path in given
+    ]
+    assert [line["text"] for line in docs.properties["lines"]] == given
+
+
+def test_a_list_of_paths_is_filled_where_it_holds_a_path() -> None:
+    for empty in ([], [""]):
+        result = draw({"docs": empty}, components=lab(top=DOCUMENTS))
+        assert result.scene.find("top/docs") is None, empty
+    filled = draw({"docs": ["", "a.md"]}, components=lab(top=DOCUMENTS))
+    assert filled.scene.find("top/docs") is not None
+
+
+#: The roles of a deck whose slides give their documents, which it sets in the type of code.
+DECK_ROLES = {**ROLES, "type.code": ROLES["type.body"]}
+
+
+def slide_drawn(**slots: Any) -> Any:
+    """The scene of a deck of one slide that fills `slots` beside its title."""
+    content = {"slides": [{"id": "s", "layout": "slide", "title": "A claim", **slots}]}
+    return draw(content, use="foundations/deck", roles=DECK_ROLES)
+
+
+def test_a_slides_documents_close_its_foot_under_its_footer_in_the_type_of_code() -> None:
+    documents = ["docs/one.md", "docs/two.md"]
+
+    result = slide_drawn(footer="In project-kit.", documents=documents)
+
+    assert result.findings == []
+    shown = result.scene.find("deck/slides[s]/documents")
+    assert shown is not None
+    assert shown.properties["text"] == "\n".join(documents)
+    runs = [run for paragraph in shown.properties["paragraphs"] for run in paragraph]
+    assert [(run["text"], run["style"], run["fill"]) for run in runs] == [
+        (path, "type.code", "text-secondary") for path in documents
+    ]
+    _, footer_y, _, footer_height = frame(result, "deck/slides[s]/footer")
+    margin = 2 * 32
+    x, y, width, height = frame(result, "deck/slides[s]/documents")
+    assert (x, width) == (margin, 1280 - 2 * margin)
+    assert round(y + height, 6) == 720 - margin
+    # A small space parts the footer from the documents under it.
+    assert round(footer_y + footer_height + 8, 6) == round(y, 6)
+    # The documents are the slide's last part, and no part labels them.
+    ids = [element.id for element in result.scene.find("deck/slides[s]").children]
+    assert ids[-1] == "deck/slides[s]/documents"
+    texts = [
+        element.properties["text"]
+        for element in result.scene.find("deck/slides[s]").children
+        if "text" in element.properties
+    ]
+    assert texts == ["A claim", "In project-kit.", "\n".join(documents)]
+
+
+def test_a_slide_that_gives_no_documents_draws_its_foot_as_before() -> None:
+    before = slide_drawn(footer="In project-kit.", limit="Only here.")
+    alone = slide_drawn(documents=["docs/one.md"], limit="Only here.")
+
+    assert before.findings == [] and alone.findings == []
+    assert before.scene.find("deck/slides[s]/documents") is None
+    margin = 2 * 32
+    _, footer_y, _, footer_height = frame(before, "deck/slides[s]/footer")
+    assert round(footer_y + footer_height, 6) == 720 - margin
+    _, limit_y, _, limit_height = frame(before, "deck/slides[s]/limit")
+    assert round(limit_y + limit_height + 32, 6) == round(footer_y, 6)
+    # With no footer, the limit stands a large space above the documents.
+    _, docs_y, _, _ = frame(alone, "deck/slides[s]/documents")
+    _, limit_y, _, limit_height = frame(alone, "deck/slides[s]/limit")
+    assert round(limit_y + limit_height + 32, 6) == round(docs_y, 6)

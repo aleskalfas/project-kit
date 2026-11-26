@@ -408,16 +408,23 @@ DECK_TOKENS = {
 #: Where the deck of the foundations being built places its parts other than their release
 #: 1.0.0: each line of its file, with the line the release holds in its place. Its lead
 #: stands a small space under its title, not a medium one, and its visual reaches down to
-#: one large space above its limit or its footer only where each is drawn, where the
-#: release leaves two above its footer on a slide with no limit.
+#: one large space above its limit or its foot only where each is drawn, where the
+#: release leaves two above its footer on a slide with no limit. Its foot holds a slide's
+#: documents under its footer, which a slide that gives none leaves where the release
+#: places it (DEC-056 point 4).
 DECK_PLACES = {
     'y: "=title.bottom + @space.2"': 'y: "=title.bottom + @space.3"',
     'height: "=limit.y - min(limit.height, @space.1) / @space.1 * @space.4 - visual.y"': (
         'height: "=limit.y - @space.4 - visual.y"'
     ),
-    'y: "=footer.y - min(footer.height, @space.1) / @space.1 * @space.4 - limit.height"': (
-        'y: "=footer.y - @space.4 - limit.height"'
-    ),
+    (
+        'y: "=footer.y - min(footer.height + documents.height, @space.1) / @space.1 * @space.4 '
+        '- limit.height"'
+    ): 'y: "=footer.y - @space.4 - limit.height"',
+    (
+        'y: "=documents.y - min(footer.height, documents.height, @space.1) / @space.1 * '
+        '@space.2 - footer.height"'
+    ): 'y: "=:height - margin - footer.height"',
 }
 
 

@@ -11,7 +11,14 @@ DEC-012).
   `x-pkit-runs: [<word>, ...]`, the words of its run styles, the first the default: a
   field of runs, whose content is text, read as one run of the first word, or a list of
   runs, each text or `{text, style?, concept?}` (DEC-012 points 1 and 2). The mark lies on
-  no schema below a field, and no `$ref` leads to it;
+  no schema below a field, and no `$ref` leads to it. A field of text alone, or a list of
+  such texts, may be marked `x-pkit-paths: true`, on the same terms: it holds a path, or a
+  list of paths, each naming a file of the repository from its root, which the check of
+  the content finds, a list of paths holding texts and no items, so no part repeats over it
+  or passes it on, and a text part shows it as one text, a path to a paragraph (DEC-056
+  points 1 and 2). A field or a slot whose schema admits a list of entries that are not
+  mappings, and carries neither mark, holds no items, runs or paths, which asks the
+  component's owner for attention (`list-unmarked`, point 5);
 - `options`: each a list of words, the first the default; or `{item: <list field>}`,
   which names an item of that list by its id; or `{item: <list field>, point: true}`,
   which names an item and one of its exposed points, `{item: <id>, point: <name>}`. Such
@@ -530,6 +537,15 @@ PAGES = "x-pkit-pages"
 #: The mark of a field of runs, which holds the words of its run styles (DEC-012 point 1).
 RUNS = "x-pkit-runs"
 
+#: The mark of a field that holds a path, or a list of paths, each naming a file of the
+#: repository from its root (DEC-056 point 1).
+PATHS = "x-pkit-paths"
+
+#: The call for attention on a field or a slot whose schema admits a list of entries that
+#: are not mappings, and that carries neither the mark of runs nor that of paths (DEC-056
+#: point 5).
+LIST_UNMARKED = "list-unmarked"
+
 #: The keys the format fixes on a run, and no other (DEC-012 point 1).
 RUN_KEYS = ("text", "style", "concept")
 
@@ -646,9 +662,71 @@ def runs_of(fields: Mapping[str, Any]) -> dict[str, tuple[str, ...]]:
     }
 
 
-def _marks_below(schema: Any, path: str) -> list[str]:
-    """The key path of each mark of a field of runs below a schema: in a list's items or an
-    object's properties, at any depth."""
+def _only_text(schema: Any) -> bool:
+    """Whether a schema takes text alone, any text: its `type` is `string` and no other, and
+    it holds no `enum`, `const` or `$ref`."""
+    if not isinstance(schema, Mapping):
+        return False
+    kind = schema.get("type")
+    if (kind if isinstance(kind, list) else [kind]) != ["string"]:
+        return False
+    return not any(key in schema for key in ("enum", "const", "$ref"))
+
+
+def paths_problem(name: str, schema: Any) -> str | None:
+    """Why a field's schema marked `x-pkit-paths` is no field of paths (DEC-056 point 1):
+    its mark is not `true`; it also takes runs; or it is neither text alone, with no `enum`,
+    `const` or `$ref`, nor a list of such texts. None where it is one."""
+    if not isinstance(schema, Mapping):
+        return f"the field `{name}` is no schema"
+    if schema.get(PATHS) is not True:
+        return f"`{PATHS}` takes `true`, where the field `{name}` holds a path or a list of paths"
+    if RUNS in schema:
+        return (
+            f"the field `{name}` is marked as holding paths and as taking runs: a path is one "
+            "name in one look, so a field of paths takes no runs"
+        )
+    if _only_text(schema):
+        return None
+    kind = schema.get("type")
+    listed = (kind if isinstance(kind, list) else [kind]) == ["array"]
+    held = [key for key in ("enum", "const", "$ref") if key in schema]
+    if listed and not held and _only_text(schema.get("items")):
+        return None
+    return (
+        f"the field of paths `{name}` takes more than a path, or a list of paths: its `type` "
+        "is `string` alone, or `array` alone with `items` of `type: string` alone, and neither "
+        "holds `enum`, `const` or `$ref`"
+    )
+
+
+def paths_of(fields: Mapping[str, Any]) -> frozenset[str]:
+    """The fields of paths among a component's fields, each holding a path or a list of
+    paths (DEC-056 point 1). A mark of another shape marks no field of paths, and the
+    component's reading reports it."""
+    return frozenset(
+        name
+        for name, schema in fields.items()
+        if isinstance(schema, Mapping) and PATHS in schema and paths_problem(name, schema) is None
+    )
+
+
+def _admits_texts(schema: Any, root: Any) -> bool:
+    """Whether a list field's schema admits entries that are not mappings: it names no
+    `items`, or its `items`, a local `$ref` followed within `root`, takes another type than
+    `object` alone, or any type (DEC-056 point 5)."""
+    items = schema.get("items") if isinstance(schema, Mapping) else None
+    if isinstance(items, Mapping) and isinstance(items.get("$ref"), str):
+        items = _target(items["$ref"], root)
+    if not isinstance(items, Mapping):
+        return True
+    kind = items.get("type")
+    return (kind if isinstance(kind, list) else [kind]) != ["object"]
+
+
+def _marks_below(schema: Any, path: str, mark: str = RUNS) -> list[str]:
+    """The key path of each `mark`, of a field of runs or of paths, below a schema: in a
+    list's items or an object's properties, at any depth."""
     found: list[str] = []
     if not isinstance(schema, Mapping):
         return found
@@ -658,9 +736,9 @@ def _marks_below(schema: Any, path: str) -> list[str]:
         below.extend((f"{path}.properties.{key}", each) for key, each in properties.items())
     for at, each in below:
         if isinstance(each, Mapping):
-            if RUNS in each:
-                found.append(f"{at}.{RUNS}")
-            found.extend(_marks_below(each, at))
+            if mark in each:
+                found.append(f"{at}.{mark}")
+            found.extend(_marks_below(each, at, mark))
     return found
 
 
@@ -1146,6 +1224,13 @@ class Component:
         # Each field of runs, with its words; and those some text part chooses by.
         self.runs = runs_of(self.fields)
         self.chosen_by: set[str] = set()
+        # Each field of paths, and those among them that hold a list of paths (DEC-056
+        # point 1).
+        self.paths = paths_of(self.fields)
+        self.path_lists = frozenset(name for name in self.paths if name in self.lists)
+        # What asks the component's owner for attention, never failing, as `(code, key
+        # path, message)`: a list that holds no items, runs or paths (DEC-056 point 5).
+        self.attention: list[tuple[str, str, str]] = []
         # The parts each part names under `lies-over` that it lies over, by its name, each
         # name it gives that names none refused (DEC-066 point 1).
         self.lies_over: dict[str, tuple[str, ...]] = {}
@@ -1171,6 +1256,7 @@ class Component:
         self.token_reads: set[str] = set()
         self._read(data)
         self._read_runs(data)
+        self._read_paths(data)
 
     @property
     def drawn(self) -> tuple[str, str] | None:
@@ -1904,6 +1990,12 @@ class Component:
             for theirs, ours in bound.items():
                 if not _is_field(ours, self.fields):
                     self._shape(f"{where}.fields.{theirs}", f"passes no field `{ours}` of its own")
+                elif ours in self.path_lists:
+                    self._shape(
+                        f"{where}.fields.{theirs}",
+                        f"passes the list of paths `{ours}` on to a component it places, which "
+                        "no part does for now: only a text part of its own shows it",
+                    )
                 elif ours in self.runs and self.draws is not None:
                     # A brand's drawing that passes it on takes none of its runs, which asks
                     # the brand's owner for attention (DEC-012 points 2 and 8).
@@ -1926,6 +2018,12 @@ class Component:
         listed = part.spec["repeat"]
         if not _is_field(listed, self.lists):
             self._shape(f"{where}.repeat", f"repeats over `{listed}`, which is no list field")
+        elif listed in self.path_lists:
+            self._shape(
+                f"{where}.repeat",
+                f"the list `{part.name}` repeats over `{listed}`, a list of paths, which holds "
+                "texts, not items: only a text part shows it, a path to a paragraph",
+            )
         if "draw" in part.spec and not _is_use(part.spec["draw"]):
             self._shape(f"{where}.draw", f"`{part.spec['draw']}` is not `<library>/<component>`")
         if "colour" in part.spec:
@@ -2384,12 +2482,13 @@ class Component:
                     self._shape(f"layouts.{layout}.slots.{slot}", f"the slot `{slot}` is no field")
                 if isinstance(slot_decl, Mapping) and slot_decl.get("pages") is True:
                     pages.add(slot)
-                if isinstance(slot_decl, Mapping) and RUNS in slot_decl:
-                    self._shape(
-                        f"layouts.{layout}.slots.{slot}.{RUNS}",
-                        f"marks the slot `{slot}` as taking runs: the slot names a field of the "
-                        "top, and the field takes the mark",
-                    )
+                for mark, what in ((RUNS, "as taking runs"), (PATHS, "as holding paths")):
+                    if isinstance(slot_decl, Mapping) and mark in slot_decl:
+                        self._shape(
+                            f"layouts.{layout}.slots.{slot}.{mark}",
+                            f"marks the slot `{slot}` {what}: the slot names a field of the "
+                            "top, and the field takes the mark",
+                        )
         self.pages = frozenset(pages)
 
     def _read_forms(self, data: Mapping[str, Any], forms: PageForms) -> None:
@@ -2581,6 +2680,77 @@ class Component:
                     f"{at}.{RUNS}",
                     f"the field of runs `{name}` declares {len(schema[RUNS])} words, and no "
                     "text part chooses its role, its paint, a run's sign or its ground by them",
+                )
+
+    # -- fields of paths, and lists that hold no items
+
+    def _read_paths(self, data: Mapping[str, Any]) -> None:
+        """The component's fields of paths (DEC-056 points 1 and 5), judged once every part
+        and layout is read, as its fields of runs are: each mark lies directly on one of its
+        fields, or on a slot of a layout that is a page's form, never below one, and no
+        `$ref` leads to a marked schema; a marked field holds a path or a list of paths
+        (`paths_problem`). Each field or such slot whose schema admits a list of entries that
+        are not mappings, and that carries neither the mark of runs nor that of paths, asks
+        the component's owner for attention (`LIST_UNMARKED`): such a list holds no items,
+        runs or paths. A field that holds a top's pages holds pages, which the check reads
+        as mappings, so it takes none. A top's own drawing of a layout, and a brand's, leave
+        all of this to the top that declares it."""
+        if self.layout is not None or self.draws is not None:
+            return
+        fields = data.get("fields")
+        if isinstance(fields, Mapping) and PATHS in fields:
+            self._shape(f"fields.{PATHS}", "marks the schema of all its fields as holding paths")
+        self._read_path_marks("fields", self.fields, fields)
+        layouts = data.get("layouts") if self.forms else None
+        for layout, decl in (layouts if isinstance(layouts, Mapping) else {}).items():
+            slots = decl.get("slots") if isinstance(decl, Mapping) else None
+            if isinstance(slots, Mapping):
+                root = {"type": "object", "properties": slots}
+                self._read_path_marks(f"layouts.{layout}.slots", slots, root, slots=True)
+
+    def _read_path_marks(
+        self, where: str, properties: Mapping[str, Any], root: Any, *, slots: bool = False
+    ) -> None:
+        """The marks of fields of paths among `properties`, the fields or a layout's slots at
+        `where`, whose `$ref`s lead within `root`; and each list among them that holds no
+        items, runs or paths."""
+        for name, schema in properties.items():
+            at = f"{where}.{name}" if slots else f"{where}.properties.{name}"
+            for below in _marks_below(schema, at, PATHS):
+                self._shape(
+                    below,
+                    f"marks a schema below the field `{name}` as holding paths: only a field "
+                    "itself, or a layout's slot, holds paths",
+                )
+            for path, ref in _refs(schema, at):
+                target = _target(ref, root)
+                if isinstance(target, Mapping) and PATHS in target:
+                    self._shape(
+                        path,
+                        f"`$ref: {ref}` leads to a field of paths, so another field would hold "
+                        "paths through it",
+                    )
+            if not isinstance(schema, Mapping):
+                continue
+            if PATHS in schema:
+                problem = paths_problem(str(name), schema)
+                if problem is not None:
+                    self._shape(f"{at}.{PATHS}", problem)
+            elif (
+                _is_list(schema)
+                and RUNS not in schema
+                and schema.get(PAGES) is not True
+                and _admits_texts(schema, root)
+            ):
+                self.attention.append(
+                    (
+                        LIST_UNMARKED,
+                        at,
+                        f"the field `{name}` takes a list whose entries may be no "
+                        f"mappings, and carries neither `{RUNS}` nor `{PATHS}`: such a list "
+                        "holds no items, runs or paths, so nothing the format gives a list, such "
+                        "as an item's id or a path's check, reaches what it holds",
+                    )
                 )
 
     # -- values, which may switch on an option
@@ -3185,6 +3355,20 @@ class Context:
             self._components[use] = component
             for code, where, message in component.issues if component else ():
                 self.report(code, message, where=where, use=use)
+            for code, where, message in component.attention if component else ():
+                self.add(
+                    Finding(
+                        code,
+                        ATTENTION,
+                        message,
+                        where=where,
+                        fix=f"mark the field `{PATHS}: true` where its entries are paths, or "
+                        "give its `items` the type `object`, where they are items",
+                        library=self.library(use),
+                        who="the component's owner",
+                        extra={"component": use},
+                    )
+                )
         return self._components[use]
 
     def _drawing(self, use: str, data: Mapping[str, Any]) -> Component:
@@ -3489,13 +3673,23 @@ def _join(path: str, key: str) -> str:
     return f"{path}.{key}" if path else key
 
 
-def _filled(value: Any, *, runs: bool = False) -> bool:
+def _filled(value: Any, *, runs: bool = False, paths: bool = False) -> bool:
     """Whether a field holds something: not missing, empty text, an empty list or an empty
     mapping. A list of runs, where `runs`, is filled where one of its runs holds text
-    (DEC-012 point 1)."""
+    (DEC-012 point 1); a list of paths, where `paths`, where it holds a path (DEC-056 point
+    1)."""
     if runs and isinstance(value, list):
         return any(_run_text(run) for run in value)
+    if paths and isinstance(value, list):
+        return any(isinstance(path, str) and path for path in value)
     return value not in (None, "", [], {})
+
+
+def _shown_paths(value: list[Any]) -> str:
+    """The text a list of paths is shown as: its paths in the content's order, a path to a
+    paragraph, each parted from the next by a line feed (DEC-056 point 1). An entry that is
+    no text is left out, as the check of the content reports."""
+    return "\n".join(path for path in value if isinstance(path, str))
 
 
 def _run_text(run: Any) -> str:
@@ -3867,7 +4061,11 @@ class Instance:
             if isinstance(when, bool):
                 return when
         if isinstance(when, str):
-            return _filled(self.given.get(when), runs=when in self.component.runs)
+            return _filled(
+                self.given.get(when),
+                runs=when in self.component.runs,
+                paths=when in self.component.paths,
+            )
         if isinstance(when, Mapping) and len(when) == 1:
             ((name, words),) = when.items()
             return self.options.get(name) in (words if isinstance(words, list) else [words])
@@ -3897,7 +4095,9 @@ class Instance:
         """The text a text part shows: a fact of its export (`_build_fact`), or its field's
         text, one run, or, in a field of runs, its runs (DEC-012 point 1). Each run takes the
         typography role its word chooses. A field given as text is one run of the field's
-        first word. A part that names neither is recorded when the component was read."""
+        first word. A list of paths is one run too, a path to a paragraph (`_shown_paths`,
+        DEC-056 point 1). A part that names neither is recorded when the component was
+        read."""
         props = node.part.props
         if "fact" in props:
             self._build_fact(node, trace)
@@ -3910,6 +4110,8 @@ class Instance:
         value = self.given.get(content)
         if isinstance(value, (int, float)) and not isinstance(value, bool):
             value = str(value)
+        if isinstance(value, list) and content in self.component.path_lists:
+            value = _shown_paths(value)
         given = self._given_runs(content, words, value) if isinstance(value, list) else []
         if not isinstance(value, list) or words is None:
             if value is not None and not isinstance(value, str):
@@ -4557,7 +4759,8 @@ class Instance:
                 shown |= part.passes | ({part.shows} if part.shows else set())
         for name in component.fields:
             given = self.given.get(name)
-            if _filled(given, runs=name in component.runs) and name not in shown:
+            filled = _filled(given, runs=name in component.runs, paths=name in component.paths)
+            if filled and name not in shown:
                 return f"the field `{name}`"
         for name, source in sorted(self.option_sources.items()):
             word = self.options.get(name)

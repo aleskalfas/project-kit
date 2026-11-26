@@ -38,6 +38,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/comparison.py
         - .pkit/capabilities/visual-communication/scripts/_lib/tokens.py
         - .pkit/capabilities/visual-communication/scripts/_lib/pictures.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/paths.py
         - .pkit/capabilities/visual-communication/scripts/_lib/notations.py
         - .pkit/capabilities/visual-communication/scripts/_lib/outlines.py
         - .pkit/capabilities/visual-communication/scripts/_lib/keys.py
@@ -194,6 +195,11 @@ pkit:
         - visual-communication:DEC-036#3
         - visual-communication:DEC-036#7
         - visual-communication:DEC-036#8
+        - visual-communication:DEC-056#1
+        - visual-communication:DEC-056#2
+        - visual-communication:DEC-056#3
+        - visual-communication:DEC-056#4
+        - visual-communication:DEC-056#6
         - visual-communication:DEC-068#4
         - visual-communication:DEC-070#4
         - visual-communication:DEC-070#5
@@ -204,6 +210,7 @@ pkit:
         - visual-communication:DEC-055#2
         - visual-communication:DEC-055#7
         - visual-communication:DEC-055#8
+        - visual-communication:DEC-053#4
         - ADR-057#2
       artefact:
         - .pkit/cli/README.md#validate
@@ -573,6 +580,7 @@ caption: The flow.
 - **`override`** points a painted part of the component at another role, by its token path, never at a value or a component token. `override: {b: accent}` paints the part `b` with `accent`.
 - **`concept`** names what the component it places stands for: a concept of a notation the piece names, as `<notation>/<concept>`, such as `concept: test-notation/store` ([Notations](#notations)). The concept gives the component its colour family; how a component paints with its family is in *Components*.
 - **A field of runs,** one its component marks as taking runs (*Components*), takes text, as any field of text does, or a list of *runs*: spans of its text, each in a style of its own (DEC-012 point 1). A run is text, set in the field's first style, or a mapping of `text`, which holds text, and perhaps `style`, one of the words of the field's run styles, and `concept`, written as above, which gives the run its colour family. The format fixes these three keys on a run, which places no component, so a run holds no other key and no reserved key binds it. The runs' texts are joined as written, with nothing between them. YAML drops the spaces at the edges of a plain text, so a run with a space at its edge is written in quotes, and so is a run whose text YAML would read as another value, such as `null` or `true` ([How the files are read](#how-the-files-are-read)). The field is filled where one of its runs holds text. A run carries no id: a list of runs holds runs, not items, so no rule of ids reaches it. A terminal's line, its command in the field's first style: `line: [{text: "$ ", style: prompt}, pkit visual render deck, {text: "  # draws every page", style: comment}]`.
+- **A field of paths,** one its component marks as holding paths (*Components*), takes a path, or a list of paths, each naming one file of the repository (DEC-056 points 1 and 2). A path is the names of folders and a file, joined by `/`, from the repository's root. It starts with no `/`, and holds no empty name, no `.` or `..`, no `\`, no control character, and no `*`, `?` or `[`, so it is no glob. It names, letter for letter, a file version control lists: one the index holds, whether or not the working tree holds it, or one not yet tracked and not ignored. A folder, a file git ignores, and a file in the folder of a piece's version handed out or of a published piece's copy name no document. A path is a citation, shown as it is written and never as a link, and the check finds whether its file is there, never whether it changed. The paths are the field's value, so they may differ between languages, as its text does. A list of paths holds texts, not items, and carries no ids, so no rule of ids reaches it. A slide's documents: `documents: [.pkit/decisions/core/COR-017-capability-pattern.md]`.
 - **An id** marks an item, or another component the content places, that another part of the piece names (DEC-001 point 3). It is unique in its list. Each list holds the same ids in every language as in the source language, in any order.
 
 Each key of a mapping that places a component must be a field or an option of that component, an arrangement field or an end field of its list where the mapping is an item, or a reserved key. A key that both an item's component and its list declare is read by neither (DEC-010 point 2, DEC-011 point 1). A key of a page in a layout must be a slot of that layout, `layout`, or a reserved key. How a component declares its fields, options, states, layouts, slots and lists is in *Components*.
@@ -818,7 +826,7 @@ Every change to a version the capability ships reaches a project that brings it 
 
 ### The foundations
 
-The capability ships the foundations' released versions 1.0.0 and 1.1.0, each at `.pkit/capabilities/visual-communication/releases/foundations/<version>/` ([The libraries the capability ships](#the-libraries-the-capability-ships)). Each is of kind `components` and builds on nothing. Release 1.0.0 needs release 0.3.0, and release 1.1.0 needs release 0.4.0. Release 1.1.0 adds the size axis `device` ([Axes and modes](#axes-and-modes)), the top `site`, the roles `size.site` and `size.line`, the roles of a run's sign and ground, and the shapes. The top, the roles and the shapes are additions, which need a minor ([What a release compares](#what-a-release-compares)). The axis was one too, released while no brand could hold an axis of its own. A new shared axis now breaks, since a brand's own axis may take its name (DEC-004 point 5). Their version being built stays where it was, at `libraries/foundations/`, and carries 1.2.0. To release 1.1.0 it adds a fourth mode of `device`, `projector`, the roles of an order, each with a default, and their pairs, the shared type of a page's title, `type.title`, and the shared type of running text read before the body, `type.lead`, each with a default, and the deck's tokens `title` and `lead`, the types of a page's title and of the line under it. The title defaults to the shared type the deck drew it in before, and the lead to `type.lead`, so under a brand that gives neither the lead nor `type.lead` a value, the lead takes the body the deck drew it in before (DEC-072 point 3). It changes the deck's look: the lead stands a small space under the title, and a slide's visual reaches down to one large space above its limit or its footer, or to the margin where it has neither. These need a minor, and only `pkit visual add foundations --being-built` takes it. A piece reads them from the library folder alone, so `pkit visual add foundations` copies the newest released version, 1.1.0, whole to `libraries/foundations/1.1.0/`, and `pkit visual add foundations@1.0.0` copies release 1.0.0 to `libraries/foundations/1.0.0/`. It lists each with `source: {kind: shipped}`, `released: true` and the hash the library's record keeps ([What the location holds](#what-the-location-holds)). The foundations hold:
+The capability ships the foundations' released versions 1.0.0 and 1.1.0, each at `.pkit/capabilities/visual-communication/releases/foundations/<version>/` ([The libraries the capability ships](#the-libraries-the-capability-ships)). Each is of kind `components` and builds on nothing. Release 1.0.0 needs release 0.3.0, and release 1.1.0 needs release 0.4.0. Release 1.1.0 adds the size axis `device` ([Axes and modes](#axes-and-modes)), the top `site`, the roles `size.site` and `size.line`, the roles of a run's sign and ground, and the shapes. The top, the roles and the shapes are additions, which need a minor ([What a release compares](#what-a-release-compares)). The axis was one too, released while no brand could hold an axis of its own. A new shared axis now breaks, since a brand's own axis may take its name (DEC-004 point 5). Their version being built stays where it was, at `libraries/foundations/`, and carries 1.2.0. To release 1.1.0 it adds a fourth mode of `device`, `projector`, the roles of an order, each with a default, and their pairs, the shared type of a page's title, `type.title`, and the shared type of running text read before the body, `type.lead`, each with a default, and the deck's tokens `title` and `lead`, the types of a page's title and of the line under it. The title defaults to the shared type the deck drew it in before, and the lead to `type.lead`, so under a brand that gives neither the lead nor `type.lead` a value, the lead takes the body the deck drew it in before (DEC-072 point 3). It changes the deck's look: the lead stands a small space under the title, and a slide's visual reaches down to one large space above its limit or its foot, or to the margin where it has neither. It adds to the slide an optional slot, `documents`, a list of the paths of the documents the slide's claim rests on (DEC-056 point 3). The deck's own drawing shows them under the footer, a small space between the two, a path to a line in the type of code, with no word before them, so the foot is the footer and the documents. A slide that gives none is drawn as before (DEC-056 point 4). These need a minor, and only `pkit visual add foundations --being-built` takes it. A piece reads them from the library folder alone, so `pkit visual add foundations` copies the newest released version, 1.1.0, whole to `libraries/foundations/1.1.0/`, and `pkit visual add foundations@1.0.0` copies release 1.0.0 to `libraries/foundations/1.0.0/`. It lists each with `source: {kind: shipped}`, `released: true` and the hash the library's record keeps ([What the location holds](#what-the-location-holds)). The foundations hold:
 
 - `library.yaml`;
 - `roles.yaml`, the shared roles, axes, colour families, shapes, an order's roles and contrast pairs that every library shares (DEC-004 points 2, 7 and 8, DEC-032 point 1, DEC-036 point 1);
@@ -939,6 +947,7 @@ A change of how something looks breaks nothing (DEC-003 point 6). So it passes o
   - **What a field takes.** A field breaks where it no longer takes a type, a value or a count of items it took. A key below it, removed or newly required, breaks it too (DEC-003 point 6). Another change of its schema, such as its `description`, is neither a break nor an addition.
   - **Its options, states and exposed parts.** Each removed breaks, and so do an option's word removed and an option that comes to take another kind of thing (DEC-003 point 6). Each new one, and a new word, is an addition (DEC-009 point 7). An option's default word is neither.
   - **Its fields of runs.** A field that ceases to take runs breaks, and so do a change of its first word and a word removed (DEC-012 point 6). A field that comes to take runs, and a new word after the first, are additions.
+  - **Its fields of paths.** A field that comes to hold paths breaks, since content written for it may then fail the check of a path (DEC-056 point 6). A field that ceases to hold paths refuses no content, and is neither a break nor an addition. A new field of paths is a new field.
   - **Its lists.** A list's component field removed or renamed breaks, and so does marking a field it held as one (DEC-010 point 7). So does an arrangement field or one of its words removed. A new component field, arrangement field or word is an addition. An arrangement field's default is neither.
   - **Its ties.** End fields declared for a list it held break, and so do its end fields swapped or one removed (DEC-011 point 6). So does a component that ceases to take ends. A new list of ties is an addition.
   - **A top's layouts.** A layout or a slot removed breaks, and so does a new required slot (DEC-003 point 6, DEC-009 point 7). A top that makes its layouts its pages' forms, or ceases to, breaks too (DEC-010 point 7). A new layout and a new optional slot are additions. A slot of a page's form is compared as a field is, and a slot that comes to hold pages, or ceases to, breaks.
@@ -1027,6 +1036,31 @@ For each combination of modes, the capability merges the brand's sources in reso
 ### Fonts
 
 A `fontFamily` token names each family's font file in the capability's extension key, `pkit.visual-communication`, as `font.body` does above. `files` maps each family to a file of the brand's version folder, or to `{"hash": "sha256:<hex>"}`. A family named by its hash is a font the brand may not ship. The project commits it in the location's `fonts/`, where the capability finds it by the hash of its bytes (DEC-004 point 9). `measure` is `file`: the font is measured from its file. A font file is committed unchanged with its licence, where its licence allows (DEC-004 point 9).
+
+### Lines set tight on purpose
+
+A brand marks a typography role whose lines it sets tight on purpose with `tight-lines: true` in the capability's extension key on the role's token (DEC-053 point 4):
+
+```json
+{
+  "type": {
+    "heading": {
+      "$type": "typography",
+      "$value": {"fontFamily": "{font.heading}", "fontSize": {"value": 48, "unit": "px"}, "fontWeight": 600, "letterSpacing": {"value": 0, "unit": "px"}, "lineHeight": 0.95},
+      "$extensions": {"pkit.visual-communication": {"tight-lines": true}}
+    }
+  }
+}
+```
+
+It says that letters that meet across the lines of a text whose line step comes from that role are meant, so validation states them as a fact, `letters-touch-meant`, in place of asking for attention ([what the check reports](checks.md#scenes)). On a typography token the extension holds `tight-lines: true` alone. Any other key or value there, and `tight-lines` on a token of another type, is `tokens-shape`. The word changes no value: the role draws as it did without it.
+
+- **It counts only where its version gives the step.** The word counts where the number the role's line height takes lies in the file of the version that holds the word, however the role's token reaches it, through a chain of aliases or through a role a base opens. So a word on a role whose value aliases a role another version gives, such as a base's, counts for nothing, and nor does a base's word on a role whose number a brand built on it gives, through a role the base opens. Where more than one role gives a text its step, each carries the word, and their line heights come from the one version that holds it.
+- **Only a released version's word counts.** It counts where its version is one the list marks released, whose folder still matches the list's hash, and for a copy of a brand the capability ships, where that hash is also the one the capability records. A word in a version not yet released gives the check nothing.
+- **A value given drops the base's word.** A brand that gives a role its base opens a value writes its own token for the role, which takes the base's place whole, its `$extensions` with it ([Open roles](#open-roles)). So the base's word no longer lies on the role's token, and the brand writes the word on its own token where it means the setting too.
+- **It says nothing on a group.** The word speaks for one role's step, so `tight-lines` in a group's `$extensions` gives nothing, and asks the brand's owner for attention, `tight-lines-refused`, without failing. On a picture role's group it is `picture-shape`, as any key there but the file's is.
+
+A brand's version that writes the word is released only on a capability that reads it, since its release reads the version in full and names that capability's version as the release it needs (DEC-014 point 1).
 
 ### Picture roles
 

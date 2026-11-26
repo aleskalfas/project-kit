@@ -50,9 +50,11 @@ and 5, DEC-019 point 8, DEC-030 point 5).
   or an icon that is no closed outline within its square; and a concept that maps no sign,
   which asks the notation's owner for attention (DEC-004 points 10 and 11, DEC-036 point
   8);
-- the ids in each content file, a list of runs skipped, and each content file against the
-  fields and options of the components it fills, each list of runs against the words of
-  its field's run styles, the nearest known key or word named (DEC-012 points 1, 2 and 8);
+- the ids in each content file, a list of runs or of paths skipped, and each content file
+  against the fields and options of the components it fills, each list of runs against the
+  words of its field's run styles, the nearest known key or word named (DEC-012 points 1, 2
+  and 8), and each path a field of paths gives against the files version control lists,
+  on every run, never from the findings record (DEC-056 points 2 and 5);
 - each page and key path a piece's brief names, against the content of its source language
   (`briefs.findings`, DEC-029 point 5);
 - the formats each piece names: two that write files of one name, `svg` and `svg-modes`
@@ -168,6 +170,7 @@ from _lib import (
     grant,
     keys,
     layout,
+    letters,
     location,
     names,
     outlines,
@@ -184,10 +187,12 @@ from _lib.findings import (
     AUTHOR,
     FACT,
     FAILS,
+    PROJECT,
     SEVERITY,
     Finding,
     accepted,
     as_read,
+    owner_of,
 )
 from _lib.findings import loss_finding as _loss_finding
 from _lib.layout import (
@@ -203,6 +208,7 @@ from _lib.layout import (
 from _lib.libraries import (
     FOLDER,
     FOUNDATIONS,
+    PROJECT_SOURCE,
     SHIPPED_SOURCE,
     Held,
     Library,
@@ -215,12 +221,14 @@ from _lib.libraries import (
     newest_of_majors,
     readable,
 )
+from _lib.paths import Repository
 from _lib.plugins import seam
 from _lib.reading import ReadError, read_yaml, sha256
 from _lib.root import CONFIG, SHIPPED
-from _lib.scene import SceneResult, line_left
+from _lib.scene import SceneResult, length, line_left
 from _lib.scene_checks import SIZES, Found, Reach, SceneCheck
 from _lib.shipped import read as read_shipped
+from _lib.text import Faces
 
 #: The renderer that draws every piece's previews.
 PREVIEWS = "svg"
@@ -451,7 +459,8 @@ class Reading:
         """`finding` as it reads, with its level there: in validation where `validation`,
         else in the viewing step."""
         if validation and finding.lies_over_in and self.word_given(finding.lies_over_in):
-            finding = boxes.meant(finding)
+            touch = finding.code == letters.LETTERS_TOUCH
+            finding = letters.meant(finding) if touch else boxes.meant(finding)
         name, _, text = finding.library.partition("@")
         try:
             version = Version.parse(text)
@@ -1785,8 +1794,9 @@ def id_findings(piece: pl.Piece) -> list[Finding]:
     """The ids of a piece's content (DEC-002 point 4): each of the id shape, unique in its
     list, and the same in every language. A translation may order a list's items its own
     way, so each list's ids are compared as a set with those of the source language. A list
-    of runs holds runs, not items, so it is skipped: the components the piece's lock names
-    say which lists hold runs, read before the lock is checked (DEC-012 point 1)."""
+    of runs holds runs, not items, and a list of paths texts, so each is skipped: the
+    components the piece's lock names say which lists hold runs or paths, read before the
+    lock is checked (DEC-012 point 1, DEC-056 point 1)."""
     found: list[Finding] = []
     lists: dict[str, dict[str, list[Any]]] = {}
     locked = _Locked(piece)
@@ -1794,7 +1804,7 @@ def id_findings(piece: pl.Piece) -> list[Finding]:
         file = piece.file(pl.content_file(language))
         reader = _Fields(locked, file, [])
         reader.placed(piece.top, content, "")
-        for path, items in _lists(content, "", reader.runs):
+        for path, items in _lists(content, "", reader.runs | reader.path_lists):
             ids = [item.get("id") for item in items if isinstance(item, Mapping) and "id" in item]
             lists.setdefault(path, {})[language] = ids
             for item in ids:
@@ -1871,9 +1881,9 @@ def _lists(
     value: Any, path: str, runs: Collection[str] = (), at: str = ""
 ) -> Iterator[tuple[str, list[Any]]]:
     """Each list of a content value, by a path of keys and places that is the same in
-    every language. A list of runs, which `runs` names by its key path as the check of the
-    content writes it (`at`, an item by its id where it has one), is no list of items, and
-    is skipped (DEC-012 point 1)."""
+    every language. A list of runs or of paths, which `runs` names by its key path as the
+    check of the content writes it (`at`, an item by its id where it has one), is no list of
+    items, and is skipped (DEC-012 point 1, DEC-056 point 1)."""
     if isinstance(value, Mapping):
         for key, item in value.items():
             yield from _lists(item, _join(path, str(key)), runs, _join(at, str(key)))
@@ -1940,11 +1950,14 @@ def content_findings(project: pl.Project) -> list[Finding]:
     its top or one its top does not declare (DEC-010 point 5), a run of a field of runs
     that is not of a run's shape or names a style its field does not declare, and a list
     in a field of text that takes no runs (DEC-012 point 8); the nearest known key, word
-    or layout named."""
+    or layout named. Each path a field of paths gives is judged against the files of the
+    repository, listed once for the piece, on every run (`paths`, DEC-056 point 5)."""
     found: list[Finding] = []
     piece = project.piece
+    repository = Repository(piece.root, f"{piece.location}/{pl.PIECES}")
     for language, content in piece.contents.items():
-        reader = _Fields(project.env, piece.file(pl.content_file(language)), found)
+        file = piece.file(pl.content_file(language))
+        reader = _Fields(project.env, file, found, repository)
         reader.placed(piece.top, content, "")
     return _clashes_once(found)
 
@@ -2000,13 +2013,28 @@ class _Fields:
     `maxItems`, `enum`, `const`, a local `$ref`), a key no property names refused. A field
     marked `x-pkit-runs` takes text, against its schema, or a list of runs, each against
     the words of its run styles (DEC-012 point 7). `runs` keeps the key path of each list
-    of runs it read."""
+    of runs it read.
 
-    def __init__(self, env: _Components, file: str, found: list[Finding]) -> None:
+    A component's own field, or a page's slot, marked `x-pkit-paths` is read against its
+    schema, and each path it gives is judged by `repository`, where one is given: its
+    form, the file version control lists, and no file a piece handed out (`paths`, DEC-056
+    points 2 and 5). The mark is read on the field the content writes, in the schema it is
+    checked against, never below it. `path_lists` keeps the key path of each list of paths
+    it read, which holds no items."""
+
+    def __init__(
+        self,
+        env: _Components,
+        file: str,
+        found: list[Finding],
+        repository: Repository | None = None,
+    ) -> None:
         self.env = env
         self.file = file
         self.found = found
+        self.repository = repository
         self.runs: set[str] = set()
+        self.path_lists: set[str] = set()
 
     def _fail(self, code: str, path: str, message: str) -> None:
         self.found.append(Finding(code, FAILS, message, file=self.file, where=path))
@@ -2061,7 +2089,15 @@ class _Fields:
         forms = page_forms(component) if isinstance(component.get("layouts"), Mapping) else None
         unread = frozenset(name for name in claimed if name in value)
         self._object(
-            fields, value, path, fields, repeats, keys_checked=True, forms=forms, unread=unread
+            fields,
+            value,
+            path,
+            fields,
+            repeats,
+            keys_checked=True,
+            forms=forms,
+            unread=unread,
+            own_fields=True,
         )
         if forms is None:
             return
@@ -2162,7 +2198,7 @@ class _Fields:
                 lists = decl.get("lists") if isinstance(decl, Mapping) else None
                 drawing = {"parts": parts, "lists": lists}
                 repeats = self._repeats(drawing, (use,)) if isinstance(parts, Mapping) else {}
-                self._object(schema, page, at, schema, repeats, keys_checked=True)
+                self._object(schema, page, at, schema, repeats, keys_checked=True, own_fields=True)
 
     def _component_field(self, value: Any, path: str, list_at: str) -> None:
         """A list's component field (DEC-010 point 1): a mapping that names a component by
@@ -2263,6 +2299,7 @@ class _Fields:
         keys_checked: bool = False,
         forms: PageForms | None = None,
         unread: frozenset[str] = frozenset(),
+        own_fields: bool = False,
     ) -> None:
         """`value` against the object `schema`. A field `forms` marks as holding pages is
         checked as a list here, and its pages by `_pages`. Each item of a list that
@@ -2270,7 +2307,9 @@ class _Fields:
         the one its list's component field names, else the list's default (DEC-010 point
         1); a tie's ends also by `_tie`, from `value`, the mapping that holds its list. A
         list's component field is read by `_component_field`. A key of `unread` is read by
-        neither the component nor the list, so it is judged at the lock alone."""
+        neither the component nor the list, so it is judged at the lock alone. Where
+        `schema` holds a component's own fields, or a page's slots (`own_fields`), each
+        field marked as holding paths gives its paths to `_paths`."""
         properties = schema.get("properties") or {}
         repeats = repeats or {}
         component_fields = {
@@ -2308,6 +2347,8 @@ class _Fields:
                 self.placed(item["use"], item, at)
             else:
                 self._value(properties[key], item, at, root)
+                if own_fields and str(key) in layout.paths_of({key: properties[key]}):
+                    self._paths(item, at)
 
     def _tie(
         self,
@@ -2548,6 +2589,28 @@ class _Fields:
                     "run-style",
                     _join(at, "style"),
                     f"`{run['style']}` is no run style of the field ({', '.join(words)}){hint}",
+                )
+
+    def _paths(self, value: Any, path: str) -> None:
+        """The paths a field of paths at `path` gives, each judged where the content writes
+        it (DEC-056 points 2 and 5): a path, at the field; a list of paths, each at its place
+        among them, from 1, an entry that is no text left to the field's schema. A list of
+        paths is kept in `path_lists`, so no rule of ids reaches it."""
+        if isinstance(value, list):
+            self.path_lists.add(path)
+            given = [(f"{path}#{place}", each) for place, each in enumerate(value, start=1)]
+        else:
+            given = [(path, value)]
+        if self.repository is None:
+            return
+        for at, text in given:
+            if not isinstance(text, str):
+                continue
+            judged = self.repository.judge(text)
+            if judged is not None:
+                code, why, fix = judged
+                self.found.append(
+                    Finding(code, FAILS, f"`{text}` {why}", file=self.file, where=at, fix=fix)
                 )
 
 
@@ -2799,6 +2862,7 @@ SCENE_CHECKS = (
     NO_GROUND,
     boxes.NEAR_ALIGNMENT_CHECK,
     boxes.BOX_OVERLAP_CHECK,
+    letters.LETTERS_CHECK,
     text_size.CHECK,
     SIZE_WIDTHS,
     BRAND_FORMS,
@@ -2852,10 +2916,11 @@ def found_in(
         for language, result, scene in scenes
     }
     steps: dict[str, boxes.Step | None] = {}
+    faces = Faces(project.env.font_file)
     found: list[Found] = []
     for language, result, scene in scenes:
         try:
-            found.extend(_in_scene(project, language, result, scene, colours, shown, steps))
+            found.extend(_in_scene(project, language, result, scene, colours, shown, steps, faces))
         except Exception as exc:
             if stops is None:
                 raise
@@ -2883,12 +2948,14 @@ def _in_scene(
     colours: Mapping[str, Mapping[str, Any]],
     shown: Mapping[tuple[str, str], set[str]],
     steps: dict[str, boxes.Step | None],
+    faces: Faces,
 ) -> list[Found]:
     """What the checks that run on each scene alone find in one scene, in a fixed order: the
     engine's own findings, content the scene's size hides, contrast as drawn, colour roles the
     brand lacks, the renderers' unaccepted losses, components' statuses, pages with no ground
-    of their own, the checks of boxes, and texts smaller than their medium allows, which the
-    check gives each with the scene it holds for (`text_size.found`)."""
+    of their own, the checks of boxes, letters that touch across a text's lines, each letter
+    read from `faces`, and texts smaller than their medium allows, which the check gives each
+    with the scene it holds for (`text_size.found`)."""
     piece = project.piece
     size = result.scene.size_key
     served = [key for key in project.keys if project.size_key(key) == size]
@@ -2905,6 +2972,7 @@ def _in_scene(
         *((STATUSES, finding) for finding in _statuses(scene, project.env)),
         *((NO_GROUND, finding) for finding in _no_ground(piece, scene, drawn, served)),
         *_of_boxes(scene, steps[size]),
+        *_of_letters(project, scene, size, faces),
     ]
     pages = [str(page) for page in scene.get("pages", [])]
     return [
@@ -3053,6 +3121,85 @@ def _space_step(project: pl.Project, size: str) -> boxes.Step | None:
             except KeyError:
                 continue
     return boxes.smallest_step(values)
+
+
+def _of_letters(
+    project: pl.Project, scene: Mapping[str, Any], size: str, faces: Faces
+) -> list[tuple[SceneCheck, Finding]]:
+    """What the check of letters across lines finds in `scene`, at the key over the size axes
+    `size`, each finding at the piece's own file, as it names no version: the step comes from
+    the brand under the piece's lock, and the letters from its content (DEC-053 point 2)."""
+    found = letters.letters_touch(scene, faces, lambda text: _step_given(project, size, text))
+    return [
+        (letters.LETTERS_CHECK, dataclasses.replace(finding, file=pl.PIECE_FILE))
+        for finding in found
+    ]
+
+
+def _step_given(project: pl.Project, size: str, text: Mapping[str, Any]) -> letters.Given:
+    """Where the brand gives the step `text`'s lines take at the key `size`, every value axis
+    at its default (DEC-053, Context): the role the scene names as its line height's source,
+    the file and the field that give its number, and who owns that version; and the version
+    that holds the word, where it counts (point 4). The word counts where each role whose
+    line height is the step carries it on its token, and that token and the number its line
+    height takes lie in one version's file."""
+    brand, env = project.brand, project.env.at(size)
+    combination = keys.parse_key(size, brand.axes)
+    step = float(text.get("line-height", 0))
+    role = str((text.get("sources") or {}).get("line-height", "")).removeprefix("role:")
+    styles = {
+        str(run["style"])
+        for paragraph in text.get("paragraphs") or []
+        for run in paragraph
+        if run.get("style")
+    }
+    giving = [style for style in sorted(styles) if _line_height(env, style) == step] or [role]
+    found = {style: brand.step_of(style, combination) for style in {role, *giving}}
+    size_of = _font_size(env, role)
+    primary = found[role]
+    if primary is None:
+        who = f"the owner of the brand {brand.name}"
+        return letters.Given(role, step, size_of, "", "", "", who)
+    word = ""
+    each = [found[style] for style in giving]
+    if all(given is not None and given.word for given in each):
+        versions = {v for given in each if given for v in (given.token_version, given.version)}
+        if len(versions) == 1:
+            word = versions.pop()
+    who = _owner_of(project.held, primary.version)
+    return letters.Given(
+        role, step, size_of, primary.file, primary.field, primary.version, who, word
+    )
+
+
+def _line_height(env: pl.ProjectEnv, role: str) -> float | None:
+    """The line height the typography role `role` gives at `env`'s key, in px, as the scene
+    holds a length; None where it gives none."""
+    try:
+        value = env.role(role)
+        return length(float(value["fontSize"]["value"]) * float(value["lineHeight"]))
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
+def _font_size(env: pl.ProjectEnv, role: str) -> float:
+    """The font size the typography role `role` gives at `env`'s key, in px; 0 where it gives
+    none."""
+    try:
+        return float(env.role(role)["fontSize"]["value"])
+    except (KeyError, TypeError, ValueError):
+        return 0.0
+
+
+def _owner_of(held: Held, version: str) -> str:
+    """Who owns the library version `version` (`<name>@<version>`), by the source the list
+    gives its library (DEC-053 point 2): whoever maintains the capability, for a copy of a
+    library it ships (DEC-003 point 9); the project, for one of its own; else the library's
+    owner."""
+    source = held.source(version.partition("@")[0])
+    if source in (None, PROJECT_SOURCE):
+        return PROJECT
+    return owner_of(version, shipped=source == SHIPPED_SOURCE)
 
 
 #: The finding on a piece drawn at a size at which its top is as wide as at the default

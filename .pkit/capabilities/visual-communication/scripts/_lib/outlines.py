@@ -22,7 +22,8 @@ one square, two that draw alike are one outline, whatever their squares.
 
 `fills` says whether path data, filled by its rule, fills a point, as SVG fills a path: the
 check of contrast as drawn reads a path's fill under a text or a sign by it (DEC-004 point
-8).
+8). `segments_of` gives the segments path data draws, by which the check of letters across
+lines reads a run's sign (DEC-053 point 1).
 
 Knows nothing of files, notations, the foundations or the scene.
 """
@@ -140,6 +141,16 @@ def fills(data: str, fill_rule: str, point: tuple[float, float]) -> bool:
     px, py = point
     winding = sum(_winding(ring, px, py) for ring in _rings(data))
     return winding % 2 == 1 if fill_rule == "evenodd" else winding != 0
+
+
+def segments_of(data: str) -> tuple[Segment, ...]:
+    """The segments path data `data` draws, as absolute moves, lines, cubic curves and
+    closes: the check of letters across lines reads a run's sign by them (DEC-053 point 1).
+    Raises ValueError where `data` is no path data SVG reads."""
+    try:
+        return _segments(data)
+    except _Unreadable as exc:
+        raise ValueError(f"no path data SVG reads: {exc}") from exc
 
 
 def _number(value: float) -> str:

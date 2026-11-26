@@ -43,6 +43,13 @@ from tests.test_visual_communication_boxes import (
 from tests.test_visual_communication_checks import COLOURS, colour, page, project_of, run, runs
 from tests.test_visual_communication_checks import box as filled
 from tests.test_visual_communication_checks import text as painted
+from tests.test_visual_communication_letters import (
+    CODE_FAMILY,
+    drawn,
+    element_of,
+    found,
+    touching,
+)
 from tests.test_visual_communication_pipeline import NARROW, add_device, drawing_project, flipping
 from tests.visual_communication_project import project, write, yaml_text
 
@@ -83,6 +90,7 @@ def test_the_checks_the_reviewer_leans_on_state_a_reach() -> None:
         "contrast-as-drawn",
         "edges-nearly-in-line",
         "boxes-that-overlap",
+        "letters-across-lines",
         "text-size-by-medium",
     }
     assert len({check.id for check in checks.SCENE_CHECKS if check.id}) == len(REACHING)
@@ -649,6 +657,49 @@ def _contrast_draws_nothing() -> None:
     assert contrast(PAPER, path("figure/sign", fill="pale", stroke="pale", d="")) == []
 
 
+def _letters_across_lines() -> None:
+    [said] = touching(drawn("a\ng\nÁ"))
+    assert "lines 2 and 3, `g` over `Á`" in said
+    signed = drawn("g\na")
+    assert touching(signed) == []
+    sign = {"d": "M0 0L16 0L16 16L0 16Z", "fill-rule": "nonzero", "size": 16, "top": 0, "gap": 2}
+    element_of(signed)["lines"][1]["spans"][0]["sign"] = sign
+    assert len(touching(signed)) == 1
+
+
+def _letters_of_two_texts() -> None:
+    body = {"text": {"content": "words", "style": "type.body", "fill": "text-primary"}}
+    parts = {
+        "t": {**body, "width": "=:width"},
+        "u": {**body, "y": "=t.bottom - @space.2", "width": "=:width"},
+    }
+    assert touching(drawn("g", parts=parts)) == []
+    assert len(touching(drawn("g\ng\nÁ"))) == 1
+
+
+def _letters_drawn_to_join() -> None:
+    assert touching(drawn("│\n│", 0.5, families=[CODE_FAMILY])) == []
+    assert touching(drawn("▀\n▄", 0.5, families=[CODE_FAMILY])) == []
+    assert touching(drawn("⌠\n⌡", 0.5, families=[CODE_FAMILY])) == []
+    assert len(touching(drawn("g\nÁ", 0.5, families=[CODE_FAMILY]))) == 1
+
+
+def _letters_a_renderer_wraps() -> None:
+    """The engine sets the text on one line, which a renderer that wraps text itself might
+    break between the two letters: the check reads the engine's line alone."""
+    scene = drawn("g Á")
+    assert len(element_of(scene)["lines"]) == 1
+    assert found(scene) == []
+
+
+def _letters_with_no_outline() -> None:
+    scene = drawn("g\nÁ")
+    element_of(scene)["paragraphs"][0][0]["measured"] = "widths"
+    [stated] = found(scene)
+    assert (stated.code, stated.level) == ("letters-touch-unmeasured", findings.FACT)
+    assert "measured nothing at lines 1 and 2" in stated.message
+
+
 #: The planted case of each clause of each reach, by the check's id, the part of its reach
 #: and the clause's place in it.
 PLANTED: dict[tuple[str, str, int], Callable[[], None]] = {
@@ -695,6 +746,11 @@ PLANTED: dict[tuple[str, str, int], Callable[[], None]] = {
     ("contrast-as-drawn", "leaves-out", 4): _contrast_no_opaque_fill,
     ("contrast-as-drawn", "leaves-out", 5): _contrast_off_the_middle,
     ("contrast-as-drawn", "leaves-out", 6): _contrast_draws_nothing,
+    ("letters-across-lines", "measures", 0): _letters_across_lines,
+    ("letters-across-lines", "leaves-out", 0): _letters_of_two_texts,
+    ("letters-across-lines", "leaves-out", 1): _letters_drawn_to_join,
+    ("letters-across-lines", "leaves-out", 2): _letters_a_renderer_wraps,
+    ("letters-across-lines", "states", 0): _letters_with_no_outline,
     ("text-size-by-medium", "measures", 0): _sized_runs,
     ("text-size-by-medium", "measures", 1): _sized_pages,
     ("text-size-by-medium", "leaves-out", 0): _sized_pictures,

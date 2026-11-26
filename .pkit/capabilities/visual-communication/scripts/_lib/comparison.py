@@ -24,8 +24,9 @@ and the record that sets it), the segment, and whether the later number allows i
 - *any library:* its kind, and the major of each library it builds on (DEC-003 point 6);
 - *components,* a component library's or a brand's: each component the earlier version
   marks stable or deprecated, its fields, options, states, exposed parts, ends, lists and
-  layouts with their slots, whether a top asks for a height, and a top's physical size
-  (DEC-003 points 6 and 7, DEC-009 to DEC-012, DEC-022 point 8, DEC-034 point 3). An
+  layouts with their slots, its fields of runs and of paths, whether a top asks for a
+  height, and a top's physical size (DEC-003 points 6 and 7, DEC-009 to DEC-012, DEC-022
+  point 8, DEC-034 point 3, DEC-056 point 6). An
   experimental component may change in any release, so only its arrival is named, as for
   any new component. A drawing carries no status, so it is passed over, its look and its
   parts, and so are a drawing new and one removed, a base's that begins to serve a top
@@ -270,6 +271,7 @@ def _component(
         where, "field", earlier.fields, later.fields, _required(data_e), _required(data_l), found
     )
     _runs(where, "field", earlier.runs, later.runs, earlier.fields, later.fields, found)
+    _paths(where, "field", earlier.paths, later.paths, earlier.fields, found)
     _options(where, earlier.options, later.options, found)
     _named(
         where, "state", earlier.states, later.states, "DEC-003 point 6", "DEC-003 point 1", found
@@ -482,6 +484,23 @@ def _runs(
             found.added(f"{where}, {noun} `{name}`", "comes to take runs", "DEC-012 point 6")
 
 
+def _paths(
+    where: str,
+    noun: str,
+    earlier: frozenset[str],
+    later: frozenset[str],
+    fields_e: Mapping[str, Any],
+    found: _Found,
+) -> None:
+    """The fields of paths (DEC-056 point 6): a field the earlier version held that comes to
+    hold paths breaks, since content written for it may then fail the check of a path. One
+    that ceases to hold paths refuses no content, and is neither a break nor an addition; a
+    new field of paths is named as a new field."""
+    for name in sorted(later - earlier):
+        if name in fields_e:
+            found.broken(f"{where}, {noun} `{name}`", "comes to hold paths", "DEC-056 point 6")
+
+
 def _options(
     where: str,
     earlier: Mapping[str, layout.Option],
@@ -681,6 +700,8 @@ def _layouts(
                 runs_e = {slot: words for slot, words in drawing_e.runs.items() if slot in slots_e}
                 runs_l = {slot: words for slot, words in drawing_l.runs.items() if slot in slots_l}
                 _runs(at, "slot", runs_e, runs_l, slots_e, slots_l, found)
+                paths_e = layout.paths_of(slots_e)
+                _paths(at, "slot", paths_e, layout.paths_of(slots_l), slots_e, found)
                 _lists(at, drawing_e.list_fields, drawing_l.list_fields, slots_e, slots_l, found)
         else:
             slots_e, slots_l = layouts_e[name], layouts_l[name]
