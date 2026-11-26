@@ -41,6 +41,7 @@ interpreter (`pkit_on_path`), so no test reaches `uv` or the network.
 from __future__ import annotations
 
 import functools
+import io
 import json
 import os
 import shutil
@@ -578,6 +579,23 @@ def test_a_check_without_a_version_reads_as_the_first() -> None:
     assert doc_check_lib.read_friction(".", _check_answering(versioned)) == versioned
 
 
+def test_a_check_that_judged_other_than_the_pages_handed_to_it_is_no_answer() -> None:
+    """Standard input cannot tell a list cut short from a whole one, so the filler reads
+    back what the check was asked to judge (`selection`): anything but the pages it
+    handed — a page missing, a check that judged every artefact, a document that does
+    not say — is no answer, never fewer obligations (ADR-079 point 2)."""
+    pages = ["docs/guide.md", "tech-docs/README.md"]
+    handed = {**REPORT, "selection": {"named": pages, "absent": []}}
+    doc_check_lib.judged_as_handed(handed, [*reversed(pages), pages[0]])
+    doc_check_lib.judged_as_handed({**REPORT, "dormant": True, "selection": None}, pages)
+    for selection in ({"named": pages[:1], "absent": []}, None):
+        with pytest.raises(doc_check_lib.NoAnswer, match="not the 2 page"):
+            doc_check_lib.judged_as_handed({**REPORT, "selection": selection}, pages)
+    for unread in (REPORT, {**REPORT, "selection": {"absent": []}}):
+        with pytest.raises(doc_check_lib.NoAnswer, match="cannot read: `selection"):
+            doc_check_lib.judged_as_handed(unread, pages)
+
+
 def _base_answering(document: dict[str, Any]) -> Any:
     """A runner answering `pkit repository base --json` with `document`."""
 
@@ -683,11 +701,17 @@ def one_call_at_a_time(monkeypatch: pytest.MonkeyPatch) -> None:
     one before to end: a call uses the process's directory, environment and standard
     streams, so it is not safe beside another in a thread, and the filler starts its
     three readings in threads (`InProcessPkit`). Each reading still starts when the
-    filler starts it. A call made inside another, in its thread, goes on."""
+    filler starts it. A call made inside another, in its thread, goes on. A call handed
+    a list on its standard input reads it whole before it waits its turn, as a process
+    reads its input on its own: the filler hands the check the pages once another call,
+    the pages' reading, has been answered."""
     call = InProcessPkit.__call__
     lock = threading.RLock()
 
     def one_at_a_time(self: InProcessPkit, *args: Any, **options: Any) -> Any:
+        stdin = options.get("stdin")
+        if stdin is not None:
+            options["stdin"] = io.StringIO(stdin.read())
         with lock:
             return call(self, *args, **options)
 
@@ -1174,6 +1198,57 @@ def test_the_filler_reads_its_answers_in_the_order_the_answer_depends_on_them(
     assert answered.stderr.count("failed on purpose") <= 1
 
 
+def test_the_filler_has_the_check_judge_the_pages_alone(docs_project: AdopterRepo) -> None:
+    """The obligations read only the pages' judgements and the measures, so the filler
+    asks the check to judge the pages and no other artefact, handing it the pages on its
+    standard input (`--artefacts-from -`). However many other artefacts a change makes
+    stale, the check judges the pages alone, and what it reads of the rest — the
+    uncovered surface — is the whole repository's (ADR-079 point 2)."""
+    repo = docs_project
+    page: dict[str, Any] = {"reader": "user", "kind": "signpost"}
+    records = {
+        f"tech-docs/decisions/ADR-00{n}-a.md": friction_document(
+            f"ADR-00{n}", anchors={"path": ["src/a.py"]}, title="A", status="accepted"
+        )
+        for n in range(1, 6)
+    }
+    repo.write(
+        {
+            "src/a.py": "A = 1\n",
+            "src/b.py": "B = 1\n",
+            "docs/guide.md": friction_document(None, anchors={"path": ["src/a.py"]}, **page),
+            **records,
+        }
+    )
+    repo.commit("base")
+    repo.commit("change a", {"src/a.py": "A = 2\n"})
+    pkit = InProcessPkit()
+    checks: list[dict[str, Any]] = []
+
+    def run(argv: Sequence[str], **options: Any) -> subprocess.CompletedProcess[Any]:
+        answered = pkit(argv, **options)
+        if _reading(argv) == CHECK:
+            checks.append(json.loads(answered.stdout))
+        return answered
+
+    answered = filled(repo.root, pkit=run)
+    assert answered.returncode == 0, answered.stderr
+    (argv,) = [call for call in pkit.calls if _reading(call) == CHECK]
+    assert argv == ["pkit", "friction", "check", "--all", "--json", "--artefacts-from", "-"]
+    (check,) = checks
+    assert check["selection"] == {"named": ["docs/guide.md", "tech-docs/README.md"], "absent": []}
+    assert [a["location"] for a in check["artefacts"]] == ["docs/guide.md"]
+    assert check["measures"]["uncovered_surface"] == ["src/b.py"]
+    assert [(o["reason"], o.get("document") or o.get("path")) for o in _value(answered)] == [
+        ("page-stale", "docs/guide.md"),
+        ("code-undocumented", "src/b.py"),
+    ]
+
+
+def _value(answered: subprocess.CompletedProcess[str]) -> list[dict[str, Any]]:
+    return json.loads(answered.stdout)["value"]
+
+
 #: The filler's CPU time on project-kit's own tree, in units of the work `_yaml_unit`
 #: does, may grow to this before the test fails (ADR-079 point 2). On 4 November 2026
 #: it took about 17 units, in process on a laptop. On CI that was about 7 s on this
@@ -1215,9 +1290,10 @@ def test_the_filler_answers_within_its_budget_on_project_kit_s_own_tree(
     """The documentation check's filler on this repository, history and answers included,
     as `pkit validate` runs it, every `pkit` it reads through and every resolver answered
     in this process: its CPU time holds within `DOC_CHECK_BUDGET`, counted in
-    `_yaml_unit`s so a slow runner and a fast one count alike. The filler reads the
-    whole-repository check, whose time grows with the history and the answers, so this
-    test fails while the filler still answers well within its bound (ADR-079 point 2)."""
+    `_yaml_unit`s so a slow runner and a fast one count alike. The filler reads a
+    selection of the whole-repository check that judges its pages alone, whose time
+    grows with the history and the pages' answers, so this test fails while the filler
+    still answers well within its bound (ADR-079 point 2)."""
     shallow = subprocess.run(
         ["git", "rev-parse", "--is-shallow-repository"],
         cwd=REPO,
@@ -1236,8 +1312,9 @@ def test_the_filler_answers_within_its_budget_on_project_kit_s_own_tree(
     assert spent / unit <= DOC_CHECK_BUDGET, (
         f"fill-doc-check took {spent:.1f} s of CPU, {spent / unit:.1f} units of "
         f"{unit:.3f} s, over its budget of {DOC_CHECK_BUDGET} units: about 20 s of its 30 s "
-        "bound on CI's slower runners. Take up next the selection of the whole-repository "
-        "check that judges the filler's pages alone, as #2412 proposed (ADR-079 point 2)."
+        "bound on CI's slower runners. Weigh the next step in a record of its own, such as "
+        "shrinking the answer files' `read` lists, and never raise the budget to put it off "
+        "(ADR-079 point 2)."
     )
 
 

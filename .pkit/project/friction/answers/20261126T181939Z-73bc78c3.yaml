@@ -1,0 +1,105 @@
+answers:
+  - artefact: docs/decisions/README.md
+    read:
+      - 20261102T232455Z-c8529620.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T131440Z-90d45a35.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T204125Z-61e9c43a.yaml
+      - 20261108T205058Z-0587751c.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T001211Z-6b0d7860.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T103219Z-76953beb.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T205252Z-4cfa1660.yaml
+      - 20261111T211406Z-59d1a8df.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261112T091032Z-823069cd.yaml
+      - 20261112T094911Z-6ef4bac4.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261112T134741Z-2c56fd6c.yaml
+      - 20261112T153532Z-b0471fdf.yaml
+      - 20261112T162755Z-424e83da.yaml
+      - 20261112T171918Z-7f8cd174.yaml
+      - 20261112T181419Z-045fe687.yaml
+      - 20261113T074852Z-8d5346ed.yaml
+      - 20261113T081544Z-f47f0ca0.yaml
+      - 20261113T101850Z-ab407b6c.yaml
+      - 20261113T134717Z-36e0821f.yaml
+      - 20261113T155900Z-499e23c9.yaml
+      - 20261113T162107Z-5e55cd43.yaml
+      - 20261113T181005Z-1533807d.yaml
+      - 20261113T194116Z-20533165.yaml
+      - 20261113T194652Z-522f1d81.yaml
+      - 20261113T204916Z-dab01a07.yaml
+      - 20261113T221124Z-bd48f436.yaml
+      - 20261114T165854Z-0aa5ab74.yaml
+      - 20261115T233327Z-1dd181fa.yaml
+      - 20261115T235027Z-ae2f6a42.yaml
+      - 20261116T072934Z-f7ff88d6.yaml
+      - 20261116T234025Z-ff90f250.yaml
+      - 20261117T193801Z-e9ff3e08.yaml
+      - 20261118T191220Z-3b107524.yaml
+      - 20261118T203809Z-2a808b7c.yaml
+      - 20261118T203936Z-9af83f52.yaml
+      - 20261118T215040Z-465f5246.yaml
+      - 20261118T215357Z-e7129e16.yaml
+      - 20261124T131644Z-fa85ef3e.yaml
+    revalidated:
+      at: 2026-11-26T18:19:39Z
+      outcome: unchanged
+      unchanged-because: The Surface table of the CLI reference gains the account row, the process rows' --actor with no default, the permissions enable and apply rows, and the selection options of friction check --all; this page names and relies on none of them, so it holds against all three changes together.
+      deferred:
+        - anchor:
+            kind: path
+            value: .pkit/rules/core.md
+          reason: "Its \"Have a person accept it\" has a person, never an agent, accept every record, and whoever authorises the merge see the list first; COR-072 lets the delegate accept at accept and drops the reading first on a standing authorisation, which the build makes true. Its follow-up: the build of COR-072 (#3417)."
+        - anchor:
+            kind: record
+            value: COR-025
+          reason: "Its \"Have a person accept it\" has a person, never an agent, accept every record, and whoever authorises the merge see the list first; COR-072 lets the delegate accept at accept and drops the reading first on a standing authorisation, which the build makes true. Its follow-up: the build of COR-072 (#3417)."
+        - anchor:
+            kind: record
+            value: COR-064#6
+          reason: "Its \"Have a person accept it\" has a person, never an agent, accept every record, and whoever authorises the merge see the list first; COR-072 lets the delegate accept at accept and drops the reading first on a standing authorisation, which the build makes true. Its follow-up: the build of COR-072 (#3417)."
+        - anchor:
+            kind: record
+            value: COR-065
+          reason: "Its \"Have a person accept it\" has a person, never an agent, accept every record, and whoever authorises the merge see the list first; COR-072 lets the delegate accept at accept and drops the reading first on a standing authorisation, which the build makes true. Its follow-up: the build of COR-072 (#3417)."
+        - anchor:
+            kind: record
+            value: COR-066
+          reason: "Its \"Have a person accept it\" has a person, never an agent, accept every record, and whoever authorises the merge see the list first; COR-072 lets the delegate accept at accept and drops the reading first on a standing authorisation, which the build makes true. Its follow-up: the build of COR-072 (#3417)."
+        - anchor:
+            kind: record
+            value: COR-067
+          reason: "Its \"Have a person accept it\" has a person, never an agent, accept every record, and whoever authorises the merge see the list first; COR-072 lets the delegate accept at accept and drops the reading first on a standing authorisation, which the build makes true. Its follow-up: the build of COR-072 (#3417)."
