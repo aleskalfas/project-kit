@@ -14,9 +14,9 @@ answers:
       - 20261117T193801Z-e9ff3e08.yaml
       - 20261118T191220Z-3b107524.yaml
     revalidated:
-      at: 2026-11-24T14:19:48Z
+      at: 2026-11-26T18:08:55Z
       outcome: unchanged
-      unchanged-because: "The change rewords core rule 17 alone (RS-OPS-017): an agent still asks one decision at a time with its recommendation, and holds the recommendation back before an answer its procedure has the user make alone. The entry defines an operational rule as an instruction each session loads, and its example names RS-OPS-008; it states no rule's words and neither OPS's version nor its budget, so it holds with rule 17 in its new words, and while the rule waits for the maintainer's acceptance outside core.md."
+      unchanged-because: "The change rewords core rule 17 alone (RS-OPS-017), which the maintainer accepted in the change and core.md now carries: an agent still asks one decision at a time with its recommendation, and holds the recommendation back before an answer its procedure has the user make alone. The entry defines an operational rule as an instruction each session loads, and its example names RS-OPS-008; it states no rule's words and neither OPS's version nor its budget, so it holds with rule 17 in its new words."
   - artefact: tech-docs/analysis/core/glossary.md#TERM-agent-workspace
     read:
       - 20261026T043015Z-eb9c3dc3.yaml
@@ -28,9 +28,9 @@ answers:
       - 20261117T193801Z-e9ff3e08.yaml
       - 20261118T191220Z-3b107524.yaml
     revalidated:
-      at: 2026-11-24T14:19:52Z
+      at: 2026-11-26T18:09:04Z
       outcome: unchanged
-      unchanged-because: The change rewords core rule 17 alone (RS-OPS-017), which holds an agent's recommendation back before an answer its procedure has the user make alone. The entry rests on core rule 16, which keeps intermediate files in the agent workspace and whose words this change keeps, so it holds with rule 17 in its new words, and while the rule waits for acceptance outside core.md.
+      unchanged-because: The change rewords core rule 17 alone (RS-OPS-017), which holds an agent's recommendation back before an answer its procedure has the user make alone; the maintainer accepted its new words in the change, and core.md now carries them. The entry rests on core rule 16, which keeps intermediate files in the agent workspace and whose words this change keeps, so it holds with rule 17 in its new words.
   - artefact: tech-docs/analysis/core/requirements/quality/040-release/REQ-017-backbone-migration-safe.md
     read:
       - 20261026T043015Z-eb9c3dc3.yaml
@@ -44,9 +44,9 @@ answers:
       - 20261117T193801Z-e9ff3e08.yaml
       - 20261118T191220Z-3b107524.yaml
     revalidated:
-      at: 2026-11-24T14:20:04Z
+      at: 2026-11-26T18:09:07Z
       outcome: unchanged
-      unchanged-because: The change rewords core rule 17 alone (RS-OPS-017), which holds an agent's recommendation back before an answer its procedure has the user make alone. The requirement rests on core rule 5, which keeps a backbone migration safe over any state and whose words this change keeps, so it holds with rule 17 in its new words, and while the rule waits for acceptance outside core.md.
+      unchanged-because: The change rewords core rule 17 alone (RS-OPS-017), which holds an agent's recommendation back before an answer its procedure has the user make alone; the maintainer accepted its new words in the change, and core.md now carries them. The requirement rests on core rule 5, which keeps a backbone migration safe over any state and whose words this change keeps, so it holds with rule 17 in its new words.
   - artefact: tech-docs/analysis/software-engineering/use-case-model/use-cases/010-build/UC-081-decide-unasked-answers.md
     read:
       - 20261026T013726Z-d41bac9b.yaml
@@ -81,9 +81,9 @@ answers:
       - 20261117T193801Z-e9ff3e08.yaml
       - 20261118T191220Z-3b107524.yaml
     revalidated:
-      at: 2026-11-24T14:20:27Z
+      at: 2026-11-26T18:09:16Z
       outcome: unchanged
-      unchanged-because: The change rewords core rule 17 alone (RS-OPS-017), which holds an agent's recommendation back before an answer its procedure has the user make alone. The use case rests on core rule 20, on who writes and checks each answer, whose words this change keeps, and its developer accepts or declines words shown, which is no answer made alone, so it holds with rule 17 in its new words, and while the rule waits for acceptance outside core.md. The deferrals for the build of COR-072 (#3417) stay.
+      unchanged-because: The change rewords core rule 17 alone (RS-OPS-017), which holds an agent's recommendation back before an answer its procedure has the user make alone; the maintainer accepted its new words in the change, and core.md now carries them. The use case rests on core rule 20, on who writes and checks each answer, whose words this change keeps, and its developer accepts or declines words shown, which is no answer made alone, so it holds with rule 17 in its new words. The deferrals for the build of COR-072 (#3417) stay.
       deferred:
         - anchor:
             kind: path
@@ -167,9 +167,9 @@ answers:
       - 20261118T191220Z-3b107524.yaml
       - 20261123T222039Z-ae5a4ea0.yaml
     revalidated:
-      at: 2026-11-24T14:20:38Z
+      at: 2026-11-26T18:09:24Z
       outcome: unchanged
-      unchanged-because: The change rewords core rule 17 alone (RS-OPS-017), which holds an agent's recommendation back before an answer its procedure has the user make alone. Variant 3a cites rule 17 for a design fork, a choice the agent names with its trade-off for the developer to decide, not an answer the agent's procedure has the developer make alone, so the rule in its new words still asks for one decision at a time with the agent's recommendation there; 3a holds once the maintainer accepts those words, before which the change does not land. Its assumptions cite core rules 2, 8, 14, 15, 19, 21, 22 and 24, whose words this change keeps.
+      unchanged-because: The change rewords core rule 17 alone (RS-OPS-017), which holds an agent's recommendation back before an answer its procedure has the user make alone; the maintainer accepted its new words in the change, and core.md now carries them. Variant 3a cites rule 17 for a design fork, a choice the agent names with its trade-off for the developer to decide, not an answer the agent's procedure has the developer make alone, so the rule as accepted still asks there for one decision at a time with the agent's recommendation, and 3a holds. Its assumptions cite core rules 2, 8, 14, 15, 19, 21, 22 and 24, whose words this change keeps.
   - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-040-accept-through-review.md
     read:
       - 20261026T013021Z-befdc31c.yaml
@@ -239,9 +239,9 @@ answers:
       - 20261118T215357Z-e7129e16.yaml
       - 20261123T001151Z-75d67d5f.yaml
     revalidated:
-      at: 2026-11-24T14:21:07Z
+      at: 2026-11-26T18:09:34Z
       outcome: unchanged
-      unchanged-because: "The change rewords core rule 17 alone (RS-OPS-017), which holds an agent's recommendation back before an answer its procedure has the user make alone. The use case rests on core rule 2, the acceptance gate, whose words this change keeps, and the change follows its path: rule 17's new words wait proposed for the merge authoriser to accept them, and the set takes its new major, so it holds with rule 17 in its new words, and while the rule waits for acceptance outside core.md. The deferrals for the build of COR-072 (#3417) stay."
+      unchanged-because: "The change rewords core rule 17 alone (RS-OPS-017), which holds an agent's recommendation back before an answer its procedure has the user make alone. The use case rests on core rule 2, the acceptance gate, whose words this change keeps, and the change follows its path: the maintainer accepted rule 17's new words in it, in a commit of its own that dates the rule's origin and names who decided, core.md now carries them, and the set takes its new major, so it holds with rule 17 in its new words. The deferrals for the build of COR-072 (#3417) stay."
       deferred:
         - anchor:
             kind: path
@@ -327,9 +327,9 @@ answers:
       - 20261123T023919Z-16126b2f.yaml
       - 20261124T012529Z-dee71133.yaml
     revalidated:
-      at: 2026-11-24T14:22:42Z
+      at: 2026-11-26T18:09:44Z
       outcome: unchanged
-      unchanged-because: "The change rewords core rule 17 alone (RS-OPS-017), which holds an agent's recommendation back before an answer its procedure has the user make alone. The README names core.md as the file the root CLAUDE.md includes, first of the rules files, and calls on core's rule to work with the permission layer, not around it, whose words this change keeps; it states nothing of rule 17, so it holds with rule 17 in its new words, and while the rule waits for acceptance outside core.md. The deferrals on the hook and the sandbox, for #3412, stay."
+      unchanged-because: "The change rewords core rule 17 alone (RS-OPS-017), which holds an agent's recommendation back before an answer its procedure has the user make alone; the maintainer accepted its new words in the change, and core.md now carries them. The README names core.md as the file the root CLAUDE.md includes, first of the rules files, and calls on core's rule to work with the permission layer, not around it, whose words this change keeps; it states nothing of rule 17, so it holds with rule 17 in its new words. The deferrals on the hook and the sandbox, for #3412, stay."
       deferred:
         - anchor:
             kind: record
@@ -430,9 +430,9 @@ answers:
       - 20261122T001341Z-1f604dc7.yaml
       - 20261123T001151Z-75d67d5f.yaml
     revalidated:
-      at: 2026-11-24T14:23:52Z
+      at: 2026-11-26T18:09:53Z
       outcome: unchanged
-      unchanged-because: The change rewords core rule 17 alone (RS-OPS-017), which holds an agent's recommendation back before an answer its procedure has the user make alone. The README cites core rules 1, 3 and 16 and the citation of a rule by its layer and number, whose words and numbers this change keeps, and states nothing of rule 17, so it holds with rule 17 in its new words, and while the rule waits for acceptance outside core.md. The deferrals for the build of COR-072 (#3417) stay.
+      unchanged-because: The change rewords core rule 17 alone (RS-OPS-017), which holds an agent's recommendation back before an answer its procedure has the user make alone; the maintainer accepted its new words in the change, and core.md now carries them. The README cites core rules 1, 3 and 16 and the citation of a rule by its layer and number, whose words and numbers this change keeps, and states nothing of rule 17, so it holds with rule 17 in its new words. The deferrals for the build of COR-072 (#3417) stay.
       deferred:
         - anchor:
             kind: path
@@ -544,9 +544,9 @@ answers:
       - 20261123T023919Z-16126b2f.yaml
       - 20261124T012529Z-dee71133.yaml
     revalidated:
-      at: 2026-11-24T14:24:24Z
+      at: 2026-11-26T18:09:57Z
       outcome: unchanged
-      unchanged-because: "The change rewords core rule 17 alone (RS-OPS-017), which holds an agent's recommendation back before an answer its procedure has the user make alone. The README rests on core rule 16, which keeps intermediate files in the agent workspace, and on rule 8, which lets an agent remove what it made itself without asking, whose words this change keeps; it states nothing of rule 17, so it holds with rule 17 in its new words, and while the rule waits for acceptance outside core.md. The deferrals on the hook and the sandbox, for #3412, stay."
+      unchanged-because: "The change rewords core rule 17 alone (RS-OPS-017), which holds an agent's recommendation back before an answer its procedure has the user make alone; the maintainer accepted its new words in the change, and core.md now carries them. The README rests on core rule 16, which keeps intermediate files in the agent workspace, and on rule 8, which lets an agent remove what it made itself without asking, whose words this change keeps; it states nothing of rule 17, so it holds with rule 17 in its new words. The deferrals on the hook and the sandbox, for #3412, stay."
       deferred:
         - anchor:
             kind: record
@@ -638,9 +638,9 @@ answers:
       - 20261117T193801Z-e9ff3e08.yaml
       - 20261118T191220Z-3b107524.yaml
     revalidated:
-      at: 2026-11-24T14:24:43Z
+      at: 2026-11-26T18:10:06Z
       outcome: unchanged
-      unchanged-because: "The change rewords core rule 17 alone (RS-OPS-017), which holds an agent's recommendation back before an answer its procedure has the user make alone, and follows what the README sets: the rule keeps its id and number, core.md is regenerated in the same change and holds the set's accepted rules alone, so it leaves rule 17 out while its new words wait for acceptance, and the raise of OPS's budget to 2371 that the words need is brought to the person beside the rule. The README states no rule's words and neither OPS's version nor its budget, and the rules it cites, 13, 19 and 24, keep their words, so it holds. The deferrals for the build of COR-072 (#3417) stay."
+      unchanged-because: "The change rewords core rule 17 alone (RS-OPS-017), which holds an agent's recommendation back before an answer its procedure has the user make alone, and follows what the README sets: the rule keeps its id and number, the maintainer accepted it in the change, core.md is regenerated in the same change from the set's accepted rules and now carries rule 17 as accepted in its new words, and the raise of OPS's budget to 2371 that the words need is made in the change in which the maintainer accepted the rule. The README states no rule's words and neither OPS's version nor its budget, and the rules it cites, 13, 19 and 24, keep their words, so it holds. The deferrals for the build of COR-072 (#3417) stay."
       deferred:
         - anchor:
             kind: path
@@ -725,9 +725,9 @@ answers:
       - 20261118T191220Z-3b107524.yaml
       - 20261123T001151Z-75d67d5f.yaml
     revalidated:
-      at: 2026-11-24T14:24:53Z
+      at: 2026-11-26T18:10:16Z
       outcome: unchanged
-      unchanged-because: The change rewords core rule 17 alone (RS-OPS-017), which holds an agent's recommendation back before an answer its procedure has the user make alone. The use case has sync refresh core.md, the harness load it and, in the methodology's source, core.md generated from ops.md, which this change does again; it states no rule's words and neither OPS's version nor its budget, so it holds with rule 17 in its new words, and while the rule waits for acceptance outside core.md.
+      unchanged-because: The change rewords core rule 17 alone (RS-OPS-017), which holds an agent's recommendation back before an answer its procedure has the user make alone; the maintainer accepted its new words in the change, and core.md now carries them. The use case has sync refresh core.md, the harness load it and, in the methodology's source, core.md generated from ops.md, which this change does again; it states no rule's words and neither OPS's version nor its budget, so it holds with rule 17 in its new words.
   - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-002-answer-stale.md
     read:
       - 20261026T013726Z-d41bac9b.yaml
@@ -767,9 +767,9 @@ answers:
       - 20261117T193801Z-e9ff3e08.yaml
       - 20261118T191220Z-3b107524.yaml
     revalidated:
-      at: 2026-11-24T14:25:02Z
+      at: 2026-11-26T18:10:19Z
       outcome: unchanged
-      unchanged-because: The change rewords core rule 17 alone (RS-OPS-017), which holds an agent's recommendation back before an answer its procedure has the user make alone. The use case rests on core rule 20, on the answers a change owes and who checks them, whose words this change keeps, and its person accepts an answer's words as shown, which is no answer made alone; so it holds with rule 17 in its new words, and while the rule waits for acceptance outside core.md.
+      unchanged-because: The change rewords core rule 17 alone (RS-OPS-017), which holds an agent's recommendation back before an answer its procedure has the user make alone; the maintainer accepted its new words in the change, and core.md now carries them. The use case rests on core rule 20, on the answers a change owes and who checks them, whose words this change keeps, and its person accepts an answer's words as shown, which is no answer made alone; so it holds with rule 17 in its new words.
   - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-007-resolve-debt.md
     read:
       - 20261026T013726Z-d41bac9b.yaml
@@ -816,9 +816,9 @@ answers:
       - 20261123T005053Z-b5822da6.yaml
       - 20261124T012529Z-dee71133.yaml
     revalidated:
-      at: 2026-11-24T14:25:19Z
+      at: 2026-11-26T18:10:23Z
       outcome: unchanged
-      unchanged-because: The change rewords core rule 17 alone (RS-OPS-017), which holds an agent's recommendation back before an answer its procedure has the user make alone. The use case rests on core rule 20, on who decides an answer no change owes and who checks it, whose words this change keeps, and its developer or delegate decides a drafted answer, which is no answer made alone; so it holds with rule 17 in its new words, and while the rule waits for acceptance outside core.md.
+      unchanged-because: The change rewords core rule 17 alone (RS-OPS-017), which holds an agent's recommendation back before an answer its procedure has the user make alone; the maintainer accepted its new words in the change, and core.md now carries them. The use case rests on core rule 20, on who decides an answer no change owes and who checks it, whose words this change keeps, and its developer or delegate decides a drafted answer, which is no answer made alone; so it holds with rule 17 in its new words.
   - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-034-land-change.md
     read:
       - 20261026T013021Z-befdc31c.yaml
@@ -878,9 +878,9 @@ answers:
       - 20261118T215357Z-e7129e16.yaml
       - 20261123T001151Z-75d67d5f.yaml
     revalidated:
-      at: 2026-11-24T14:25:31Z
+      at: 2026-11-26T18:10:32Z
       outcome: unchanged
-      unchanged-because: The change rewords core rule 17 alone (RS-OPS-017), which holds an agent's recommendation back before an answer its procedure has the user make alone. The use case rests on core rule 20, on what an agent tells the merge authoriser before a direct commit and who checks the answers, whose words this change keeps, and it states nothing of rule 17, so it holds with rule 17 in its new words, and while the rule waits for acceptance outside core.md.
+      unchanged-because: The change rewords core rule 17 alone (RS-OPS-017), which holds an agent's recommendation back before an answer its procedure has the user make alone; the maintainer accepted its new words in the change, and core.md now carries them. The use case rests on core rule 20, on what an agent tells the merge authoriser before a direct commit and who checks the answers, whose words this change keeps, and it states nothing of rule 17, so it holds with rule 17 in its new words.
   - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-037-record-decision.md
     read:
       - 20261026T013021Z-befdc31c.yaml
@@ -962,9 +962,9 @@ answers:
       - 20261118T215357Z-e7129e16.yaml
       - 20261123T001151Z-75d67d5f.yaml
     revalidated:
-      at: 2026-11-24T14:25:35Z
+      at: 2026-11-26T18:10:36Z
       outcome: unchanged
-      unchanged-because: The change rewords core rule 17 alone (RS-OPS-017), which holds an agent's recommendation back before an answer its procedure has the user make alone. The use case rests on core rules 1 and 2, the no-shared-files invariant and the acceptance gate, whose words this change keeps, and it states nothing of rule 17, so it holds with rule 17 in its new words, and while the rule waits for acceptance outside core.md. The deferrals for the build of COR-072 (#3417) stay.
+      unchanged-because: The change rewords core rule 17 alone (RS-OPS-017), which holds an agent's recommendation back before an answer its procedure has the user make alone; the maintainer accepted its new words in the change, and core.md now carries them. The use case rests on core rules 1 and 2, the no-shared-files invariant and the acceptance gate, whose words this change keeps, and it states nothing of rule 17, so it holds with rule 17 in its new words. The deferrals for the build of COR-072 (#3417) stay.
       deferred:
         - anchor:
             kind: path
@@ -1063,9 +1063,9 @@ answers:
       - 20261117T193801Z-e9ff3e08.yaml
       - 20261118T191220Z-3b107524.yaml
     revalidated:
-      at: 2026-11-24T14:25:39Z
+      at: 2026-11-26T18:10:39Z
       outcome: unchanged
-      unchanged-because: The change rewords core rule 17 alone (RS-OPS-017), which holds an agent's recommendation back before an answer its procedure has the user make alone. The journey rests on core rule 2, the acceptance gate, which has a record accepted before a change builds on it and whose words this change keeps, and it states nothing of rule 17, so it holds with rule 17 in its new words, and while the rule waits for acceptance outside core.md.
+      unchanged-because: The change rewords core rule 17 alone (RS-OPS-017), which holds an agent's recommendation back before an answer its procedure has the user make alone; the maintainer accepted its new words in the change, and core.md now carries them. The journey rests on core rule 2, the acceptance gate, which has a record accepted before a change builds on it and whose words this change keeps, and it states nothing of rule 17, so it holds with rule 17 in its new words.
   - artefact: docs/decisions/README.md
     read:
       - 20261102T232455Z-c8529620.yaml
@@ -1141,9 +1141,9 @@ answers:
       - 20261118T215040Z-465f5246.yaml
       - 20261118T215357Z-e7129e16.yaml
     revalidated:
-      at: 2026-11-24T14:25:56Z
+      at: 2026-11-26T18:10:48Z
       outcome: unchanged
-      unchanged-because: The change rewords core rule 17 alone (RS-OPS-017), which holds an agent's recommendation back before an answer its procedure has the user make alone. The guide cites core rules 2 and 22, on accepting a record and reading the records a change's files lead to, whose words this change keeps, and states nothing of rule 17, so it holds with rule 17 in its new words, and while the rule waits for acceptance outside core.md. The deferrals for the build of COR-072 (#3417) stay.
+      unchanged-because: The change rewords core rule 17 alone (RS-OPS-017), which holds an agent's recommendation back before an answer its procedure has the user make alone; the maintainer accepted its new words in the change, and core.md now carries them. The guide cites core rules 2 and 22, on accepting a record and reading the records a change's files lead to, whose words this change keeps, and states nothing of rule 17, so it holds with rule 17 in its new words. The deferrals for the build of COR-072 (#3417) stay.
       deferred:
         - anchor:
             kind: path
@@ -1215,9 +1215,9 @@ answers:
       - 20261118T215040Z-465f5246.yaml
       - 20261123T001151Z-75d67d5f.yaml
     revalidated:
-      at: 2026-11-24T14:26:08Z
+      at: 2026-11-26T18:10:52Z
       outcome: unchanged
-      unchanged-because: The change rewords core rule 17 alone (RS-OPS-017), which holds an agent's recommendation back before an answer its procedure has the user make alone. The use case rests on core rule 16, which keeps an agent's intermediate files in the agent workspace and whose words this change keeps, and it states nothing of rule 17, so it holds with rule 17 in its new words, and while the rule waits for acceptance outside core.md.
+      unchanged-because: The change rewords core rule 17 alone (RS-OPS-017), which holds an agent's recommendation back before an answer its procedure has the user make alone; the maintainer accepted its new words in the change, and core.md now carries them. The use case rests on core rule 16, which keeps an agent's intermediate files in the agent workspace and whose words this change keeps, and it states nothing of rule 17, so it holds with rule 17 in its new words.
   - artefact: tech-docs/analysis/core/use-case-model/use-cases/070-work-within-limits/UC-032-ask-before-other-repository.md
     read:
       - 20261026T013021Z-befdc31c.yaml
@@ -1286,9 +1286,9 @@ answers:
       - 20261123T001151Z-75d67d5f.yaml
       - 20261123T004642Z-44bc2fa1.yaml
     revalidated:
-      at: 2026-11-24T14:26:20Z
+      at: 2026-11-26T18:10:56Z
       outcome: unchanged
-      unchanged-because: The change rewords core rule 17 alone (RS-OPS-017), which holds an agent's recommendation back before an answer its procedure has the user make alone. The use case rests on core rule 19, which has a session change only its own repository unless the user confirms, and whose words this change keeps; a confirmation the agent asks for is no answer its procedure has the user make alone, so it holds with rule 17 in its new words, and while the rule waits for acceptance outside core.md.
+      unchanged-because: The change rewords core rule 17 alone (RS-OPS-017), which holds an agent's recommendation back before an answer its procedure has the user make alone; the maintainer accepted its new words in the change, and core.md now carries them. The use case rests on core rule 19, which has a session change only its own repository unless the user confirms, and whose words this change keeps; a confirmation the agent asks for is no answer its procedure has the user make alone, so it holds with rule 17 in its new words.
   - artefact: README.md
     read:
       - 20261025T221340Z-215a759f.yaml
@@ -1456,9 +1456,9 @@ answers:
       - 20261123T012809Z-8ec01a65.yaml
       - 20261123T023919Z-16126b2f.yaml
     revalidated:
-      at: 2026-11-24T14:26:39Z
+      at: 2026-11-26T18:11:05Z
       outcome: unchanged
-      unchanged-because: The change rewords core rule 17 alone (RS-OPS-017), which holds an agent's recommendation back before an answer its procedure has the user make alone. The README names core.md as the first file CLAUDE.md includes, and its console quotes rule 2's words, which this change keeps; it states nothing of rule 17, so it holds with rule 17 in its new words, and while the rule waits for acceptance outside core.md. The deferrals for the build of COR-072 (#3417) and for the permission commands' release (#3412) stay.
+      unchanged-because: The change rewords core rule 17 alone (RS-OPS-017), which holds an agent's recommendation back before an answer its procedure has the user make alone; the maintainer accepted its new words in the change, and core.md now carries them. The README names core.md as the first file CLAUDE.md includes, and its console quotes rule 2's words, which this change keeps; it states nothing of rule 17, so it holds with rule 17 in its new words. The deferrals for the build of COR-072 (#3417) and for the permission commands' release (#3412) stay.
       deferred:
         - anchor:
             kind: path
