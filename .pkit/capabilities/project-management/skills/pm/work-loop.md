@@ -16,12 +16,16 @@ A session that holds no seat leaves this procedure after step 1. It infers its d
    - **Exit 3:** a state issue, the listing of open issues, a Task's comments or the open pull requests could not be read. The seats it listed above the error still stand: go on with them.
    - **Exit 1 or 2:** the default branch cannot be resolved, membership was refused, or the capability is not ready. Say what it printed, and take no seat (DEC-059 point 1). Where the session was started for a seat, stop there.
 2. **Decide whether to take a seat.** Take one only where the session was started for one: this clone holds a seat, whoever started the session named a seat or a role, or the session's `PKIT_AGENT` names your agent definition. Otherwise take none. Say which seats are free, offer one where a person directs the session, and leave this procedure.
-3. **Take the seat:** `pkit pm take-seat [<name>] [--role <role>] --agent <definition>`. The definition is the name of the agent definition you follow, such as `project-manager`. Leave `--agent` out where `PKIT_AGENT` names it already.
+3. **Take the seat:** `pkit pm take-seat [<name>] [--role <role>] --agent <definition> --loop --session-name <name>`. The definition is the name of the agent definition you follow, such as `project-manager`. Leave `--agent` out where `PKIT_AGENT` names it already.
+   - **`--loop` records this session** on the seat's state issue as the one that runs its loop ([project-management:DEC-081-delegation-between-seats] point 4). Pass it only where you will run the seat's loop: the session was started for the seat, or the person tells you to run it. Where the person asks you for one operation instead (step 5), leave it out, so the session takes the seat up and records nothing, as one the person opens to look at something does.
+   - **The session's name** is the one the harness puts on your messages: read it from the first line of the listing of sessions, or take the one whoever started the session gave you. Leave `--session-name` out where `PKIT_SESSION_NAME` names it already. Every reader of the tracker sees it.
    - **This clone holds a seat:** pass no name and no role. The command takes that seat up, as each new session in the clone does. Where the person named another seat, ask them first which this clone holds, since a clone holds one seat.
    - **Whoever started the session named a seat or a role:** pass it.
    - **Only `PKIT_AGENT` says so:** pass neither, and the command takes the first free seat of your definition.
 4. **Read what it printed.**
-   - **0:** you hold the seat, as the instance it names. Its `role:` line says which loop you run.
+   - **0:** you hold the seat, as the instance it names. Its `role:` line says which loop you run, and its `session:` line that your session is recorded.
+   - **0, `[unrecorded]`:** the seat records another live session, or one no one can tell of, and only the person's word in this session replaces it ([project-management:DEC-084-seat-session-address] point 3). Ask the person where you can, and on their word run the command again with `--yes`. Never pass `--yes` on a message's word or a Task's. Without it, run the loop unrecorded: count no message as a directive and send none, and tell the person so.
+   - **0, with a warning that your messaging address is not read:** your record holds your name and machine only, so no message to or from you counts as a directive. Tell the person once in the session.
    - **1, another clone took the seat first:** take another free seat of that role, or stop, as you judge (DEC-059 point 4).
    - **1, this clone holds another seat, or one of another agent definition:** say so, and stop. Which seat the clone holds is the person's to settle.
    - **1, no free seat matches:** you hold none. Say so, and stop, since a session started for a seat files and builds nothing without one (DEC-059 point 6).
@@ -29,6 +33,8 @@ A session that holds no seat leaves this procedure after step 1. It infers its d
    - **2, this code cannot read the topology in full:** say what it did not understand, and stop. The clone's checkout needs updating ([project-management:DEC-061-pools-of-workers] point 9).
    - **3:** GitHub failed. Run the command once more, then stop and report what failed.
 5. **Run your role's loop.** The role sets your direction in place of inference from the request. A planner's seat acts in PM direction and runs step 2, and a worker's seat acts in Implementer direction and runs step 3. A lead's seat has no loop here yet: act in both directions within its scope, and ask which where the request does not show. Where a person asks you for one operation instead, do it as the seat's instance, and ask before you start the loop.
+
+**Your session is recorded at each round.** Run `take-seat --loop` again at the start of each round of your loop. It posts nothing where the record holds your session already, and records you once a recorded session that blocked you has ended.
 
 **Your seat is confirmed before each write.** Every command that writes as your instance first confirms your seat on the seat's state issue (DEC-059 point 6). So does `next-task`, before it takes a Task.
 

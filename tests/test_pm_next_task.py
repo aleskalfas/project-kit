@@ -607,10 +607,12 @@ OPEN_MILESTONES = [
 ]
 
 
-def _pooled_topology(nt, *, seat_pools: Any = ("alpha",), extra: dict | None = None):
+def _pooled_topology(
+    nt, *, seat_pools: Any = ("alpha",), extra: dict | None = None, scope: dict | None = None
+):
     """The run's snapshot of a topology that declares the pools alpha and bravo,
-    whose second seat, `tester`, serves `seat_pools` (None: names none), and
-    which this clone took."""
+    whose second seat, `tester`, serves `seat_pools` (None: names none) within
+    `scope` (None: no scope), and which this clone took."""
     claims = nt.instance_claims
     repo = FakeRepo()
     seat_issue(claims, repo, 11, "planner")
@@ -618,6 +620,8 @@ def _pooled_topology(nt, *, seat_pools: Any = ("alpha",), extra: dict | None = N
     tester: dict[str, Any] = {"name": "tester", "role": "worker", "state_issue": 12}
     if seat_pools is not None:
         tester["pools"] = list(seat_pools)
+    if scope is not None:
+        tester["scope"] = scope
     seats = [{"name": "planner", "role": "planner", "organizer": True, "state_issue": 11}, tester]
     doc = {"schema_version": 1, "pools": ["alpha", "bravo"], "seats": seats, **(extra or {})}
     return seat_snapshot(claims, doc, repo), "tester"
@@ -830,6 +834,108 @@ def test_this_clone_keeps_a_task_it_claimed_first(run, nt, sw, monkeypatch) -> N
         comments=pool.github.issues[10].comments, labels=[], assignee_login="me"
     )
     assert resolution.winner == 2
+
+
+# ---- a Task a directive names (DEC-081 point 6) ---------------------------------------------
+
+
+def test_a_named_task_in_the_seats_pools_is_taken_ahead_of_its_own_order(
+    run, nt, monkeypatch, capsys
+) -> None:
+    pool = Pool()
+    pool.add(21, priority="High", milestone=3)
+    pool.add(24, priority="Low", milestone=3)
+    _milestones(nt, monkeypatch)
+    rc, starts = run(pool, extra=("--task", "24"), seated=_pooled_topology(nt))
+    assert (rc, starts) == (0, [(24, False)])
+    out = capsys.readouterr().out
+    assert "next-task: #24 is named, and is among them." in out
+    assert "[ok] next-task: started #24" in out
+
+
+@pytest.mark.parametrize(
+    ("add", "why"),
+    [
+        pytest.param(
+            {"milestone": 4}, "it is in no open Milestone of the pools this seat serves", id="pools"
+        ),
+        pytest.param(
+            {"milestone": 3, "kind": "docs"}, "it falls outside this seat's scope", id="scope"
+        ),
+        pytest.param(
+            {"milestone": 3, "state": "todo"},
+            "it is in todo, and a ready Task is in Backlog",
+            id="not-scheduled",
+        ),
+        pytest.param(
+            {"milestone": 3, "body": "Feature: #1\n\n## Dependencies\n\n- #30\n"},
+            "its dependencies name the open issue(s) #30",
+            id="waiting",
+        ),
+        pytest.param(
+            {"milestone": 3, "assignees": ("alice",)},
+            "it is assigned to another account (@alice)",
+            id="another-account",
+        ),
+    ],
+)
+def test_a_named_task_this_clone_could_not_take_starts_nothing_and_says_why(
+    run, nt, monkeypatch, capsys, add: dict[str, Any], why: str
+) -> None:
+    """A directive widens nothing: scheduling the Task or putting it into a pool
+    stays the person's act (DEC-081 point 6, DEC-061 point 6)."""
+    pool = Pool()
+    pool.add(21, priority="High", milestone=3)
+    pool.add(30, title="[Feature] the foundation")
+    pool.add(24, **add)
+    _milestones(nt, monkeypatch)
+    seated = _pooled_topology(nt, scope={"types": ["feature"]})
+    rc, starts = run(pool, extra=("--task", "24"), seated=seated)
+    assert (rc, starts) == (nt.EXIT_NOT_OFFERED, [])
+    err = capsys.readouterr().err
+    assert "[refused] next-task: #24 is not among the Tasks this clone may take, so nothing" in err
+    assert why in err
+
+
+def test_a_named_task_that_is_no_open_issue_starts_nothing(run, nt, capsys) -> None:
+    pool = Pool()
+    pool.add(10)
+    rc, starts = run(pool, extra=("--task", "99"))
+    assert (rc, starts) == (nt.EXIT_NOT_OFFERED, [])
+    assert "it is not among the open issues of work" in capsys.readouterr().err
+
+
+def test_a_named_task_another_instance_holds_starts_nothing(run, nt, capsys) -> None:
+    pool = Pool()
+    pool.add(10, priority="High", assignees=("me",))
+    pool.add(11, priority="Low")
+    pool.github.post(10, _stamp(nt, 3))
+    rc, starts = run(pool, instance=2, extra=("--task", "10"))
+    assert (rc, starts) == (nt.EXIT_NOT_OFFERED, [])
+    assert "#10 is not among the Tasks this clone may take" in capsys.readouterr().err
+    assert pool.github.writes() == []
+
+
+def test_a_named_task_whose_claim_another_clone_wins_is_not_taken_and_takes_no_other(
+    run, nt, sw, monkeypatch, capsys
+) -> None:
+    """The clash guard keeps a second agent off the Task whatever channel named it,
+    and the worker reports the loss and runs next-task again (DEC-081 point 6)."""
+    pool = Pool()
+    pool.add(10, priority="High")
+    pool.add(11, priority="Low")
+    _rival(pool, nt, number=10, instance=3, at=1)
+    start = StartWorkInProcess(sw, monkeypatch, pool)
+    rc, starts = run(pool, instance=2, start=start, extra=("--task", "10"))
+    assert rc == nt.EXIT_NOT_OFFERED
+    assert [n for n, _ in starts] == [10]
+    assert start.moved == []
+    assert pool.claims(10) == ["claim 3"]
+    assert pool.claims(11) == []
+    assert (
+        "another instance claimed #10 first, and the first claim holds, so this clone did not"
+        in (capsys.readouterr().out)
+    )
 
 
 # ---- the commit the run read (DEC-059 point 1) ----------------------------------------------

@@ -11,6 +11,7 @@ pkit:
         - .pkit/adapters/claude-code/settings/project/settings.json
         - .pkit/adapters/claude-code/harness-support.yaml
         - .pkit/adapters/claude-code/permission-enforcement.yaml
+        - .pkit/adapters/claude-code/session.yaml
         - .pkit/adapters/claude-code/tool-access.json
         - src/project_kit/visibility.py
         - .pkit/permissions/decide.py
@@ -22,7 +23,7 @@ pkit:
         - .pkit/agents/tool_access.py
         - .pkit/agents/definition_source.py
         - .pkit/cli/install-pkit.sh
-      record: [COR-002, COR-004, COR-005, COR-007, "COR-013#7", "COR-013#8", COR-016, COR-017, COR-020, COR-026, COR-028, COR-047, COR-070, COR-074, ADR-002, ADR-004, ADR-005, ADR-009, ADR-014, ADR-025, ADR-034, ADR-052, ADR-060, ADR-066, ADR-073, ADR-076, ADR-085, ADR-086, ADR-087, "ADR-090#3", "ADR-090#4", ADR-095, ADR-099, "project-management:DEC-029", "project-management:DEC-030", "project-management:DEC-068"]
+      record: [COR-002, COR-004, COR-005, COR-007, "COR-013#7", "COR-013#8", COR-016, COR-017, COR-020, COR-026, COR-028, COR-047, COR-070, COR-074, ADR-002, ADR-004, ADR-005, ADR-009, ADR-014, ADR-025, ADR-034, ADR-052, ADR-060, ADR-066, ADR-073, ADR-076, ADR-085, ADR-086, ADR-087, "ADR-090#3", "ADR-090#4", ADR-095, ADR-099, ADR-103, "project-management:DEC-029", "project-management:DEC-030", "project-management:DEC-068", "project-management:DEC-081", "project-management:DEC-084"]
       artefact:
         - .pkit/lifecycle/component-registry.md#uninstall-origin-aware-removal-cor-031-d4
         - .pkit/capabilities/project-management/README.md#starting-the-fixers--fix-drift
@@ -49,9 +50,11 @@ Translates kit content for the [Claude Code](https://docs.claude.com/en/docs/cla
 ├── _resolve_agent.py                  # resolves one agent: overlay placeholders, model and effort, tool access, storyboard paths, the workspace sentence
 ├── run-agent.py                       # the agent runner: starts one agent in Claude Code for `pkit agents run`
 ├── probe-confined-run.py              # the probe of the runner's confined form; a person runs it, never a test
+├── probe-messaging.py                 # the probe of messaging between sessions; a person runs it, never a test
 ├── tool-access.json                   # Claude Code's keys for an agent's tool access, its names' forms, the built-in tools it knows, and the withheld entries it admits
 ├── harness-support.yaml               # how far Claude Code meets each harness requirement the core declares
 ├── permission-enforcement.yaml        # which permission dimensions this harness realizes, and via which layer
+├── session.yaml                       # how a command finds its Claude Code session, the session's process and its messaging address
 ├── permission-hook.py                 # the PreToolUse enforcement hook (registered by `pkit permissions enable`)
 └── session-start-hook.py              # the start hook: the workspace sentence at each session's and subagent's start, and the install script where no pkit is on the PATH
 ```
@@ -509,6 +512,37 @@ The line names the install script, which installs the version the project pins o
 
 Where the hook finds a `pkit` on its `PATH`, it adds nothing. The line reaches each session and each subagent at its start, as the workspace sentence does, and no confined run, which loads no project settings.
 
+### The probe of messaging between sessions (`probe-messaging.py`)
+
+[project-management:DEC-081] lets a worker take direction by message only from the session its directing seat's state issue records. It rests on facts of Claude Code's messaging between sessions that the harness's documentation leaves unconfirmed, and its build measures them before it rests anything on them (DEC-081's Context). [project-management:DEC-084] decides again on what they found: a seat records its session's messaging address and process, and a message's reply address is checked against them. Its build measured four more facts first (DEC-084's Context, 9 to 12). [ADR-103](../../../tech-docs/architecture/decisions/ADR-103-process-liveness-reading.md) has the backbone alone read whether a recorded process runs, by a name that holds the process's space, its id and its start time, and its build measures first, on each platform the adapter supports, what that reading rests on (ADR-103's Implications). This probe takes the three sets of measurements: the six DEC-081 lists, two more, the listing under remote control and a subagent resumed by a message, DEC-084's four, and ADR-103's four (13 to 16).
+
+A person runs it, never a test. It starts real sessions, which sign in and spend, so it refuses to start unless given `--start-claude`, and it refuses inside an agent's run. It needs Claude Code 2.1.224 or later, and runs under the system's `python3`, 3.9 or later:
+
+```
+python3 .pkit/adapters/claude-code/probe-messaging.py --start-claude
+```
+
+It makes a new scratch folder under `~/.cache` (or `--root`), outside every working tree: a git repository with a linked worktree, another repository whose sessions run their shell in the sandbox, and a folder for each other session. Each folder's settings name a probe agent, which withholds neither messaging tool, as the session's agent, and register a hook that records each event the session sees. The hook is the probe itself, copied into the scratch folder. The probe runs in four parts, and `--part headless`, `--part terminal`, `--part address` or `--part process` runs one alone:
+
+- **The headless part** runs what a session started with `claude -p` can show: whether the session's agent and its subagents hold the tools, a subagent resumed by a message, five cases of a held message, and whether a run shaped as a builder's working run can send or receive. It starts fourteen runs, in about fifteen minutes.
+- **The terminal part** walks the person through each step that needs a session at a terminal, in up to four terminals. It prints the line to run and the prompt to type, reads what the sessions recorded, and asks the person what only a terminal shows, such as an approval dialog. It takes about half an hour.
+- **The address part** takes DEC-084's measurements at a terminal, in three terminals, in about a quarter of an hour. Two sessions under one name each message a third, in another repository, so the probe reads the reply address each message carries against the address each sender's shell reads. Each sender's shell also reads the process `CLAUDE_PID` names, the processes the shell runs under, and, through `lsof`, whether that process holds the address's socket. A subagent of the first session messages the third too. The third session then checks, from its sandbox and from a copy of the probe it runs with the sandbox disabled for that one call, whether each sender's process runs, and again once one sender has closed. The second check runs outside the sandbox, as the methodology's command runs on macOS, through the Bash tool's own escape, since the harness measured took no command out of its sandbox through `excludedCommands`. It reads a session's own name again too, from the first line of the listing the agent reads.
+- **The process part** takes ADR-103's measurements headless, in a minute or two, and needs nothing of the person. It starts one run of `claude -p` whose shell runs in the sandbox. The run reads twice from the sandbox and once outside it, through the Bash tool's own escape, and the probe reads twice at the person's terminal. Each read takes the process space it runs in from the operating system: the machine's identity, the boot and, on Linux, the process namespace. It also takes three processes' start times from the operating system's process table, through `sysctl` and libproc on macOS and `/proc` on Linux: the session's process, the probe's own, and a process the probe started and ended. So the results say whether the space and the start times can be read inside and outside the sandbox, and whether every read of one process gives one start time (13). They name the source of the machine's identity and whether the machine runs virtual (14), and whether each command in the sandbox runs in a process space of its own (15). On macOS they say what the sandbox lets a command read where `ps` cannot run (16). Run it on each platform the adapter supports. The results hold each part of a space but a namespace as a digest, which tells nothing of the value and differs between runs.
+
+The sessions it starts shorten the deadline of a held message through `CLAUDE_CODE_USER_DIALOG_TIMEOUT_MS`, so a step waits a minute at most rather than five.
+
+It writes the harness's version and each measurement's result to `results.md` in the scratch folder, or to `--out`: a table of the results, then each measurement's findings and the evidence they rest on. In the file, `<scratch>` stands for the scratch folder and `~` for the home folder, the user's and the machine's names are replaced, and each listing leaves out the rows of sessions outside the probe. Read the results before posting them anywhere, since what the probe replaces is all it knows to replace. The scratch folder keeps the raw evidence as it was, so remove it once done. The results are recorded on [#3461](https://github.com/aleskalfas/project-kit/issues/3461) <!-- unanchored: names the Task that records the results, a pointer and no statement of the system -->.
+
+### The declaration of a session (`session.yaml`)
+
+How a command finds the Claude Code session whose shell runs it, which the backbone reads as data and gives through `pkit harness session` ([the adapters README, "The declaration of a session"](../README.md#the-declaration-of-a-session) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->). It rests on what the probe above measured on macOS, with Claude Code 2.1.330 and 2.1.331, recorded on [#3461](https://github.com/aleskalfas/project-kit/issues/3461) <!-- unanchored: names the Task that records the results, a pointer and no statement of the system -->:
+
+- **The session's process** is the one `CLAUDE_PID` names in each command's environment: the process the session's shell runs under, which holds the session's messaging socket and ends when the session ends (DEC-084's Context, measurement 10).
+- **The messaging address** is the path `CLAUDE_CODE_MESSAGING_SOCKET` holds, a local socket named after that process, as `/tmp/cc-socks/<id>.sock`. Each message the session sends carries it as its reply address, `from="uds:<address>"` (measurement 9). The declaration admits only that form, so an address in a user's folder is not given and reaches no tracker.
+- **No platform reads a process by its id alone.** On macOS a start time reads wherever a command reads its process space whole, which a command outside the sandbox does, where the methodology's command runs ([ADR-014](../../../tech-docs/architecture/decisions/ADR-014-macos-sandbox-platform-stance.md) point 2). Inside the sandbox the boot does not read, so every reading there cannot tell, and the id alone would not help (ADR-103's measurements 13 and 16). Linux is not measured.
+
+The address and the process change when the session restarts, `--continue` and `--resume` included, while its name stays.
+
 ### Harness support (`harness-support.yaml`)
 
 The adapter's support declaration ([COR-047](../../decisions/core/COR-047-harness-requirement-declaration.md) point 2): its answer to each requirement in `.pkit/schemas/harness-requirements.yaml`, with the evidence for each. The grades are [the adapters README's](../README.md#harness-requirements), and `pkit harness report` resolves them for a project. In prose:
@@ -523,6 +557,7 @@ The adapter's support declaration ([COR-047](../../decisions/core/COR-047-harnes
   - **The cost.** A session keeps a person who answers its asks. In a turn that something other than a person answers, each ask is refused, and the refusal reads as the person's own. In a turn nobody answers, each ask holds the turn until someone answers it.
   - **The asks** are the permission hook's ("When the hook asks" above).
   - **What the trial saw,** in auto mode. In a turn a message in a chat channel started, the hook's ask was refused at once, and the tool returned `User refused permission to run tool`. In a run with nobody at it, the ask waited in the host's approval inbox, which expires after 24 hours.
+- **A session reads its own messaging address, which its messages carry and no other session holds** (`session-messaging-address`): `at-cost`, for 2.1.330 to 2.1.331, the versions DEC-084's measurements ran on, on macOS. A subagent's message carries its session's address and name, so the address tells one session from another, never a session from its own subagents, and the harness was seen checking an address against the sending process only on a held message. No platform reads a process by its id alone ("The declaration of a session" above).
 
 ### `permission-enforcement.yaml`
 

@@ -835,6 +835,27 @@ def test_a_planner_files_with_no_owner(ic, root: Path, role: str, claims: bool) 
     assert ic.claim_plan(clone) == "claimed for seat worker-2, instance 2 (comment substrate)"
 
 
+@pytest.mark.parametrize(
+    ("role", "claims", "refused"),
+    [("planner", False, False), ("worker", True, True), ("lead", False, False)],
+)
+def test_a_lead_files_for_its_workers_with_no_owner(
+    ic, root: Path, role: str, claims: bool, refused: bool
+) -> None:
+    """DEC-081 point 3: a lead owns only what it files for itself to build, and
+    `--for-workers` is a lead's, or a planner's, whose filing it already is."""
+    clone = _seat_clone(ic, root, role=role)
+    assert ic.claims_at_filing(clone, "me", for_workers=True) is claims
+    assert (ic.for_workers_refusal(clone) is not None) is refused
+    plan = ic.claim_plan(clone, "me", filing=True, for_workers=True)
+    assert plan.startswith("not claimed: seat worker-2") is not claims
+
+
+def test_a_clone_with_no_seat_files_nothing_for_workers(ic, root: Path) -> None:
+    assert ic.for_workers_refusal(None) is not None
+    assert "holds no seat" in (ic.for_workers_refusal(ic.Clone(2, "comment", "me", root)) or "")
+
+
 def test_a_seats_claim_names_the_seat_its_number_and_the_key(ic, root: Path) -> None:
     """DEC-059 point 9, in the audit-log facility's stamp, with DEC-052's footer."""
     gh = FakeGitHub()

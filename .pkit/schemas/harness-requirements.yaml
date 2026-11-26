@@ -139,3 +139,23 @@ requirements:
       where the answer arrives, and only where the harness tells the session
       who gave the answer. Until it does, even a pass there would resolve it
       indeterminate (COR-047 point 4).
+  session-messaging-address:
+    title: A session reads its own messaging address, which its messages carry and no other session holds
+    behaviour: >-
+      A session can read the address at which the harness delivers messages
+      to it. The harness puts that address on each message the session sends,
+      as the address to reply to, beside the session's name. While a
+      session's process runs, no other session holds its address. Where a
+      command reads a process by its id alone, a null signal finds a process
+      wherever one runs.
+    observation_point: in-session
+    evidence: >-
+      A design dependency (COR-047 point 9): project-management DEC-084 has a
+      worker count a message as a directive only where its reply address and
+      sender's name are the ones its directing seat's state issue records, and
+      the worker's own address is the one its seat records (point 2). A loop
+      records itself by its address and process (point 3), and a report is
+      checked the same way (point 4). A shared address would let the check
+      pass for the wrong session. The requirement's truth is visible inside a
+      session, where a command its shell runs reads the address, and in a
+      message the session receives.

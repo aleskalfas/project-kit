@@ -549,9 +549,11 @@ def test_an_issue_filed_for_another_person_is_not_claimed(
     assert "  ownership:  not claimed: assigned to @someone-else" in capsys.readouterr().out
 
 
-def _file_from_seat(ci, tmp_path, monkeypatch, role: str) -> tuple[int, list, FakeGitHub]:
+def _file_from_seat(
+    ci, tmp_path, monkeypatch, role: str, extra: tuple[str, ...] = ()
+) -> tuple[int, list, FakeGitHub]:
     """File from a clone that holds the topology's first seat, of `role`
-    (DEC-059), with the key `k1`."""
+    (DEC-059), with the key `k1`, and with ``extra`` options."""
     github = FakeGitHub(author="filer-login")
     github.add(55, assignees=("filer-login",))
     claims = ci.instance_claims
@@ -560,7 +562,7 @@ def _file_from_seat(ci, tmp_path, monkeypatch, role: str) -> tuple[int, list, Fa
     seat = claims.Seat("seat-1", 1, role)
     topology_with(claims, monkeypatch, claims.Topology(seat, {"seat-1": holder}), key="k1")
     use(claims, monkeypatch, github)
-    rc, calls = _file_task(ci, tmp_path, monkeypatch, _CLEAN_TITLE)
+    rc, calls = _file_task(ci, tmp_path, monkeypatch, _CLEAN_TITLE, extra)
     return rc, calls, github
 
 
@@ -583,6 +585,48 @@ def test_any_other_seat_claims_what_it_files(ci, tmp_path, monkeypatch, capsys, 
     claim = github.issues[55].comments[0]["body"]
     assert "event=claim instance=1 seat=seat-1 seat_number=1 clone=k1 " in claim
     assert "#55 claimed for seat seat-1, instance 1" in capsys.readouterr().out
+
+
+def test_a_leads_seat_files_for_its_workers_with_no_owner(
+    ci, tmp_path, monkeypatch, capsys
+) -> None:
+    """DEC-081 point 3: what a lead leaves to its workers is ready for them, so
+    the lead's clone claims none of it at creation."""
+    rc, calls, github = _file_from_seat(ci, tmp_path, monkeypatch, "lead", ("--for-workers",))
+    assert rc == 0
+    assert _issue_created(calls)
+    assert github.calls == []
+    assert (
+        "  ownership:  not claimed: seat seat-1, instance 1 is a lead's seat, which files with "
+        "no owner the work it leaves to its workers, so the issue becomes ready for them"
+    ) in capsys.readouterr().out
+
+
+def test_a_planners_seat_may_name_its_filing_for_workers(ci, tmp_path, monkeypatch) -> None:
+    rc, calls, github = _file_from_seat(ci, tmp_path, monkeypatch, "planner", ("--for-workers",))
+    assert rc == 0
+    assert _issue_created(calls)
+    assert github.calls == []
+
+
+def test_a_workers_seat_may_not_file_for_workers(ci, tmp_path, monkeypatch, capsys) -> None:
+    rc, calls, github = _file_from_seat(ci, tmp_path, monkeypatch, "worker", ("--for-workers",))
+    assert rc == 2
+    assert not _issue_created(calls)
+    assert github.calls == []
+    assert (
+        "[refused] create-issue: --for-workers files with no owner the work a lead's seat "
+        "leaves to its workers, and seat seat-1, instance 1 is a worker's seat; nothing was filed."
+    ) in capsys.readouterr().err
+
+
+def test_a_clone_with_no_seat_may_not_file_for_workers(ci, tmp_path, monkeypatch, capsys) -> None:
+    rc, calls, _github = _file_with_instance(
+        ci, tmp_path, monkeypatch, instance=2, extra=("--for-workers",)
+    )
+    assert rc == 2
+    assert not _issue_created(calls)
+    assert "and this clone holds no seat of a topology" in capsys.readouterr().err
 
 
 def test_a_failed_claim_leaves_the_issue_filed(ci, tmp_path, monkeypatch, capsys) -> None:

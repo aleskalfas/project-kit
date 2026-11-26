@@ -14,7 +14,9 @@ pkit:
         - src/project_kit/cli_render.py
         - src/project_kit/agent_runs.py
         - src/project_kit/agent_confinement.py
+        - src/project_kit/harness_session.py
         - src/project_kit/harness_support.py
+        - src/project_kit/recorded_processes.py
         - src/project_kit/install.py
         - src/project_kit/candidates.py
         - src/project_kit/capabilities.py
@@ -96,7 +98,7 @@ pkit:
         - .pkit/migrations/backbone/2.0.0/002-move-answers-to-files.sh
         - .pkit/adapters/claude-code/deploy-agents.sh
         - .pkit/capabilities/visual-communication/scripts/look.py
-      record: [COR-004, COR-012, COR-029, COR-043, COR-047, COR-048, COR-049, COR-050, COR-051, COR-054, COR-055, COR-061, COR-062, COR-064, "COR-066#2", "COR-066#3", "COR-066#4", COR-068, COR-069, COR-070, COR-073, PRJ-001, PRJ-002, PRJ-003, PRJ-004, PRJ-015, "ADR-009#7", ADR-027, ADR-029, ADR-030, ADR-033, ADR-039, ADR-049, ADR-057, ADR-058, ADR-059, "ADR-060#1", "ADR-060#2", "ADR-060#3", "ADR-060#4", "ADR-060#5", "ADR-060#10", ADR-061, ADR-063, ADR-064, ADR-066, "ADR-068#1", "ADR-068#3", "ADR-068#6", ADR-075, ADR-076, ADR-077, "ADR-079#2", ADR-080, "ADR-081#1", "ADR-081#2", "ADR-081#3", "ADR-081#4", "ADR-081#5", "ADR-081#6", "ADR-081#7", "ADR-081#8", ADR-083, ADR-088, ADR-090, "ADR-092#8", "COR-013#8", COR-017, COR-031, COR-041, ADR-087, "ADR-092#6", PRJ-016, "ADR-089#1", "ADR-089#3", "ADR-089#6", "ADR-089#7", "ADR-089#8", "ADR-089#9", "ADR-092#2", "ADR-092#3", "ADR-092#7", "ADR-092#9", "ADR-092#4", ADR-040, ADR-097, ADR-094, ADR-098]
+      record: [COR-004, COR-012, COR-029, COR-043, COR-047, COR-048, COR-049, COR-050, COR-051, COR-054, COR-055, COR-061, COR-062, COR-064, "COR-066#2", "COR-066#3", "COR-066#4", COR-068, COR-069, COR-070, COR-073, PRJ-001, PRJ-002, PRJ-003, PRJ-004, PRJ-015, "ADR-009#7", ADR-027, ADR-029, ADR-030, ADR-033, ADR-039, ADR-049, ADR-057, ADR-058, ADR-059, "ADR-060#1", "ADR-060#2", "ADR-060#3", "ADR-060#4", "ADR-060#5", "ADR-060#10", ADR-061, ADR-063, ADR-064, ADR-066, "ADR-068#1", "ADR-068#3", "ADR-068#6", ADR-075, ADR-076, ADR-077, "ADR-079#2", ADR-080, "ADR-081#1", "ADR-081#2", "ADR-081#3", "ADR-081#4", "ADR-081#5", "ADR-081#6", "ADR-081#7", "ADR-081#8", ADR-083, ADR-088, ADR-090, "ADR-092#8", "COR-013#8", COR-017, COR-031, COR-041, ADR-087, "ADR-092#6", PRJ-016, "ADR-089#1", "ADR-089#3", "ADR-089#6", "ADR-089#7", "ADR-089#8", "ADR-089#9", "ADR-092#2", "ADR-092#3", "ADR-092#7", "ADR-092#9", "ADR-092#4", ADR-040, ADR-097, ADR-094, ADR-098, "ADR-100#9", ADR-103]
       artefact:
         - .pkit/agents/README.md#diagnosing--repairing-the-overlay
         - .pkit/agents/README.md#a-capabilitys-write-categories
@@ -116,6 +118,7 @@ pkit:
         - .pkit/capabilities/project-management/README.md#starting-the-fixers--fix-drift
         - .pkit/adapters/README.md#harness-requirements
         - .pkit/adapters/README.md#what-an-adapter-declares-as-data
+        - .pkit/adapters/README.md#the-declaration-of-a-session
         - .pkit/lifecycle/manifest.md#how-a-registered-command-is-run
         - .pkit/decisions/README.md#checking-a-changes-numbering
         - .pkit/decisions/README.md#checking-what-a-change-lands
@@ -312,6 +315,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh   # or: brew install uv
 | `migrations check-diff [--base <ref>] [--include-working-tree]` | the migration check of a change. It fails a rename or a removal in a tree the methodology ships that no migration of its tier and component in the same change covers ([the lifecycle reference's migration framework, "What ships a migration"](../lifecycle/migrations.md#what-ships-a-migration)). It also fails a migration script the change adds, or moves in, whose `<major>.<minor>.0/` folder is at or below the version its tier records at the base's tip: a project already there never runs it. The line names the version to move it to. A script the project receives by sync is not judged, nor one the tip already holds, at its path or renamed in its folder with the same content. It also fails a script the change adds, or moves in, whose number another script in its folder holds, the folder read as merging the base would leave it. The line names the number to take ([the lifecycle reference's migration framework, "Naming"](../lifecycle/migrations.md#naming)). Its base is `--base`, else `$PKIT_CHECK_BASE`, else the default branch. `--include-working-tree` adds staged and unstaged changes. The rule is in [the lifecycle reference's migration framework, "Which version a migration targets"](../lifecycle/migrations.md#which-version-a-migration-targets) | no | yes (read-only) |
 | `data validate <path>` | validate adopter data files against their bound capability schemas (per COR-023); resolves binding field-first via `pkit_schema:`, then via per-schema `binds_to:` fallback | no | yes (read-only) |
 | `harness report [--adapter <name>] [--json]` | report the harness requirements the project's harness leaves unmet (COR-047): each requirement the core declares, resolved for each registered adapter from its support declaration; offline, files only; exit 1 while anything is unmet (see "Diagnostic commands") | no | yes (read-only) |
+| `harness session [--reply <address>]... [--json]` | the harness session whose shell runs the command, as the one registered adapter declares it in `session.yaml` (ADR-100 point 9): its process, by the name the backbone gives it, and its messaging address, each given only once a null signal finds the process here (ADR-103 point 5), and each `--reply` in the address's form (see "Diagnostic commands") | no | yes (read-only) |
 | `friction check [--base <ref>] [--head <rev> [--own-head <rev>]] [--json]` | the friction change check (COR-050): every artefact whose anchor changed — working tree, or commit `<rev>` with `--head`, against the merge-base of `<ref>`, default `$PKIT_CHECK_BASE`, else the default branch (COR-054; `repository base` shows it) — carries an answer (updated, unchanged, deferred); reports friction, bumps with nothing behind them, dead anchors of the change and an outdated base, upstream first, and lists every answer the change wrote, word for word, judging what each answer in an answer file read against the change's own head, `--own-head`, else `--head`'s `<rev>`, else `$PKIT_CHECK_HEAD`; `--json` for other components; exits 1 only in enforcing mode. See "Friction checks" | no | yes (read-only) |
 | `friction check --all [--artefact <location>]... [--artefacts-from <file>] [--json]` | the whole-repository friction check (COR-050 point 6): every artefact at HEAD — or, with `--artefact` or `--artefacts-from`, only those named, the measures still the whole repository's — against the current history, each anchor judged from the artefact's revalidation point — derived from git, renames followed — and each deferral from its deferral point; reports stale and deferred debt with their origins, every dead anchor, over-broad anchors, anchors on an id two artefacts share, unanchored artefacts and uncovered surface, upstream first; needs the full history and says so in a shallow clone; exits 0 in either mode. See "Friction checks" | no | yes (read-only) |
 | `friction debt [--json]` | the friction debt listing (COR-050 point 9): exactly the stale and deferred findings of the whole-repository check, oldest first by the author date of their origin, each with its kind, artefact, anchor, origin commit, author, date and change, and a deferral's reason; artefacts a shallow clone cannot judge are named apart; exits 0. See "Friction checks" | no | yes (read-only) |
@@ -349,6 +353,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh   # or: brew install uv
 | `config set <key> <value> [--yes]` | set one backbone-owned key of `.pkit/project/config.yaml` (dotted, e.g. `docs.internal`) through the consent-gated writer (COR-048 point 5): the key must exist in the configuration schema and hold a single value, the result is validated before anything is written, the reserved `project` block is refused. Setting `docs.internal` also declares the old root's `rule-sets/` as a place in `friction.places`, where a rule-set file there would go unfound under the new root (COR-051 point 6), and names each recorded documentation location it leaves outside the new root (COR-049 point 6). Asks once on a terminal; `--yes` consents non-interactively; without either it refuses and names the command to run. See "Configuration file" | yes | yes — same value, same file |
 | `docs record-location <capability> <name> [--dry-run]` | record where an installed capability's documentation location `<name>` now lies (COR-049 point 5): a location derived from a root is written to the capability's `project/docs-locations.yaml`, so a later root change moves nothing; one already recorded is never overwritten. Running it is the consent: the value recorded is the one already in use, so it asks nothing, at a terminal or off one, and `--yes` is accepted with no effect (COR-049 point 5). What a capability's stamping command runs when it places the first document there. See "Configuration file" | yes | yes — a recorded location is left as it is |
 | `account read [--json]` / `account spell [--json]` / `account compare [--json]` | the account on the hosting service the credential acts as, and the one spelling accounts are compared in ([ADR-094](../../tech-docs/architecture/decisions/ADR-094-acting-account-reading.md)): `read` asks GitHub, through `gh`, which account the credential acts as, and names one only from GitHub's answer; `spell` puts accounts a request on standard input names into the one spelling, and `compare` answers whether accounts are one, two, or cannot be told apart, each asking GitHub nothing. `--json` is the document a capability's script reads in place of asking GitHub a way of its own. See "Account commands" | no | yes (read-only) |
+| `recorded-process read [--json]` / `recorded-process compare [--json]` | whether a process a part of the methodology recorded still runs, read in one place ([ADR-103](../../tech-docs/architecture/decisions/ADR-103-process-liveness-reading.md)): `read` answers each name a request on standard input gives `running`, `ended` or `cannot-tell`, `ended` only where this command could have seen the process or its machine has restarted since, and `compare` whether two names name one process. See "Recorded-process commands" | no | yes (read-only) |
 | `repository base [--base <ref>] [--json]` | what is settled (COR-054 point 5): the default branch — declared, and resolved to a commit — and the base a comparison reads — `<ref>`, else `$PKIT_CHECK_BASE`, else the default branch — with its commit and where HEAD left it; a branch read from the local branch, and a declaration read as the default, are said on standard error. Runs no discovery. `--json` is the stable document a capability's own script reads instead of resolving a branch or computing a merge-base, and adds HEAD — its commit, none yet, or why git cannot read it. See "Configuration file" | no | yes (read-only) |
 | `pull-request read <n>` / `pull-request squash-defaults` / `pull-request merge <n> --subject <s>` / `pull-request enqueue <n>` / `pull-request wait <n>` / `pull-request dequeue <n>` / `pull-request delete-branch <n> --expect <sha>` [`--allow-foreign-repo`] [`--json`] | landing a pull request on the hosting service — the one merge mechanic every command that lands a PR calls: where PR `<n>`'s base merges through a merge queue and where the PR stands in it; the repository's squash-commit defaults; the direct squash merge and the enqueue, each pinned to a checked head (`--head`); the bounded wait for the queue's merge; taking a PR out of the queue; deleting a merged PR's head branch, only while its tip is the head that merged. Runs `gh` from the working directory. `merge`, `enqueue`, `dequeue` and `delete-branch` run the cross-repository guard first and take `--allow-foreign-repo`. `--json` writes each document as one line, which is how a capability's script calls it. See "Pull-request commands" | `read`, `squash-defaults`, `wait`: no; `merge`, `enqueue`, `dequeue`, `delete-branch`: yes (on the hosting service) | reads yes; `enqueue`, `dequeue` and `delete-branch` yes; `merge` no — merges a PR |
 | `pull-request land <n> --head <sha> --subject <s>` [options] [`--dry-run`] [`--json`] | the landing sequence in one command: the guard once, one reading, the options applied, the merge or the enqueue, the wait, the dequeue on a head that moved; events, then one end document. See "Pull-request commands" | yes, but `--dry-run` (on the hosting service) | yes — it reads first; a merged PR ends merged |
@@ -1663,6 +1668,31 @@ Reports the harness requirements the project's harness leaves unmet ([COR-047](.
 
 It is not a member of `validate`: it answers about the harness, not the project's own files ([COR-055](../decisions/core/COR-055-validation.md) point 1). `validate` checks the declarations' shape.
 
+### `harness session [--reply <address>]... [--json]`
+
+Gives the harness session whose shell runs the command, as the project's adapter declares it in `session.yaml` ([ADR-100](../../tech-docs/architecture/decisions/ADR-100-runs-in-seat-clone.md) point 9). A capability's command learns its session here, so it names no harness. Read-only, offline; exit 0 whenever it read, the document saying what it found. Without `--json`, it prints lines for people.
+
+- **The declaration** is read as [the adapters README, "The declaration of a session"](../adapters/README.md#the-declaration-of-a-session) says. Where none is read, no session is found.
+- **The session's process** is given by the name the backbone gives it ([`recorded-process`](#recorded-process-commands)), only once a process with the declared id runs in this command's process space and a null signal finds it there ([ADR-103](../../tech-docs/architecture/decisions/ADR-103-process-liveness-reading.md) point 5).
+- **The messaging address** is given only where it names that process as the declaration says, and that signal found it.
+- **Each `--reply`,** a message's reply address, is given in the form of a session's messaging address, as the declaration says a reply address is brought into it, and only where it then names a process as the declaration says.
+
+The document, `schema_version: 1`:
+
+| Key | What it gives | Null |
+|---|---|---|
+| `adapter` | the adapter whose declaration was read | where no declaration was read |
+| `found` | whether a session of the adapter runs this command | never |
+| `why` | why no session was found, for people | where one was |
+| `messaging` | whether the adapter declares messaging between sessions | never; `false` where no declaration was read |
+| `process` | the name of the session's process | where none was given |
+| `process_why` | why none was given, for people | where one was |
+| `address` | the session's messaging address | where none was given |
+| `address_why` | why none was given, for people | where one was |
+| `replies` | each `--reply`, in order, as `{"given", "address", "why"}`: `address` its form, `null` where it has none, and `why` why not | never; an empty list with no `--reply` |
+
+A command that finds a session runs on the agent's call, whatever this finds of its process and address (ADR-103 point 5).
+
 ### `version`
 
 Prints the CLI's own version (`pkit <version>`) — the version of the checkout or wheel that owns the binary, not of the project at the working directory; `pkit status` shows the project's recorded core-layer version for comparing against it.
@@ -2402,6 +2432,37 @@ A reader reads `cannot-tell` as its refusal: only `one` grants a member or a rev
 | `reason` | why it has no spelling, for people | where it has one |
 
 **The sets may grow** (ADR-097 point 4): the kinds, the causes and the answers. A reader takes a kind it does not know as a kind unknown, and, from `read`, as an unresolved identity; a cause it does not know as an unresolved identity; an answer it does not know as `cannot-tell`; and a `schema_version` it does not know, or no document, as no answer.
+
+## Recorded-process commands
+
+Whether a process that a part of the methodology recorded, and did not start, still runs, read in one place ([ADR-103](../../tech-docs/architecture/decisions/ADR-103-process-liveness-reading.md)). A seat's loop asks it of the session recorded for a seat (project-management DEC-084). A part that asks reads no process for itself, and stores and passes each name whole.
+
+**A name** is the one [`harness session`](#harness-session---reply-address---json) gives a session's process: one line of text, tagged with its form, which holds the process's space, its id and, where it could be read, the start time the operating system fixed when it made the process. Its space is held in a form derived for the repository, from its `origin` remote, the same in every clone of it and with no key, so a name may go on the tracker. A repository with no `origin` gets no name. Only the backbone writes names, reads them or compares them.
+
+Each command reads one JSON request on standard input. A request it refuses, such as one that is no JSON, not of the form below, or holding a name that is no string, prints no document and exits 1, saying why. Without `--json`, each prints a line for people for each answer.
+
+### `recorded-process read [--json]`
+
+Reads `{"names": [<name>, ...]}`, and gives `{"schema_version": 1, "answers": [...]}`, one answer for each name, in order: `{"name", "state", "by", "why"}`.
+
+- **`state`** is one of:
+  - **`running`:** this command runs in the recorded process space, and finds there a process under the recorded id that started at the recorded time and has not exited;
+  - **`ended`:** this command runs in the recorded space and finds no process under the id, one that started at another time, or one that has exited, or the recorded space belongs to an earlier boot of this machine, where the platform names one machine by its identity;
+  - **`cannot-tell`:** anything else, among it a name of another space or another machine, a name of a form pkit does not read, a read that failed, and a command that cannot read its own space whole, as one inside the macOS sandbox cannot.
+- **`by`** is the reading that told: `start-time`, `id-alone` or `earlier-boot`, and `null` for `cannot-tell`.
+- **`why`** says it for people.
+
+**By the id alone.** Where the start time cannot be compared, a null signal stands in only on a platform the adapter's declaration names, and only once the same signal finds the process of the session this command runs in. A start time that can be read is always compared.
+
+### `recorded-process compare [--json]`
+
+Reads `{"pairs": [[<name>, <name>], ...]}`, and gives `{"schema_version": 1, "pairs": [...]}`, each pair as `{"names", "answer", "why"}`. It reads no process.
+
+- **`one`:** both names hold one space and one id and, where both hold a start time, one start time;
+- **`two`:** they hold two spaces, two ids, or two start times;
+- **`cannot-tell`:** either is of no form pkit reads, or holds no whole space.
+
+**The sets may grow** (ADR-097 point 4): the states, the readings and the answers. A reader takes a state or an answer it does not know as `cannot-tell`, a reading it does not know as no reading, and a `schema_version` it does not know, or no document, as no answer. Each part that asks says what `cannot-tell` means for it, and none acts on it as on `ended` where that would end, replace or free what a live process holds (ADR-103 point 6).
 
 ## Report commands
 

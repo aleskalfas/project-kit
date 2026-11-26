@@ -83,6 +83,14 @@ keeps only a Task whose native Milestone is in the set, this clone's own Tasks
 among them. None stands for no pools declared, and the set then filters
 nothing: the one shared pool of DEC-059. The empty set keeps no Task. Neither
 ever stands for the other. The seat's scope then narrows what the set kept.
+
+A Task a directive names
+------------------------
+A directive from a worker's directing seat may name the Task it takes next, and
+the worker takes it only where it could take that Task of its own choosing
+([project-management:DEC-081-delegation-between-seats] point 6). So
+``next-task --task N`` takes N only where :func:`candidates` keeps it, and
+:func:`why_left` says why it does not, by the same filters in the same order.
 """
 
 from __future__ import annotations
@@ -387,6 +395,55 @@ class _Unplaced:
     why: str
 
 
+@dataclass(frozen=True)
+class _Left:
+    """An open issue of work the pool does not hand out, and why."""
+
+    number: int
+    why: str
+
+
+def why_left(
+    rows: Iterable[Any],
+    number: int,
+    *,
+    open_numbers: Iterable[int],
+    login: str | None,
+    scope: topology.Scope | None,
+    takes_over: bool,
+    readers: Readers,
+    milestones: Collection[int] | None = None,
+) -> str | None:
+    """Why the Task numbered ``number`` is not among :func:`candidates`, in words
+    a line can carry, or None where it is among them.
+
+    The reasons follow the filters :func:`candidates` applies, in its order, so
+    a Task a directive names is taken only where this clone could take it of its
+    own choosing ([project-management:DEC-081-delegation-between-seats] point 6).
+    Its owner is not judged here."""
+    row = next(
+        (r for r in rows if isinstance(r, dict) and r.get("number") == number),
+        None,
+    )
+    if row is None:
+        return (
+            "it is not among the open issues of work, so it is closed, a pull request, a "
+            "state issue or not there"
+        )
+    if milestones is not None and native_milestone(row) not in milestones:
+        return "it is in no open Milestone of the pools this seat serves"
+    judged = _candidate(row, login, scope, takes_over, readers, _priorities(readers.classification))
+    if isinstance(judged, (_Left, _Unplaced)):
+        return judged.why
+    if judged is None:
+        return "it cannot be read as an issue"
+    still_open = frozenset(open_numbers)
+    waiting = [n for n in dependencies(str(row.get("body") or ""), own=number) if n in still_open]
+    if waiting:
+        return "its dependencies name the open issue(s) " + ", ".join(f"#{n}" for n in waiting)
+    return None
+
+
 def _candidate(
     row: Any,
     login: str | None,
@@ -394,13 +451,15 @@ def _candidate(
     takes_over: bool,
     readers: Readers,
     order: Mapping[str, int],
-) -> Candidate | _Unplaced | None:
+) -> Candidate | _Unplaced | _Left | None:
     """``row`` as a Candidate, an :class:`_Unplaced` Task where its card's Status
-    does not place it, or None where it is no Task the pool hands out."""
+    does not place it, or a :class:`_Left` that says why the pool does not hand
+    it out. None where it is no issue at all."""
     if not isinstance(row, dict) or not isinstance(row.get("number"), int):
         return None
+    number = row["number"]
     if str(row.get("state") or "").lower() != "open":
-        return None
+        return _Left(number, "it is closed")
     title = str(row.get("title") or "")
     labels = label_names(row)
     structural = infer_structural_type(
@@ -410,21 +469,26 @@ def _candidate(
         labels=labels,
     )
     if structural != "task":
-        return None
+        return _Left(number, "it is no Task")
     assignees = _assignees(row)
     if assignees and login not in assignees:
-        return None
+        others = ", ".join(f"@{a}" for a in assignees)
+        return _Left(number, f"it is assigned to another account ({others})")
     kind = axis_labels.resolve_read("type", labels, readers.substrate_map)
     if kind is None:
         kind = classification_rules.kind_from_title(title, dict(readers.classification))
     workstream = axis_labels.resolve_read("workstream", labels, readers.substrate_map)
     if not in_scope(kind, workstream, scope):
-        return None
+        return _Left(number, "it falls outside this seat's scope")
     state, why = readers.state(row, labels)
     if state == infer.UNDETERMINED:
-        return _Unplaced(row["number"], why)
+        return _Unplaced(number, why)
     if state not in (BACKLOG, IN_PROGRESS) or (state == IN_PROGRESS and not takes_over):
-        return None
+        return _Left(
+            number,
+            f"it is in {state}, and a ready Task is in Backlog, or In Progress where its "
+            "seat was released",
+        )
     priority = axis_labels.resolve_read("priority", labels, readers.substrate_map)
     return Candidate(
         number=row["number"],
