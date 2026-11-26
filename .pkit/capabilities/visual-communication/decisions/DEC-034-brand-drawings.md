@@ -194,7 +194,6 @@ Three more records bear on it:
   - DEC-025 point 8, since the command that moves a piece onto another brand reads the brand the piece names.
   - DEC-031 point 2, since a top with a physical size whose layouts are its pages' forms asks for a height through it, so its pages are fixed pages, and a poster that is a page alone is none.
 - **Left open:**
-  - whether a brand may name a brand other than its base, and so place that brand's parts
+  - whether a brand may name a brand other than its base, and so place that brand's parts (refinement per [visual-communication:DEC-044-brand-own-component-tokens] points 2 and 3). That record decides outright that a brand may name a brand along its chain beyond its base, which adds only that the major it names agree with the one its base fixes, and that the brand places the parts it keeps of that brand whether or not it names it. It holds meanwhile that naming a brand outside its chain reaches none of that brand's roles, and leaves placing that brand's parts open.
   - a physical size with bleed, the margin printed past the trim and cut away
   - a frame around the top's own drawing, as a kind of drawing of its own
-  - what gives the tokens of a brand's own components their values, which DEC-035 point 7 leaves to the change that builds a brand's own components
