@@ -66,6 +66,7 @@ from tests.visual_communication_project import (
     bound,
     copy_library,
     hold_shipped,
+    taken,
     write,
     write_list,
     yaml_text,
@@ -2324,6 +2325,148 @@ def test_a_page_carries_its_layout_the_reserved_keys_and_its_slots_alone(
     found = [f for f in checks.content_findings(project_of(root)) if f.file == CONTENT]
 
     assert [(f.code, f.where) for f in found] == [("content-key", "slides[a].slides")]
+
+
+# --- paths in content (DEC-056) ------------------------------------------------------------------
+
+
+def documents_deck(tmp_path: Path, en: list[Any], cs: list[Any] | None = None) -> Path:
+    """The deck of the foundations being built as the piece's top, in English and Czech, its
+    slide `rules` naming the documents each language gives, Czech those of English unless
+    `cs` gives its own; in a git repository of its own, with nothing committed, which holds
+    `docs/one.md` and `docs/two.md`, and ignores `notes/`, where `notes/draft.md` lies."""
+    built = taken("foundations", being_built=True).version
+    lock = {**LOCK, "foundations": built}
+    root = drawing_project(
+        tmp_path, top="foundations/deck", picture=False, languages=["en", "cs"], lock=lock
+    )
+    hold_shipped(root, "foundations")
+    for language, documents in (("en", en), ("cs", en if cs is None else cs)):
+        pages = slides(language)
+        pages[1] = {**pages[1], "documents": documents}
+        write(
+            root / PIECE_FOLDER / f"content.{language}.yaml",
+            yaml_text(bound("content", slides=pages)),
+        )
+    for path in ("docs/one.md", "docs/two.md", "notes/draft.md"):
+        write(root / path, "A document.\n")
+    write(root / ".gitignore", "notes/\n")
+    subprocess.run(["git", "init", "-q"], cwd=root, check=True, capture_output=True)
+    return root
+
+
+def path_findings(root: Path) -> list[Any]:
+    return [f for f in checks.content_findings(project_of(root)) if f.code.startswith("path-")]
+
+
+def test_a_slide_names_the_documents_its_claim_rests_on_by_their_paths(tmp_path: Path) -> None:
+    root = documents_deck(tmp_path, ["docs/one.md", "docs/two.md"], cs=["docs/two.md"])
+
+    assert checks.content_findings(project_of(root)) == []
+    # A list of paths holds texts, not items, so each language gives its own.
+    assert checks.id_findings(piece_of(root)) == []
+
+
+def test_a_path_not_of_the_form_or_naming_no_file_version_control_lists_fails(
+    tmp_path: Path,
+) -> None:
+    handed_out = f"{PIECE_FOLDER}/handed-out/flow.svg"
+    given = [
+        "Docs/one.md",
+        "docs",
+        "notes/draft.md",
+        "docs/gone.md",
+        "docs/*.md",
+        "/docs/one.md",
+        "docs/./one.md",
+        "docs\\one.md",
+        handed_out,
+        f"{PIECE_FOLDER}/current-copy/flow.svg",
+        "docs/one.md",
+    ]
+    root = documents_deck(tmp_path, given)
+    # A file handed out is refused, though version control lists it.
+    write(root / handed_out, "<svg/>\n")
+
+    found = [f for f in path_findings(root) if f.file == CONTENT]
+
+    at = "slides[rules].documents"
+    assert [(f.code, f.where, f.level) for f in found] == [
+        *(("path-missing", f"{at}#{place}", "fails") for place in (1, 2, 3, 4)),
+        *(("path-form", f"{at}#{place}", "fails") for place in (5, 6, 7, 8)),
+        *(("path-handed-out", f"{at}#{place}", "fails") for place in (9, 10)),
+    ]
+    assert [f.message for f in found[:4]] == [
+        "`Docs/one.md` names no file version control lists: it lists `docs/one.md`, and a "
+        "path names a file by its exact case",
+        "`docs` names no file version control lists: it is a folder, and a path names one file",
+        "`notes/draft.md` names no file version control lists: the file lies there, and git "
+        "ignores it, so no other clone holds it",
+        "`docs/gone.md` names no file version control lists",
+    ]
+    assert found[4].message == (
+        "`docs/*.md` holds `*`, which would make it a glob: a path names one file"
+    )
+    # Each language's paths are judged in its own file.
+    assert len([f for f in path_findings(root) if f.file != CONTENT]) == len(found)
+
+
+def test_a_path_names_a_file_the_index_holds_though_the_working_tree_leaves_it_out(
+    tmp_path: Path,
+) -> None:
+    """As a sparse checkout leaves a file out: nothing reads a document's bytes."""
+    root = documents_deck(tmp_path, ["docs/one.md"])
+    subprocess.run(["git", "add", "docs/one.md"], cwd=root, check=True, capture_output=True)
+    (root / "docs" / "one.md").unlink()
+
+    assert path_findings(root) == []
+    (root / ".git").rename(root / "git-moved")
+    # Outside version control, the files that lie in the project are its list.
+    [missing] = [f for f in path_findings(root) if f.file == CONTENT]
+    assert missing.code == "path-missing"
+
+
+def notes_project(tmp_path: Path) -> Path:
+    """A figure whose body is the piece's own component `notes`, which shows its field
+    `head` and takes `notes`, a list of texts it marks neither as runs nor as paths."""
+    root = drawing_project(tmp_path, picture=False)
+    notes = bound(
+        "component",
+        status="experimental",
+        about="Notes.",
+        fields={
+            "type": "object",
+            "properties": {
+                "head": {"type": "string"},
+                "notes": {"type": "array", "items": {"type": "string"}},
+            },
+        },
+        parts={
+            "head": {
+                "text": {"content": "head", "style": "type.body", "fill": "text-primary"},
+                "width": "=:width",
+            }
+        },
+        preferred={"height": "=head.height"},
+    )
+    write(root / PIECE_FOLDER / "components" / "notes.yaml", yaml_text(notes))
+    write_content(root, body={"use": "piece/notes", "head": "A", "notes": ["one", "two"]})
+    return root
+
+
+def test_a_list_that_holds_no_items_runs_or_paths_asks_its_components_owner_for_attention(
+    tmp_path: Path,
+) -> None:
+    report = checks.check(notes_project(tmp_path))
+
+    [(finding, level)] = judged(report, "list-unmarked")
+    assert level == "attention"
+    assert checks.place(finding) == (
+        f"{PIECE_FOLDER}/components/notes.yaml#fields.properties.notes"
+    )
+    assert "x-pkit-paths: true" in finding.fix
+    # Nothing a list's items take reaches it: neither ids nor the check of a path.
+    assert judged(report, "id-shape") == [] and path_findings(notes_project(tmp_path / "b")) == []
 
 
 # --- a list's component field and arrangement fields (#2560) ---------------------------------

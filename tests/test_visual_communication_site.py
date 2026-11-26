@@ -24,6 +24,7 @@ from typing import Any
 import pytest
 from ruamel.yaml import YAML
 
+from tests import test_visual_communication_pdf as pdf_file
 from tests import test_visual_communication_starter as starter
 from tests.in_process import load, run_main
 from tests.visual_communication_project import (
@@ -627,6 +628,43 @@ def as_released_location(root: Path) -> Path:
     )
     write(root / "visual/pieces/figure/content.en.yaml", yaml_text(bound("content", **FIGURE)))
     return root
+
+
+def test_a_slides_documents_draw_in_every_renderer_as_the_lines_its_scene_holds(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The deck's own drawing shows a slide's documents under its footer, a path to a line,
+    and no word before them, and each renderer draws the lines the scene holds, adding
+    nothing (DEC-056 point 4)."""
+    importable(monkeypatch, svg, pdf, html)
+    root = project(tmp_path)
+    copy_library(root, TEST_BRAND, "test-brand", "1.0.0")
+    write_list(
+        root, {"test-brand": {"source": {"kind": "project"}, "versions": {"1.0.0": {}}}}
+    )  # fmt: skip
+    built = hold_shipped(root, "foundations").version
+    write_piece(
+        root,
+        "slides",
+        top="foundations/deck",
+        lock={"foundations": built, "test-brand": "1.0.0"},
+    )
+    documents = ["docs/one.md", "tech-docs/two.md"]
+    slide = {"id": "claim", "layout": "slide", "title": "A claim", "footer": "In project-kit."}
+    content = {"slides": [{**slide, "documents": documents}]}
+    write(root / "visual/pieces/slides/content.en.yaml", yaml_text(bound("content", **content)))
+    drawn = project_of(root, "slides")
+    (scene,) = scenes_of(drawn).values()
+    shown = scene.find("deck/slides[claim]/documents")
+    assert shown is not None
+    assert [line["text"] for line in shown.properties["lines"]] == documents
+    for renderer, _, files in renders(drawn):
+        if renderer == "pdf":
+            file = pdf_file.read(files[0].encode("latin-1"))
+            [page] = file.pages()
+            assert file.lines(page) == ["A claim", "In project-kit.", *documents]
+        else:
+            assert all("".join(files).count(path) == 1 for path in documents), renderer
 
 
 def test_the_deck_and_the_figure_draw_as_before_in_every_renderer(
