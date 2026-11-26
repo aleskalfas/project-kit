@@ -91,6 +91,9 @@ LIST = f"{FOLDER}/libraries.yaml"
 #: The kind of source the list gives a library the capability ships (DEC-013 point 5).
 SHIPPED_SOURCE = "shipped"
 
+#: The kind of source the list gives a library of the project's own (DEC-003 point 4).
+PROJECT_SOURCE = "project"
+
 #: The version being built of each library the capability ships, each in a folder of its
 #: own named for the library, under a name that names no version (DEC-013 point 2). Its
 #: released versions and its record lie apart, under `shipped.RELEASES`.
