@@ -77,9 +77,19 @@ points 1 to 6, DEC-039 points 1 to 4, DEC-005 points 4, 5, 9 and 10).
   run's paint. A reader's tools pass over it. The strut rises as high as a sign does.
   Under forced colours a sign takes the rules a shape's fill takes, and the run's ground
   lies in its line's ground (DEC-039 point 3).
-- **Lengths** on a page are shares of its width (`cqw`), so a page scales with no script.
-  A share is written to more places than a length of px is, since 1/100 of it is over
-  1/10 px on a wide page.
+- **Lengths** on a page are shares of its width, so a page scales with no script. A share is
+  written in `cqw`, but for a box laid on the page, a text's frame or a line's ground, and
+  for a line's strut. Those are percentages of the width of the box they lie in: the page's
+  for a frame and a ground, and the line's for its strut. A left and a width are `left` and
+  `width`, a top is a top margin under `top:0`, and a height a top padding, since CSS takes
+  a margin's and a padding's percentage of that width too. In Firefox's print a length in
+  `cqw` there takes the paper area's width at a scale of 1 for the page's width, so a text
+  left its shapes on a page that printed narrower or wider than that (DEC-026 point 2,
+  project-kit#3012). A strut whose line has no width keeps `cqw`. A run's font size keeps
+  it too, since no other unit of CSS takes a font's size from a box's width, and so does its
+  sign's size, which keeps to the run's: so in Firefox's print a run is laid out at the size
+  the paper area gives, and painted at the page's. A share is written to more places than a
+  length of px is, since 1/100 of it is over 1/10 px on a wide page.
 - **The file** holds all it needs: each face once, subset to every character the file draws
   in it, each arrowhead once for its role, and every picture. It asks for nothing. Its
   head declares its encoding, its language and its viewport. Its pages follow each other
@@ -190,7 +200,9 @@ SHAPE_ID = "pkit-shape-"
 CLIP_ID = "pkit-clip-"
 
 #: The rules every page file holds, after its faces. None sets a colour or clips anything: a
-#: line's ground and the inset shape draw nothing outside forced colours (DEC-039).
+#: line's ground and the inset shape draw nothing outside forced colours (DEC-039). A text's
+#: frame and a line's ground lie from the page's top, which their top margin moves them down
+#: from.
 SHEET = "".join(
     (
         "body{margin:0}",
@@ -198,14 +210,14 @@ SHEET = "".join(
         f"[{MARKS['page']}]+[{MARKS['page']}]{{margin-top:{DECLARATION['pages']['gap']}px}}",
         f"[{MARKS['layer']}]{{position:absolute;left:0;top:0;width:100%;height:100%;"
         "pointer-events:none}",
-        f"[{MARKS['text']}]{{position:absolute;isolation:isolate}}",
+        f"[{MARKS['text']}]{{position:absolute;top:0;isolation:isolate}}",
         f"[{MARKS['line']}]{{position:absolute;left:0;width:100%;font-size:0;line-height:0;"
         "white-space:pre}",
         f"[{MARKS['strut']}]{{display:inline-block;width:0}}",
         f"[{MARKS['span']}]{{position:relative}}",
         f"[{MARKS['span']}]::before{{content:'';position:absolute;inset:0;z-index:-1;"
         f"border-radius:inherit;background:var({RUN_GROUND})}}",
-        f"[{MARKS['ground']}]{{position:absolute;display:none;pointer-events:none}}",
+        f"[{MARKS['ground']}]{{position:absolute;top:0;display:none;pointer-events:none}}",
         f"[{INSET}]{{display:none}}",
     )
 )
@@ -343,6 +355,11 @@ def render(
 def _style(pairs: list[tuple[str, Any]]) -> str:
     """CSS declarations, as the value of a `style` attribute."""
     return ";".join(f"{name}:{value}" for name, value in pairs if value is not None)
+
+
+def _percent(length: float, whole: float) -> str:
+    """`length` as a percentage of `whole`, both in px of the page."""
+    return f"{number(length / whole * 100, PLACES)}%"
 
 
 def _leaves(
@@ -517,6 +534,19 @@ class PageFile(Canvas):
     def _share(self, length: Any) -> str:
         """A length in px of the page, as a share of the page's width."""
         return f"{number(float(length) / self._page_width * 100, PLACES)}cqw"
+
+    def _laid(
+        self, left: float, top: float, width: float, height: float | None = None
+    ) -> list[tuple[str, Any]]:
+        """The place of a box laid on the page, as percentages of the page's width: its left and
+        width, its top as a top margin under the sheet's `top:0`, and its height, where given,
+        as a top padding (`Lengths` in the module's docstring)."""
+        return [
+            ("left", _percent(left, self._page_width)),
+            ("margin-top", _percent(top, self._page_width)),
+            ("width", _percent(width, self._page_width)),
+            ("padding-top", _percent(height, self._page_width) if height is not None else None),
+        ]
 
     # -- the file
 
@@ -702,9 +732,7 @@ class PageFile(Canvas):
         """A text at its frame, which the groups around it move by (`x`, `y`)."""
         style = _style(
             [
-                ("left", self._share(x + float(element["x"]))),
-                ("top", self._share(y + float(element["y"]))),
-                ("width", self._share(element["width"])),
+                *self._laid(x + float(element["x"]), y + float(element["y"]), element["width"]),
                 ("text-align", ALIGNED.get(element.get("text-anchor", "start"))),
             ]
         )
@@ -729,12 +757,7 @@ class PageFile(Canvas):
             high, low = self._reach(baseline, line, spans)
             start = left + before * (width - float(line["width"]))
             style = _style(
-                [
-                    ("left", self._share(start - margin)),
-                    ("top", self._share(high)),
-                    ("width", self._share(float(line["width"]) + 2 * margin)),
-                    ("height", self._share(low - high)),
-                ]
+                self._laid(start - margin, high, float(line["width"]) + 2 * margin, low - high)
             )
             head = attribute_text([(MARKS["ground"], element["id"]), ("style", style)])
             grounds.append(f"<div {head}></div>")
@@ -766,7 +789,9 @@ class PageFile(Canvas):
     ) -> str:
         """A line whose baseline lies `baseline` below its text's top. A browser starts a
         line too wide for its box at the box's start, whatever its alignment, so the box of
-        such a line grows to hold it, and the anchor keeps the place the engine gave it."""
+        such a line grows to hold it, and the anchor keeps the place the engine gave it. Its
+        strut's height is a top padding, a percentage of the line's box's width, or a share
+        of the page's where that box has no width (`Lengths` in the module's docstring)."""
         strut = _strut(line, spans)
         width = float(element["width"])
         over = max(float(line["width"]) - width, 0.0)
@@ -779,7 +804,9 @@ class PageFile(Canvas):
                 ("width", self._share(width + over) if wider else None),
             ]
         )
-        opening = attribute_text([(MARKS["strut"], ""), ("style", f"height:{self._share(strut)}")])
+        box = width + over if wider else width
+        held = f"padding-top:{_percent(strut, box)}" if box > 0 else f"height:{self._share(strut)}"
+        opening = attribute_text([(MARKS["strut"], ""), ("style", held)])
         drawn = "".join(self._span(element, line, span, run) for span, run in spans)
         head = attribute_text([(MARKS["line"], ""), ("style", style)])
         return f"<div {head}><span {opening}></span>{drawn}</div>"
