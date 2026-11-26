@@ -64,7 +64,7 @@ pkit lean add-assumption meal-plan--households "Five in a hundred households rea
 pkit lean add-assumption meal-plan--households "Groups of new parents reach households who would pay" --kind feasibility --entry parent-groups --id groups-reach-parents
 ```
 
-You offer an order: the planning burden first, since the whole canvas rests on it; then the two-year stay, the input that put the goal out of reach when the estimate tried it worse; then the conversion; and the parents' groups last, since the person is in two of them already. You add that no fourteen-day test can show a two-year lifetime, and that the stay keeps its place all the same, since when a belief can be tested does not change how much rests on it. The person takes the order as you offered it. You run the ranking without the flag, show them its question, and on their confirmation run:
+You offer an order: the planning burden first, since the whole canvas rests on it; then the conversion, since five in a hundred is a high share for a page nobody has seen yet; then the two-year stay; and the parents' groups last, since the person is in two of them already. The person moves the stay before the conversion: it is the input that put the goal out of reach when the estimate tried it worse, so more of the model falls with it. You add that no fourteen-day test can show a two-year lifetime. They keep the stay where they put it, since when a belief can be tested does not change how much rests on it. You run the ranking as they gave it, without the flag, show them its question, and on their confirmation run:
 
 ```
 pkit lean rank meal-plan--households planning-burden two-year-stay five-percent-pay groups-reach-parents --person-decided
