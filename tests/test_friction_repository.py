@@ -39,8 +39,11 @@ from tests.friction_documents import (
     ADR,
     ADR_OVERLAY,
     CONFIG,
+    MANUAL,
     NOTES,
     NOTES_HOLD,
+    POINTED,
+    SECTIONS,
     SOURCE,
     T1,
     T2,
@@ -52,8 +55,10 @@ from tests.friction_documents import (
     document,
     friction_config,
     guide,
+    manual,
     move_answers,
     notes,
+    pointed_record,
     without_over_broad,
 )
 from tests.in_process import start_in_process
@@ -1571,6 +1576,164 @@ def test_unparsable_front_matter_is_reported(timeline: Timeline) -> None:
     assert _summary(_run(timeline)) == [("unreadable", "docs/broken.md", None, None)]
 
 
+# --- a selection of the check (ADR-079 point 2) --------------------------------------
+
+
+def test_a_run_judges_only_the_artefacts_named_each_as_the_whole_check_does(
+    timeline: Timeline,
+) -> None:
+    """Named by location, an artefact is judged exactly as the whole check judges it, and
+    no other is: its report and its findings are the whole check's. The measures and the
+    count of answer files stay the repository's; which answer files a prune would remove
+    is a reading of every artefact's answers, so it is not read. A location HEAD holds no
+    artefact at names nothing, and naming none judges none."""
+    without_shipped_rule_sets(timeline.adopter)
+    timeline.start(
+        {
+            "docs/guide.md": guide(),
+            "docs/notes.md": notes(),
+            "docs/plain.md": "---\ntitle: Plain\n---\n\nText.\n",
+            "src/stray.py": "STRAY = 1\n",
+        },
+        friction_config(surface=["src"]),
+    )
+    timeline.commit(
+        "change the CLI and the engine",
+        {"src/cli/main.py": "print('j')\n", "src/core/engine.py": "ENGINE = 2\n"},
+        author=ALICE,
+    )
+    whole = _run(timeline)
+    named = _run(timeline, judging=["docs/guide.md", "docs/absent.md"])
+    assert {r.location for r in whole.artefact_reports} == {"docs/guide.md", "docs/notes.md"}
+    assert named.artefact_reports == tuple(
+        r for r in whole.artefact_reports if r.location == "docs/guide.md"
+    )
+    assert named.findings == tuple(f for f in whole.findings if f.location == "docs/guide.md")
+    assert [kind for kind, *_ in _summary(named)] == ["stale"]
+    assert (named.unanchored, named.surface, named.uncovered, named.answer_files) == (
+        whole.unanchored,
+        whole.surface,
+        whole.uncovered,
+        whole.answer_files,
+    )
+    assert whole.uncovered == ("src/stray.py",) and whole.answer_files
+    assert whole.prunable == () and named.prunable is None
+    assert named.selection == fr.Selection(("docs/absent.md", "docs/guide.md"), ("docs/absent.md",))
+    assert whole.selection is None
+    none = _run(timeline, judging=[])
+    assert (none.artefact_reports, none.findings, none.uncovered) == ((), (), whole.uncovered)
+    # A reading of the list, made when the run needs it, names what the list names.
+    late = _run(timeline, judging=lambda: ["docs/notes.md"])
+    assert [r.location for r in late.artefact_reports] == ["docs/notes.md"]
+
+
+def _collection(rs1_at: str, rs2_at: str) -> str:
+    """A collection file of two entries anchored to the engine, each revalidated at its own
+    `at`."""
+    front = {
+        entry: {
+            "pkit": {
+                "friction": {
+                    "anchors": {"path": ["src/core/**"]},
+                    "revalidated": {"at": at, "outcome": "updated"},
+                }
+            }
+        }
+        for entry, at in (("RS-1", rs1_at), ("RS-2", rs2_at))
+    }
+    return f"---\n{json.dumps(front)}\n---\n\n## RS-1 — One\n\nOne.\n\n## RS-2 — Two\n\nTwo.\n"
+
+
+def test_each_artefact_named_is_judged_as_in_the_whole_check(timeline: Timeline) -> None:
+    """Every artefact judged alone has the report and the findings it has in the whole
+    check: each entry of a collection, each artefact along a chain of artefact anchors
+    whatever its place in truth-chain order, one deferring an anchor, and one anchored
+    on a record's point and on a document's section, each stale or current."""
+    without_shipped_rule_sets(timeline.adopter)
+    on_parts = {"record": ["PRJ-900#2"], "artefact": ["docs/manual.md#using"]}
+    timeline.start(
+        {
+            **_chain(),
+            "docs/rules.md": _collection(T1, T1),
+            NOTES: notes(),
+            POINTED: pointed_record(),
+            MANUAL: manual(),
+            "docs/guide.md": guide(anchors=on_parts),
+        }
+    )
+    timeline.commit("change the engine", {"src/core/engine.py": "ENGINE = 2\n"}, author=ALICE)
+    timeline.commit("revalidate RS-2", {"docs/rules.md": _collection(T1, T2)}, author=BOB)
+    deferred = notes(deferred=[("path", "src/core/**", "rewrite after #1")])
+    timeline.commit("defer the notes", {NOTES: deferred}, author=BOB)
+    using = tuple((h, "Run the tool twice." if h == "Using" else t) for h, t in SECTIONS)
+    timeline.commit("change the manual's section", {MANUAL: manual(using)}, author=ALICE)
+    whole = _run(timeline)
+    located = sorted({r.location for r in whole.artefact_reports})
+    assert located == [
+        "docs/a-engine.md",
+        "docs/b-overview.md",
+        "docs/c-intro.md",
+        "docs/guide.md",
+        NOTES,
+        "docs/rules.md#RS-1",
+        "docs/rules.md#RS-2",
+    ]
+    assert {r.state for r in whole.artefact_reports} == {
+        fr.ArtefactState.STALE,
+        fr.ArtefactState.DEFERRED,
+        fr.ArtefactState.CURRENT,
+    }
+    for location in located:
+        alone = _run(timeline, judging=[location])
+        assert alone.artefact_reports == tuple(
+            r for r in whole.artefact_reports if r.location == location
+        ), location
+        assert alone.findings == tuple(f for f in whole.findings if f.location == location)
+
+
+def test_the_cli_judges_only_the_artefacts_named(timeline: Timeline) -> None:
+    """`--artefact`, repeatable, and `--artefacts-from`, a list on standard input read when
+    the check needs it, with `--all` alone: the document holds the artefacts named, says
+    what was named, and `prunable` is `null`; an empty list judges none."""
+    without_shipped_rule_sets(timeline.adopter)
+    timeline.start({"docs/guide.md": guide(), "docs/notes.md": notes()})
+    result = _cli("--json", "--artefact", "docs/notes.md")
+    assert result.exit_code == 0, result.output
+    doc = json.loads(result.output)
+    assert [a["location"] for a in doc["artefacts"]] == ["docs/notes.md"]
+    assert doc["counts"]["checked"] == 1
+    assert doc["answers"]["prunable"] is None
+    assert doc["selection"] == {"named": ["docs/notes.md"], "absent": []}
+    listed = CliRunner().invoke(
+        main,
+        ["friction", "check", "--all", "--json", "--artefacts-from", "-"],
+        input="docs/guide.md\n\ndocs/gone.md\n",
+    )
+    assert listed.exit_code == 0, listed.output
+    doc = json.loads(listed.output)
+    assert [a["location"] for a in doc["artefacts"]] == ["docs/guide.md"]
+    assert doc["selection"] == {
+        "named": ["docs/gone.md", "docs/guide.md"],
+        "absent": ["docs/gone.md"],
+    }
+    empty = CliRunner().invoke(
+        main, ["friction", "check", "--all", "--json", "--artefacts-from", "-"], input=""
+    )
+    assert empty.exit_code == 0, empty.output
+    assert json.loads(empty.output)["artefacts"] == []
+    human = _cli("--artefact", "docs/notes.md", "--artefact", "docs/gone.md")
+    assert human.exit_code == 0, human.output
+    assert "Judged: only the 2 artefacts named; HEAD holds none at docs/gone.md" in human.output
+    assert "which a prune would remove is not read when only some artefacts are judged" in (
+        human.output
+    )
+    refused = CliRunner().invoke(main, ["friction", "check", "--artefacts-from", "-"])
+    assert refused.exit_code == 2
+    assert "--artefact and --artefacts-from name what the whole-repository check judges" in (
+        refused.output
+    )
+
+
 def test_json_document_shape(timeline: Timeline) -> None:
     without_shipped_rule_sets(timeline.adopter)
     timeline.start({"docs/guide.md": guide()}, friction_config(mode="enforcing"))
@@ -1591,9 +1754,11 @@ def test_json_document_shape(timeline: Timeline) -> None:
         "measures",
         "mode",
         "schema_version",
+        "selection",
         "states",
     ]
     assert doc["schema_version"] == fr.REPOSITORY_SCHEMA_VERSION == 1
+    assert doc["selection"] is None  # every artefact judged
     assert (doc["check"], doc["mode"], doc["dormant"], doc["failed"]) == (
         "repository",
         "enforcing",
@@ -2323,7 +2488,7 @@ def test_a_collection_entry_deleted_and_restored_starts_its_answers_again_in_bot
     }
     assert revalidated["docs/rules.md#RS-1"] == []
     assert len(revalidated["docs/rules.md#RS-2"]) == 1
-    assert len(result.prunable) == 1
+    assert result.prunable is not None and len(result.prunable) == 1
 
     repo.checkout("again", create=True)
     again = timeline.commit("change the engine again", {"src/core/engine.py": "ENGINE = 3\n"})

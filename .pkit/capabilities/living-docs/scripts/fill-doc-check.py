@@ -23,10 +23,15 @@ parameter: it reads the repository through the backbone and asks git nothing
 itself — whether HEAD names a commit, `head` in `pkit repository base --json`;
 HEAD and its history, through `pkit friction check --all --json`; and which
 documents are pages, from the working tree through `pkit friction artefacts
---json` — writes nothing and needs no network. None of the three readings
-depends on another, so it starts them at once and reads their answers in that
-order: the answer, and the reason when there is none, are those of reading them
-one after another, in the time of the longest. Its `commands:` entry declares
+--json` — writes nothing and needs no network. The check judges the pages
+alone: the obligations read no other artefact's judgement, and its measures
+stay the whole repository's, so the uncovered surface is read whole. It starts
+the three readings at once, the check with `--artefacts-from -`, and hands the
+check the pages once it knows them: the check reads them once it has read HEAD,
+its history and HEAD's answers, so telling the pages costs it little time or
+none. It reads their answers in the order the answer depends on them — HEAD's,
+the check's, the pages' — so the answer, and the reason when there is none, are
+those of reading them one after another. Its `commands:` entry declares
 what it reads beyond the working tree, `reads: [history]`, so the backbone's
 report names the commit HEAD was read at; it reads no settled state and no
 base — the base a pull request is compared with bounds the consumer's diff,
@@ -47,9 +52,10 @@ Usage:
 Exit codes:
   0  answered
   1  no answer: the friction check, the places or HEAD's reading gave no
-     document, git cannot read HEAD, or the friction check did not judge a
-     page — its friction lies beyond a shallow clone's history, or an anchor's
-     resolver gave no answer — never an empty answer in its place
+     document, git cannot read HEAD, the friction check judged other than the
+     pages handed to it, or it did not judge a page — its friction lies beyond
+     a shallow clone's history, or an anchor's resolver gave no answer — never
+     an empty answer in its place
 """
 
 from __future__ import annotations
@@ -58,7 +64,7 @@ import argparse
 import json
 import sys
 from collections.abc import Mapping
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import Future, ThreadPoolExecutor
 from pathlib import Path
 from typing import Any
 
@@ -70,27 +76,53 @@ from _lib.declarations import project_root
 
 
 def reading(root: Path) -> tuple[Mapping[str, Any], list[str]] | None:
-    """The whole-repository friction check and the pages, for the project at `root`;
-    None when nothing is committed — no HEAD to judge, so nothing is owed. Raises
-    NoAnswer.
+    """The whole-repository friction check of the pages, and the pages, for the
+    project at `root`; None when nothing is committed — no HEAD to judge, so nothing
+    is owed. Raises NoAnswer.
 
-    The three backbone readings run at once, and their answers are read in the
-    order the answer depends on them: whether HEAD names a commit, then the
-    check, then the pages. So the first that gives no answer is the one named,
-    and with no commit the others' answers go unread, as when each waited for
-    the one before."""
-    with ThreadPoolExecutor(max_workers=3) as pool:
-        head = pool.submit(doc_check.has_commit, str(root))
-        friction = pool.submit(doc_check.read_friction, str(root))
-        places = pool.submit(spaces.pages, root)
-        if not head.result():
-            return None
-        report = friction.result()
-        try:
-            pages = places.result()
-        except Unreadable as exc:
-            raise doc_check.NoAnswer(f"the pages cannot be told: {exc}") from exc
+    The three backbone readings run at once. The check judges the pages alone: a
+    hand-over of its own hands it them once they are told (`doc_check.Pages`), or
+    none where they cannot be, so the check never waits on a list that does not
+    come, whether the readings run at once or in turn. The answers are read in the
+    order the answer depends on them: whether HEAD names a commit, then the check,
+    then the pages. So the first that gives no answer is the one named, and with no
+    commit the others' answers go unread, as when each waited for the one before. A
+    check that judged other than the pages handed to it is no answer
+    (`doc_check.judged_as_handed`)."""
+    handed = doc_check.Pages()
+    try:
+        with ThreadPoolExecutor(max_workers=4) as pool:
+            head = pool.submit(doc_check.has_commit, str(root))
+            places = pool.submit(spaces.pages, root)
+            given = pool.submit(_hand_over, places, handed)
+            friction = pool.submit(doc_check.read_friction, str(root), pages=handed)
+            try:
+                if not head.result():
+                    return None
+                report = friction.result()
+            finally:
+                # The check has ended, or its answer goes unread: nothing reads the
+                # pages handed to it any more, so a hand-over still writing stops.
+                handed.close()
+                given.exception()
+            try:
+                pages = places.result()
+            except Unreadable as exc:
+                raise doc_check.NoAnswer(f"the pages cannot be told: {exc}") from exc
+    finally:
+        handed.close()
+    doc_check.judged_as_handed(report, pages)
     return report, pages
+
+
+def _hand_over(places: Future[list[str]], handed: doc_check.Pages) -> None:
+    """Hand the check the pages once they are told, or none where their reading gave
+    no answer, which the reading's own answer names in its turn."""
+    told: list[str] = []
+    try:
+        told = places.result()
+    finally:
+        handed.give(told)
 
 
 def main() -> int:
