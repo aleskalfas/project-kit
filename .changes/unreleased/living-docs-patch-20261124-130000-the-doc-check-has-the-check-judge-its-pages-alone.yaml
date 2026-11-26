@@ -1,0 +1,18 @@
+component: living-docs
+kind: patch
+custom:
+  category: Fixed
+  requires_backbone: release
+body: >
+  The documentation-check filler, `fill-doc-check`, has the whole-repository
+  friction check judge its pages alone: it starts `pkit friction check --all
+  --json --artefacts-from -` beside its other readings, and hands the check
+  the pages on its standard input once it knows them. The obligations read no
+  other artefact's judgement, and the check's measures stay the whole
+  repository's, so the obligations are the same. The filler no longer pays
+  for every artefact's judgement to read the pages', so it answers further
+  within the bound a query command has. A check that says it judged other
+  than the pages it was handed, or does not say what it judged, gives no
+  answer, never fewer obligations. So this needs the backbone this release
+  ships, whose check takes the selection. The README says so, in "The
+  documentation check".

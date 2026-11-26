@@ -76,6 +76,12 @@ format may add:
   `fontFamily` token: `files` maps each family to its file in the brand's version folder,
   or to `{"hash": "sha256:<hex>"}` for a file in the location's `fonts/`; `measure` says
   how it is measured, `file` alone in format 1.
+- *A typography role set tight on purpose* (DEC-053 point 4): its token holds
+  `tight-lines: true` alone in the capability's extension key, and any other key or value
+  there, or `tight-lines` on a token of another type, is refused as `tokens-shape`. In a
+  group's `$extensions` it says nothing, and asks the brand's owner for attention,
+  `tight-lines-refused`. `Brand.step_of` reads where a role's line height comes from, and
+  whether its token carries the word, for the check of letters across lines.
 - *A picture role's value* is an empty group at the role's path, with no `$type`, since
   DTCG has no type for a file (DEC-025 point 4). Its `$extensions` name the file in the
   capability's extension key, `{"file": "<name>"}`, by its bare name in the version's
@@ -247,6 +253,14 @@ LEVELS = {"text": 4.5, "large-text": 3.0, "marks": 3.0}
 
 #: How a font is measured in format 1 (DEC-004 point 9).
 MEASURES = ("file",)
+
+#: The word a brand writes in the capability's extension key on a typography role's token,
+#: `true` alone, which says its lines are set tight on purpose (DEC-053 point 4).
+TIGHT_LINES = "tight-lines"
+
+#: The call for attention on `tight-lines` in a group's `$extensions`, where it says nothing
+#: (DEC-053 point 4).
+TIGHT_LINES_REFUSED = "tight-lines-refused"
 
 _ALIAS = re.compile(r"^\{([^{}]+)\}$")
 _HASH = re.compile(r"^sha256:[0-9a-f]{64}$")
@@ -1313,6 +1327,22 @@ class _Resolved:
     value: Any
 
 
+@dataclass(frozen=True)
+class StepGiven:
+    """Where a typography role's line height comes from in one combination (DEC-053,
+    Context): the role's token, the one that gives it its value, or the one its default
+    leads to, with the version whose file holds it (`token_version`) and whether it carries
+    `tight-lines` (`word`); and the file, as findings name it, and the field, in words, that
+    hold the number its line height takes, with the version whose file that is (`version`),
+    reached from the role's token through each alias its value or its `lineHeight` takes."""
+
+    token_version: str
+    word: bool
+    file: str
+    field: str
+    version: str
+
+
 class _Problem(Exception):
     """A token that cannot be resolved; `shown` is its file as findings name it."""
 
@@ -1426,6 +1456,39 @@ class Brand:
         if self.scope.roles.get(token_path, Role("", "")).type != PICTURE:
             raise UnknownRole(token_path)
         return self._given[keys.key_of(combination, self.axes)].get(token_path)
+
+    def step_of(self, token_path: str, combination: Mapping[str, str]) -> StepGiven | None:
+        """Where the typography role at `token_path` takes its line height in `combination`
+        (an axis left out takes its default), as the engine resolves the brand there
+        (DEC-053, Context): its token, the one the merge leaves at the role or, for a
+        default, the one the default leads to, and the number its line height takes,
+        followed through each alias its value or its `lineHeight` takes. None where the
+        brand gives the role no typography there. Raises keys.BadKey for a combination the
+        axes do not hold."""
+        view = self._views[keys.key_of(combination, self.axes)]
+        token = view.roles.get(token_path)
+        try:
+            seen: set[tuple[str, str]] = set()
+            while token is not None and token.owner == "":
+                token = _followed(self.scope, token, view, seen)  # a default leads to a role
+            if token is None:
+                return None
+            word = _tight(token.extensions.get(EXTENSION))
+            number = token
+            while (target := _alias_of(number.value)) is not None:
+                number = _followed(self.scope, number, view, seen, target)
+            if not isinstance(number.value, Mapping) or "lineHeight" not in number.value:
+                return None
+            member = number.value["lineHeight"]
+            field = f"the `lineHeight` of `{number.path}`"
+            if (target := _alias_of(member)) is not None:
+                number = _followed(self.scope, number, view, seen, target)
+                while (target := _alias_of(number.value)) is not None:
+                    number = _followed(self.scope, number, view, seen, target)
+                field = f"the value of `{number.path}`"
+        except _Problem:
+            return None
+        return StepGiven(token.owner, word, number.shown, field, number.owner)
 
     def picture_of(self, given: GivenPicture, named: str = "") -> pictures.Judged:
         """The file `given` names, read from the `pictures/` of the brand version that holds
@@ -2290,6 +2353,7 @@ class _BrandReader:
                 prefix,
             )
             return
+        self._group_word(node, prefix, file)
         for key, child in node.items():
             if key.startswith("$"):
                 if key not in _GROUP_KEYS and not (top and key == "$schema"):
@@ -2320,6 +2384,28 @@ class _BrandReader:
             else:
                 self._walk(child, path, group_type, file)
 
+    def _group_word(self, node: Mapping[str, Any], prefix: str, file: str) -> None:
+        """`tight-lines` in a group's `$extensions` says nothing, since the word speaks for
+        one role's step: it asks the owner of the brand for attention, naming the role's
+        token as where the word lies, and fails nothing (DEC-053 point 4). A picture role's
+        group is read as its value instead (`_picture`)."""
+        extensions = node.get("$extensions")
+        given = extensions.get(EXTENSION) if isinstance(extensions, Mapping) else None
+        if not isinstance(given, Mapping) or TIGHT_LINES not in given:
+            return
+        group = f"the group `{prefix}`" if prefix else "the file's top group"
+        self._keep(
+            TIGHT_LINES_REFUSED,
+            f"{group} carries `{TIGHT_LINES}` in its `$extensions`, which says nothing there: "
+            f"the word speaks for one typography role's line step, on that role's token",
+            file,
+            prefix,
+            ATTENTION,
+            fix=f"take `{TIGHT_LINES}` out of {group}'s `$extensions`, and write it on the token "
+            f"of each role whose lines are set tight on purpose",
+            who=f"the owner of the brand {self.name}",
+        )
+
     def _token(self, node: Mapping[str, Any], path: str, inherited: str | None, file: str) -> None:
         for key in node:
             if key not in _TOKEN_KEYS:
@@ -2345,11 +2431,31 @@ class _BrandReader:
                 "tokens-shape", f"the `$extensions` of `{path}` is not an object", file, path
             )
             return
-        if EXTENSION in extensions and type_ != "fontFamily":
+        given = extensions.get(EXTENSION)
+        if EXTENSION in extensions and type_ == "typography" and not _tight(given):
+            self._fail(
+                "tokens-shape",
+                f"`{path}` carries `{EXTENSION}` holding more or other than "
+                f"`{TIGHT_LINES}: true`, which a `typography` token holds there alone, to say "
+                f"its lines are set tight on purpose",
+                file,
+                path,
+            )
+            return
+        if EXTENSION in extensions and type_ not in ("fontFamily", "typography"):
             self._fail(
                 "tokens-shape",
                 f"`{path}` carries `{EXTENSION}`, which only a `fontFamily` token takes in "
-                f"format 1",
+                f"format 1, and a `typography` token as `{TIGHT_LINES}: true` alone",
+                file,
+                path,
+            )
+            return
+        if type_ == "fontFamily" and isinstance(given, Mapping) and TIGHT_LINES in given:
+            self._fail(
+                "tokens-shape",
+                f"`{path}` carries `{TIGHT_LINES}`, which only a `typography` token takes: it "
+                f"says that role's lines are set tight on purpose",
                 file,
                 path,
             )
@@ -2631,50 +2737,8 @@ class _BrandReader:
         return found
 
     def _target(self, token: _Token, target: str, where: str, view: _View) -> tuple[str, str]:
-        """Where an alias in `token`, at `where`, leads: a role, or a private token of the
-        library that writes `token` (DEC-004 point 6). A brand's token reaches a library's
-        role only where that brand names the library; a default reaches any role (DEC-008
-        point 4). Raises _Problem for an alias into another library's private token, or one
-        that leads nowhere."""
-        library = self.scope.owner.get(target)
-        if target in view.private.get(token.owner, {}) and (
-            target not in view.roles or (library and library not in view.named[token.owner])
-        ):
-            return (token.owner, target)
-        if target in view.roles and (
-            not library or token.owner == "" or library in view.named[token.owner]
-        ):
-            return ("", target)
-        if library and token.owner:
-            why = (
-                "which has no value under the brand"
-                if library in view.named[token.owner]
-                else f"which {token.owner} does not name among the libraries it builds on"
-            )
-            raise _Problem(
-                "alias-dangling",
-                f"`{where}` aliases `{target}`, a role of `{library}`, {why}",
-                token.shown,
-                token.path,
-            )
-        holder = next(
-            (owner for owner, held in view.private.items() if target in held),
-            None,
-        )
-        if holder is not None:
-            raise _Problem(
-                "alias-private",
-                f"`{where}` aliases `{target}`, which {holder} keeps private: a brand aliases "
-                f"only the roles its base exports",
-                token.shown,
-                token.path,
-            )
-        raise _Problem(
-            "alias-dangling",
-            f"`{where}` aliases `{target}`, which the brand does not hold",
-            token.shown,
-            token.path,
-        )
+        """Where an alias in `token`, at `where`, leads (`_target_in`)."""
+        return _target_in(self.scope, token, target, where, view)
 
     def _typography(
         self,
@@ -2797,7 +2861,8 @@ class _BrandReader:
         another type, is a finding; where it does not, the token stays private and asks for
         attention. The foundations are judged under `component.foundations` alone, since
         they have no own roles. A token under `component.<the brand's own name>` is private,
-        and judged here no further (#2573)."""
+        and judged here no further, though DEC-044 points 1 and 4 have it give one of the
+        brand's own components' tokens a value, or be a finding."""
         for file, tokens in sorted(self.flat.items()):
             for path, token in tokens.items():
                 library, group = self._library_of(path)
@@ -3056,8 +3121,8 @@ class _BrandReader:
         for file, tokens in self.flat.items():
             for path, token in tokens.items():
                 extension = token.extensions.get(EXTENSION)
-                if extension is None:
-                    continue
+                if extension is None or token.type == "typography":
+                    continue  # a typography token's extension is its word (DEC-053 point 4)
                 if (
                     not isinstance(extension, Mapping)
                     or set(extension) != {"files", "measure"}
@@ -3279,6 +3344,82 @@ class _BrandReader:
             fix=f"swap the colours of the two ends in `{key}`, or move `{order.first}` further "
             f"from `{order.ground}`",
         )
+
+
+def _target_in(
+    scope: Scope, token: _Token, target: str, where: str, view: _View
+) -> tuple[str, str]:
+    """Where an alias in `token`, at `where`, leads: a role, or a private token of the
+    library that writes `token` (DEC-004 point 6). A brand's token reaches a library's
+    role only where that brand names the library; a default reaches any role (DEC-008
+    point 4). Raises _Problem for an alias into another library's private token, or one
+    that leads nowhere."""
+    library = scope.owner.get(target)
+    if target in view.private.get(token.owner, {}) and (
+        target not in view.roles or (library and library not in view.named[token.owner])
+    ):
+        return (token.owner, target)
+    if target in view.roles and (
+        not library or token.owner == "" or library in view.named[token.owner]
+    ):
+        return ("", target)
+    if library and token.owner:
+        why = (
+            "which has no value under the brand"
+            if library in view.named[token.owner]
+            else f"which {token.owner} does not name among the libraries it builds on"
+        )
+        raise _Problem(
+            "alias-dangling",
+            f"`{where}` aliases `{target}`, a role of `{library}`, {why}",
+            token.shown,
+            token.path,
+        )
+    holder = next(
+        (owner for owner, held in view.private.items() if target in held),
+        None,
+    )
+    if holder is not None:
+        raise _Problem(
+            "alias-private",
+            f"`{where}` aliases `{target}`, which {holder} keeps private: a brand aliases "
+            f"only the roles its base exports",
+            token.shown,
+            token.path,
+        )
+    raise _Problem(
+        "alias-dangling",
+        f"`{where}` aliases `{target}`, which the brand does not hold",
+        token.shown,
+        token.path,
+    )
+
+
+def _followed(
+    scope: Scope,
+    token: _Token,
+    view: _View,
+    seen: set[tuple[str, str]],
+    target: str | None = None,
+) -> _Token:
+    """The token an alias in `token` leads to in `view`, `target` or else the one its value
+    names, as resolution follows it (`_target_in`). Raises _Problem where it leads nowhere,
+    or back to a token `seen` holds."""
+    target = target if target is not None else _alias_of(token.value)
+    if target is None:
+        raise _Problem("token-value", f"`{token.path}` aliases nothing", token.shown, token.path)
+    ref = _target_in(scope, token, target, token.path, view)
+    if ref in seen:
+        raise _Problem("alias-loop", f"the aliases of `{token.path}` loop", token.shown, token.path)
+    seen.add(ref)
+    library, path = ref
+    return view.private[library][path] if library else view.roles[path]
+
+
+def _tight(given: Any) -> bool:
+    """Whether the capability's extension on a typography token, `given`, says its lines are
+    set tight on purpose: `tight-lines: true` alone (DEC-053 point 4)."""
+    return isinstance(given, Mapping) and set(given) == {TIGHT_LINES} and given[TIGHT_LINES] is True
 
 
 def _families(*maps: Mapping[str, Mapping[str, _Resolved]]) -> set[str]:

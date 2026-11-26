@@ -1,0 +1,24 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Added
+body: >
+  Content may name a file of the repository by its path (DEC-056, #3208). A
+  component marks a field `x-pkit-paths: true` where it holds a path, or a list
+  of paths, each the names of folders and a file joined by `/` from the
+  repository's root. A list of paths holds texts, not items, and carries no
+  ids; a text part shows it as one text, a path to a paragraph. The check fails
+  a path not of that form (`path-form`), one that names no file version control
+  lists (`path-missing`), naming a file whose path differs only in case, a
+  folder and a file git ignores, and one into the folder of a piece's version
+  handed out or of a published piece's copy (`path-handed-out`), on every run.
+  It fails a mark elsewhere than on a field or a page layout's slot, and a
+  `repeat` part over a list of paths or a part that passes one on
+  (`component-shape`). A list field whose entries may be no mappings, with
+  neither the mark of runs nor that of paths, asks the component's owner for
+  attention (`list-unmarked`). The release comparison reads a field that comes
+  to hold paths as a break. The foundations' version being built, 1.2.0, gives
+  the deck's slide an optional slot, `documents`, the documents its claim rests
+  on, which the deck's own drawing shows under the footer, a path to a line in
+  the type of code, with no label. A slide that gives none draws as before, and
+  so does every component format 1 accepted.
