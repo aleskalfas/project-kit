@@ -133,6 +133,7 @@ class Face:
             raise UnreadableFont(path, exc) from exc
         self._font = hb.Font(hb.Face(hb.Blob(data)))
         self._advances: dict[str, float] = {}
+        self._glyphs: dict[str, tuple[Glyph, ...]] = {}
 
     def has(self, character: str) -> bool:
         return ord(character) in self._cmap
@@ -141,12 +142,41 @@ class Face:
         """How far a piece of text moves the pen, in ems, shaped with the font's default
         features."""
         if text not in self._advances:
-            buffer = hb.Buffer()
-            buffer.add_str(text)
-            buffer.guess_segment_properties()
-            hb.shape(self._font, buffer)
+            buffer = self._shaped(text)
             self._advances[text] = sum(p.x_advance for p in buffer.glyph_positions) / self.upem
         return self._advances[text]
+
+    def glyphs(self, text: str) -> tuple[Glyph, ...]:
+        """Each glyph a piece of text shapes to, as `advance` shapes it, where it stands from
+        the piece's start, in ems (DEC-053 point 1)."""
+        if text not in self._glyphs:
+            buffer = self._shaped(text)
+            found, pen = [], 0.0
+            for info, position in zip(buffer.glyph_infos, buffer.glyph_positions, strict=True):
+                x = (pen + position.x_offset) / self.upem
+                found.append(Glyph(info.codepoint, info.cluster, x, position.y_offset / self.upem))
+                pen += position.x_advance
+            self._glyphs[text] = tuple(found)
+        return self._glyphs[text]
+
+    def _shaped(self, text: str) -> hb.Buffer:
+        buffer = hb.Buffer()
+        buffer.add_str(text)
+        buffer.guess_segment_properties()
+        hb.shape(self._font, buffer)
+        return buffer
+
+
+@dataclass(frozen=True)
+class Glyph:
+    """A glyph a face shapes a piece of text to: its id in the face, the place in the piece
+    of the first character it draws, and where its origin stands from the piece's start,
+    across and up, in ems."""
+
+    id: int
+    cluster: int
+    x: float
+    y: float
 
 
 class Faces:

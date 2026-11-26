@@ -1,0 +1,23 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Added
+body: >
+  The check names a text whose letters touch across its lines (#3232,
+  DEC-053). Its check, `letters-across-lines`, reads the outline of each letter
+  of a line and of the next, from the face that shaped it and where the engine
+  places it, a run's sign among them, each curve flattened within 0.001 em, and
+  finds where they share a point at the text's line step. It leaves out the
+  characters drawn to join the next line's, such as box drawing, and the lines
+  of two texts. Its finding, `letters-touch`, asks the owner of the brand
+  version that gives the step for attention and never fails, naming the lines,
+  the letters, their reach, and the role, file and field that give the step.
+  Where a letter has no outline, it states `letters-touch-unmeasured`. A brand
+  may mark a typography role set tight on purpose with
+  `"$extensions": {"pkit.visual-communication": {"tight-lines": true}}` on the
+  role's token: where the version that holds it gives the step and is released
+  as it is, validation states the letters as the fact `letters-touch-meant`,
+  and the viewing step's report still gives `letters-touch`. Any other key or
+  value there, or the word on a token of another type, is `tokens-shape`, and
+  the word on a group asks for attention as `tight-lines-refused`. Every file
+  format 1 accepted reads as before, and the engine keeps every line step.
