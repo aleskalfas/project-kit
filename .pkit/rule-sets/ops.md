@@ -101,8 +101,8 @@ rules:
       friction:
         anchors: {record: [COR-028]}
   RS-OPS-017:
-    status: proposed
-    origin: {why: "Several open questions at once make the person parse and re-argue them all, so an agent asks one decision at a time, each with its recommendation (project-kit#1648). A guess made alone is worth setting against what happens only while it is the person's own, so a recommendation waits until it is recorded (project-kit#3520)."}
+    status: accepted
+    origin: {date: 2026-11-26, by: "Aleš Kalfas", why: "Several open questions at once make the person parse and re-argue them all, so an agent asks one decision at a time, each with its recommendation (project-kit#1648). A guess made alone is worth setting against what happens only while it is the person's own, so a recommendation waits until it is recorded (project-kit#3520)."}
     pkit:
       friction:
         unanchored-because: "A rule about how an agent talks with the person; no record or file carries it out."

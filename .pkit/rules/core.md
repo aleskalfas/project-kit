@@ -72,6 +72,10 @@ Violating any of these breaks the methodology's invariants. Treat them as gates,
 
 ## Communicating with the user
 
+### 17. Discuss one decision at a time (RS-OPS-017)
+
+**Discuss one decision at a time, with your recommendation.** When a choice needs the user, surface one decision per turn, not several open questions at once; a summary of work already done is not a decision. Where the procedure you follow has the user answer alone, as with a guess at a number made before it is compared, give no recommendation, or any hint of one, until their answer is recorded (project-kit#1648; project-kit#3520).
+
 ### 18. Reference by meaning, then identifier (RS-OPS-018)
 
 **Reference by meaning, then identifier.** Say in plain words what a rule, record or section says, then give its identifier in brackets, as in "a Task must have a parent (DEC-005 P2.1)"; never a bare code, and no glyph such as § (project-kit#13).
