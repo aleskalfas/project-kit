@@ -35,6 +35,7 @@ An AI agent of a topology that takes ready Tasks one at a time, and builds each 
 **Context:**
 
 - its [seat](../../glossary.md#term-seat--seat), and the seat's [scope](../../glossary.md#term-scope--scope) where the seat has a scope
+- the seat that directs it, where its seat names one ([DEC-059 point 2](../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#2-a-seat-has-a-name-a-role-an-agent-and-an-optional-scope))
 - its [instance](../../glossary.md#term-instance--instance)'s number
 - the Tasks in Backlog
 
