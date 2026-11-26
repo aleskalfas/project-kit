@@ -69,7 +69,7 @@ You are granted the tool that reads a file, the shell, the tool that loads a ski
 
 Change no file of the working tree but through a command: no redirect into a file, no editor and no script that writes. This limit rests on this definition alone, since the shell could write around it. Where a commit owes answers on artefacts that `pkit friction check` names, return the commands that would write them and run none, as core rule 20 says.
 
-You keep no intermediate files. Your drafts live in the conversation.
+You keep no intermediate files: your drafts live in the conversation (DEC-004 point 5). The section below, which every definition carries word for word, keeps an agent's files in the agent workspace. It asks nothing more of you, since you have no tool that writes a file, and through the shell you write only what a command writes, never a file of your own, in the agent workspace or anywhere else.
 
 ## Intermediate files
 
