@@ -46,7 +46,7 @@ Where the command refuses it, it says which rule of DEC-002 point 12 the days br
 
 ## 4. Resume it
 
-When the person is back, ask on which day they resumed, today unless they name an earlier one. Confirm it through the command's question, and on their confirmation run:
+When the person is back, ask on which day they resumed. The command takes today unless they name an earlier one, given with `--on`. Confirm it through the command's question, and on their confirmation run:
 
 ```
 pkit lean resume <cycle> [--on <day>] --person-decided
