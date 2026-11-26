@@ -118,6 +118,17 @@ layouts:
         type: string
         description: A line at the foot, such as where the slide's claim can be seen.
         x-pkit-prose: true
+      # A path names a file of the repository from its root, and the check fails one that
+      # names no file version control lists (DEC-056 points 2 and 3). The slide shows each
+      # as it is written, with no label: a label is no word a component holds.
+      documents:
+        type: array
+        minItems: 1
+        items: {type: string}
+        description: >-
+          The documents the slide's claim rests on, each by its path from the repository's
+          root, in order.
+        x-pkit-paths: true
     required: [title]
     parts:
       background:
@@ -137,18 +148,19 @@ layouts:
         x: "=margin"
         y: "=title.bottom + @space.2"
         width: "=:width - 2 * margin"
-      # The visual takes the height between the lead and the limit, or the footer, so a
-      # visual that asks for more is reported. A large space stands above the limit and
-      # above the footer only where each is drawn: a part drawn holds a line of text,
-      # taller than the smallest space, and one not drawn has no height. So the visual
-      # reaches down to the limit, the footer or the margin, one large space above it.
+      # The visual takes the height between the lead and the limit, or the foot, the footer
+      # and the documents, so a visual that asks for more is reported. A large space stands
+      # above the limit and above the foot only where each is drawn: a part drawn holds a
+      # line of text, taller than the smallest space, and one not drawn has no height. So
+      # the visual reaches down to the limit, the foot or the margin, one large space above
+      # it.
       visual:
         slot: visual
         x: "=margin"
         y: "=lead.bottom + @space.4"
         width: "=:width - 2 * margin"
         height: "=limit.y - min(limit.height, @space.1) / @space.1 * @space.4 - visual.y"
-      # The limit stands above the footer, a bar of the accent at its side.
+      # The limit stands above the foot, a bar of the accent at its side.
       limit-bar:
         when: limit
         box: {fill: accent}
@@ -160,11 +172,21 @@ layouts:
         when: limit
         text: {content: limit, style: type.body, fill: text-primary}
         x: "=margin + @space.1 + @space.3"
-        y: "=footer.y - min(footer.height, @space.1) / @space.1 * @space.4 - limit.height"
+        y: "=footer.y - min(footer.height + documents.height, @space.1) / @space.1 * @space.4 - limit.height"
         width: "=:width - 2 * margin - @space.1 - @space.3"
+      # The foot closes the slide: the footer, and under it the documents, a small space
+      # between the two where both are drawn.
       footer:
         when: footer
         text: {content: footer, style: type.body, fill: text-secondary}
         x: "=margin"
-        y: "=:height - margin - footer.height"
+        y: "=documents.y - min(footer.height, documents.height, @space.1) / @space.1 * @space.2 - footer.height"
+        width: "=:width - 2 * margin"
+      # The documents the slide's claim rests on, a path to a line, set apart from the
+      # slide's words in the type of code. Drawn last, they read last.
+      documents:
+        when: documents
+        text: {content: documents, style: type.code, fill: text-secondary}
+        x: "=margin"
+        y: "=:height - margin - documents.height"
         width: "=:width - 2 * margin"

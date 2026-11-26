@@ -24,7 +24,9 @@ pieces (DEC-002 points 1 and 2).
 The files of a folder are listed as git sees them: tracked, and untracked but not ignored.
 Outside a git repository, the folder is walked. A link is listed only where a caller asks
 for links too (`listed`), as the reading of a picture file does, to tell a name that finds a
-link from one that finds nothing. What a commit holds is read from git alone (`files_at`,
+link from one that finds nothing. The paths of the whole repository that content may name
+are listed as git lists them, without asking whether the working tree holds each
+(`repository_files`). What a commit holds is read from git alone (`files_at`,
 `file_at`). Whether a path is one git keeps is git's word too (`ignored`), and so is whether
 git hands it to a large-file store (`in_store`).
 """
@@ -282,6 +284,18 @@ def listed(root: Path, folder: str) -> list[str]:
     found = _git(root, "ls-files", "-z", "--cached", "--others", "--exclude-standard", "--", folder)
     entries = {entry for entry in found.decode("utf-8").split("\0") if entry}
     return sorted(rel for rel in entries if _plain_file(root / rel) or (root / rel).is_symlink())
+
+
+def repository_files(root: Path) -> list[str]:
+    """Every path git lists in the repository at `root`, relative to it, in path order: one
+    its index holds, whether or not the working tree holds it, as where a sparse checkout
+    leaves it out, and one not yet tracked and not ignored. The file system is never asked
+    (visual-communication DEC-056 point 2). Outside a git repository, the files that lie
+    under `root`, walked. Raises GitFailed."""
+    if not _in_repository(root):
+        return walked(root, "")
+    found = _git(root, "ls-files", "-z", "--cached", "--others", "--exclude-standard")
+    return sorted({entry for entry in found.decode("utf-8").split("\0") if entry})
 
 
 def files_at(root: Path, commit: str, folder: str) -> list[str]:

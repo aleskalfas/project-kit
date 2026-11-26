@@ -50,9 +50,11 @@ and 5, DEC-019 point 8, DEC-030 point 5).
   or an icon that is no closed outline within its square; and a concept that maps no sign,
   which asks the notation's owner for attention (DEC-004 points 10 and 11, DEC-036 point
   8);
-- the ids in each content file, a list of runs skipped, and each content file against the
-  fields and options of the components it fills, each list of runs against the words of
-  its field's run styles, the nearest known key or word named (DEC-012 points 1, 2 and 8);
+- the ids in each content file, a list of runs or of paths skipped, and each content file
+  against the fields and options of the components it fills, each list of runs against the
+  words of its field's run styles, the nearest known key or word named (DEC-012 points 1, 2
+  and 8), and each path a field of paths gives against the files version control lists,
+  on every run, never from the findings record (DEC-056 points 2 and 5);
 - each page and key path a piece's brief names, against the content of its source language
   (`briefs.findings`, DEC-029 point 5);
 - the formats each piece names: two that write files of one name, `svg` and `svg-modes`
@@ -214,6 +216,7 @@ from _lib.libraries import (
     newest_of_majors,
     readable,
 )
+from _lib.paths import Repository
 from _lib.plugins import seam
 from _lib.reading import ReadError, read_yaml, sha256
 from _lib.root import CONFIG, SHIPPED
@@ -1784,8 +1787,9 @@ def id_findings(piece: pl.Piece) -> list[Finding]:
     """The ids of a piece's content (DEC-002 point 4): each of the id shape, unique in its
     list, and the same in every language. A translation may order a list's items its own
     way, so each list's ids are compared as a set with those of the source language. A list
-    of runs holds runs, not items, so it is skipped: the components the piece's lock names
-    say which lists hold runs, read before the lock is checked (DEC-012 point 1)."""
+    of runs holds runs, not items, and a list of paths texts, so each is skipped: the
+    components the piece's lock names say which lists hold runs or paths, read before the
+    lock is checked (DEC-012 point 1, DEC-056 point 1)."""
     found: list[Finding] = []
     lists: dict[str, dict[str, list[Any]]] = {}
     locked = _Locked(piece)
@@ -1793,7 +1797,7 @@ def id_findings(piece: pl.Piece) -> list[Finding]:
         file = piece.file(pl.content_file(language))
         reader = _Fields(locked, file, [])
         reader.placed(piece.top, content, "")
-        for path, items in _lists(content, "", reader.runs):
+        for path, items in _lists(content, "", reader.runs | reader.path_lists):
             ids = [item.get("id") for item in items if isinstance(item, Mapping) and "id" in item]
             lists.setdefault(path, {})[language] = ids
             for item in ids:
@@ -1870,9 +1874,9 @@ def _lists(
     value: Any, path: str, runs: Collection[str] = (), at: str = ""
 ) -> Iterator[tuple[str, list[Any]]]:
     """Each list of a content value, by a path of keys and places that is the same in
-    every language. A list of runs, which `runs` names by its key path as the check of the
-    content writes it (`at`, an item by its id where it has one), is no list of items, and
-    is skipped (DEC-012 point 1)."""
+    every language. A list of runs or of paths, which `runs` names by its key path as the
+    check of the content writes it (`at`, an item by its id where it has one), is no list of
+    items, and is skipped (DEC-012 point 1, DEC-056 point 1)."""
     if isinstance(value, Mapping):
         for key, item in value.items():
             yield from _lists(item, _join(path, str(key)), runs, _join(at, str(key)))
@@ -1939,11 +1943,14 @@ def content_findings(project: pl.Project) -> list[Finding]:
     its top or one its top does not declare (DEC-010 point 5), a run of a field of runs
     that is not of a run's shape or names a style its field does not declare, and a list
     in a field of text that takes no runs (DEC-012 point 8); the nearest known key, word
-    or layout named."""
+    or layout named. Each path a field of paths gives is judged against the files of the
+    repository, listed once for the piece, on every run (`paths`, DEC-056 point 5)."""
     found: list[Finding] = []
     piece = project.piece
+    repository = Repository(piece.root, f"{piece.location}/{pl.PIECES}")
     for language, content in piece.contents.items():
-        reader = _Fields(project.env, piece.file(pl.content_file(language)), found)
+        file = piece.file(pl.content_file(language))
+        reader = _Fields(project.env, file, found, repository)
         reader.placed(piece.top, content, "")
     return _clashes_once(found)
 
@@ -1999,13 +2006,28 @@ class _Fields:
     `maxItems`, `enum`, `const`, a local `$ref`), a key no property names refused. A field
     marked `x-pkit-runs` takes text, against its schema, or a list of runs, each against
     the words of its run styles (DEC-012 point 7). `runs` keeps the key path of each list
-    of runs it read."""
+    of runs it read.
 
-    def __init__(self, env: _Components, file: str, found: list[Finding]) -> None:
+    A component's own field, or a page's slot, marked `x-pkit-paths` is read against its
+    schema, and each path it gives is judged by `repository`, where one is given: its
+    form, the file version control lists, and no file a piece handed out (`paths`, DEC-056
+    points 2 and 5). The mark is read on the field the content writes, in the schema it is
+    checked against, never below it. `path_lists` keeps the key path of each list of paths
+    it read, which holds no items."""
+
+    def __init__(
+        self,
+        env: _Components,
+        file: str,
+        found: list[Finding],
+        repository: Repository | None = None,
+    ) -> None:
         self.env = env
         self.file = file
         self.found = found
+        self.repository = repository
         self.runs: set[str] = set()
+        self.path_lists: set[str] = set()
 
     def _fail(self, code: str, path: str, message: str) -> None:
         self.found.append(Finding(code, FAILS, message, file=self.file, where=path))
@@ -2060,7 +2082,15 @@ class _Fields:
         forms = page_forms(component) if isinstance(component.get("layouts"), Mapping) else None
         unread = frozenset(name for name in claimed if name in value)
         self._object(
-            fields, value, path, fields, repeats, keys_checked=True, forms=forms, unread=unread
+            fields,
+            value,
+            path,
+            fields,
+            repeats,
+            keys_checked=True,
+            forms=forms,
+            unread=unread,
+            own_fields=True,
         )
         if forms is None:
             return
@@ -2161,7 +2191,7 @@ class _Fields:
                 lists = decl.get("lists") if isinstance(decl, Mapping) else None
                 drawing = {"parts": parts, "lists": lists}
                 repeats = self._repeats(drawing, (use,)) if isinstance(parts, Mapping) else {}
-                self._object(schema, page, at, schema, repeats, keys_checked=True)
+                self._object(schema, page, at, schema, repeats, keys_checked=True, own_fields=True)
 
     def _component_field(self, value: Any, path: str, list_at: str) -> None:
         """A list's component field (DEC-010 point 1): a mapping that names a component by
@@ -2262,6 +2292,7 @@ class _Fields:
         keys_checked: bool = False,
         forms: PageForms | None = None,
         unread: frozenset[str] = frozenset(),
+        own_fields: bool = False,
     ) -> None:
         """`value` against the object `schema`. A field `forms` marks as holding pages is
         checked as a list here, and its pages by `_pages`. Each item of a list that
@@ -2269,7 +2300,9 @@ class _Fields:
         the one its list's component field names, else the list's default (DEC-010 point
         1); a tie's ends also by `_tie`, from `value`, the mapping that holds its list. A
         list's component field is read by `_component_field`. A key of `unread` is read by
-        neither the component nor the list, so it is judged at the lock alone."""
+        neither the component nor the list, so it is judged at the lock alone. Where
+        `schema` holds a component's own fields, or a page's slots (`own_fields`), each
+        field marked as holding paths gives its paths to `_paths`."""
         properties = schema.get("properties") or {}
         repeats = repeats or {}
         component_fields = {
@@ -2307,6 +2340,8 @@ class _Fields:
                 self.placed(item["use"], item, at)
             else:
                 self._value(properties[key], item, at, root)
+                if own_fields and str(key) in layout.paths_of({key: properties[key]}):
+                    self._paths(item, at)
 
     def _tie(
         self,
@@ -2547,6 +2582,28 @@ class _Fields:
                     "run-style",
                     _join(at, "style"),
                     f"`{run['style']}` is no run style of the field ({', '.join(words)}){hint}",
+                )
+
+    def _paths(self, value: Any, path: str) -> None:
+        """The paths a field of paths at `path` gives, each judged where the content writes
+        it (DEC-056 points 2 and 5): a path, at the field; a list of paths, each at its place
+        among them, from 1, an entry that is no text left to the field's schema. A list of
+        paths is kept in `path_lists`, so no rule of ids reaches it."""
+        if isinstance(value, list):
+            self.path_lists.add(path)
+            given = [(f"{path}#{place}", each) for place, each in enumerate(value, start=1)]
+        else:
+            given = [(path, value)]
+        if self.repository is None:
+            return
+        for at, text in given:
+            if not isinstance(text, str):
+                continue
+            judged = self.repository.judge(text)
+            if judged is not None:
+                code, why, fix = judged
+                self.found.append(
+                    Finding(code, FAILS, f"`{text}` {why}", file=self.file, where=at, fix=fix)
                 )
 
 
