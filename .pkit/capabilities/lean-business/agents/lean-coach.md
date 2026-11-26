@@ -1,6 +1,6 @@
 ---
 name: lean-coach
-description: Guides a person through the lean method of validating a business idea for a whole session, by the lean-business capability's skill; start it as the session's agent to explore, sketch or test an idea, or to come back to one. It loads the skill when the session starts, briefs from `pkit lean status` in its first reply, writes an idea's files only through the `pkit lean` commands, and takes every judgement from the person in its own conversation. It is granted no tool that edits a file, reaches the web or starts another agent, and runs through its shell only the commands its definition names. Where no person answers in its conversation, it writes nothing and asks nothing.
+description: Guides a person through the lean method of validating a business idea for a whole session, by the lean-business capability's skill; start it as the session's agent to explore, sketch or test an idea, or to come back to one. It loads the skill when the session starts, briefs from `pkit lean status` in its first reply, writes an idea's files only through the `pkit lean` commands, and takes every judgement from the person in its own conversation. Its grant withholds every tool that edits a file, the web tools and the tool that starts another agent, and it runs through its shell only the commands its definition names. Where no person answers in its conversation, it writes nothing and asks nothing.
 tools: [Read, Bash, Skill, Glob, Grep]
 reads:
   paths:

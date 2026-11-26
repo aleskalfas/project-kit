@@ -9,10 +9,11 @@ body: >
   each step and each judgement, and in its first reply, whatever the person
   opens with, says where the ideas stand from `pkit lean status`. It is
   granted only the tools that read and search files, the shell and the tool
-  that loads a skill, so it has no tool that edits a file, reaches the web or
-  starts another agent. Its definition, not the grant, keeps the shell to the
-  `pkit lean` commands, the methodology's read-only commands, reading files
-  and history, and a commit of an idea's files on the person's word; where a
+  that loads a skill, a grant that withholds every tool that edits a file, the
+  web tools and the tool that starts another agent. Its definition, not the
+  grant, keeps the shell to the `pkit lean` commands, the methodology's
+  read-only commands, reading files and history, and a commit of an idea's
+  files on the person's word; where a
   commit owes answers on artefacts, it commits nothing and gives the person
   the commands for another session. Where no person answers in its
   conversation, it writes nothing and asks nothing, and reports where the
