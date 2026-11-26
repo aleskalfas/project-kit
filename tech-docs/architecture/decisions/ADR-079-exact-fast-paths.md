@@ -136,7 +136,7 @@ The filler reads its pages' states from a selection of the whole-repository chec
 
 ## Implications
 
-- **The filler reads a selection of the check.** It hands the check its pages, and reads their states and the measures from the check's machine-readable document. The CLI reference documents the selection and what the document holds under it. The living-docs README, "The documentation check", says what the filler reads, and that its time grows with the repository's history and the pages' answers.
+- **The filler reads a selection of the check.** It hands the check its pages, and reads their states and the measures from the check's machine-readable document. The CLI reference documents the selection and what the document holds under it. The living-docs README, "The documentation check", says what the filler reads, and that its time grows with the repository's history and answer files.
 - **ADR-057 point 2** lists the fast reader of YAML text among the homes, as its refinement per point 3.
 - **The loader's version.** The fast reader is held to the ruamel.yaml version the lock pins, where the declared range starts. A release of ruamel.yaml turns it off on every install that resolves it, and the whole check runs at the loader's speed there. Moving the lock to it fails a test until the two readers are compared under it, and it is named tested.
 - **A sidecar's data** ([COR-063](../../../.pkit/decisions/core/COR-063-document-sidecars.md)). When the backbone reads data from a sidecar, the prefilter takes its cut from the one module where a document's data lies, once that module lands ([ADR-070](ADR-070-document-sidecar-place.md) point 7). A sidecar's YAML goes through the same fast reader as front matter.
