@@ -248,7 +248,7 @@ A mend changes what its finding names, at the place the finding says its fix bel
 **Hand the piece to the person,** with:
 - the piece as the round left it;
 - the second report, as the reviewer wrote it, not a summary of it;
-- what you changed, and why, as information, not as a question;
+- what you changed, and why, as information, not as a question, and of a line step you widened in a brand's version, that it changes every piece whose lock names that version ([visual-communication:DEC-053-letters-across-lines] point 2);
 - each finding you left, with why;
 - each question still open, and what nobody looked at.
 
