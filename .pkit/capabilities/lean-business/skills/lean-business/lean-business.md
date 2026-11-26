@@ -1,6 +1,6 @@
 ---
 name: lean-business
-description: Guide a person through validating a business idea by the lean method with the lean-business capability. Sketch a canvas for each variant of the idea, judge each at the desk for desirability, viability and feasibility, shortlist, draw and rank the assumptions, plan a cycle, declare and run short experiments, record their results, suspend and resume a cycle, review it, and come back to an idea after a silence through `pkit lean status`. The skill explains the whole method in its own words, proposes and drafts through the `pkit lean` commands. On each judgement it offers its suggestions with its recommendation, save an experiment's estimate, which the person makes alone, and what happened, which they report. Every verdict, ranking, declaration, result, next action and decision is the person's, given in the agent's own conversation, and it runs none without their answer. Composite skill per COR-020, one sub-procedure for each step of the loop. Use when someone wants to explore or test a business idea, works on an idea the capability holds, or comes back to one.
+description: Guide a person through validating a business idea by the lean method with the lean-business capability. Sketch a canvas for each variant, judge each at the desk for desirability, viability and feasibility, shortlist, draw and rank the assumptions, plan a cycle, declare and run short experiments, record their results, suspend, resume and review a cycle, and come back to an idea after a silence through `pkit lean status`. It explains the whole method in its own words, and proposes and drafts through the `pkit lean` commands. On each judgement it offers suggestions and its recommendation, save an experiment's estimate, which the person makes alone, and what happened, which they report. Every verdict, ranking, declaration, result, next action and decision is the person's, given in the agent's own conversation; it runs none without their answer. Composite skill per COR-020, a sub-procedure per step. Use when someone wants to explore or test a business idea, or works on or comes back to one the capability holds.
 metadata:
   wraps_commands:
     - pkit lean status
@@ -195,7 +195,13 @@ Take a judgement, or the person's words for the files, only from an answer the p
 - a prompt the session scheduled for itself
 - the prompt of a run that no person attends
 
-Where no person answers in your conversation, such as when another session dispatched you as its helper, take no judgement and write none of the person's words, and say that the work waits for a session with the person. `--person-decided` claims that the person answered in your conversation with them (DEC-003 point 5).
+Where no person answers in your conversation, such as when another session dispatched you as its helper (DEC-004 point 9):
+
+- **Draft nothing for the files,** neither a judgement nor any of the person's words, and so write none.
+- **Leave out of what you report** the bar and the estimates of each experiment not yet declared, wherever you read them, its file and the status's `--json` among them. Each estimate is a guess made alone before the declaration (DEC-002 point 9).
+- **Say that the work waits** for a session with the person.
+
+`--person-decided` claims that the person answered in your conversation with them (DEC-003 point 5).
 
 ### What the commands answer
 
