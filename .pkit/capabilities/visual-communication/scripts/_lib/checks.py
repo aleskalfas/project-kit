@@ -168,6 +168,7 @@ from _lib import (
     grant,
     keys,
     layout,
+    letters,
     location,
     names,
     outlines,
@@ -183,10 +184,12 @@ from _lib.findings import (
     AUTHOR,
     FACT,
     FAILS,
+    PROJECT,
     SEVERITY,
     Finding,
     accepted,
     as_read,
+    owner_of,
 )
 from _lib.findings import loss_finding as _loss_finding
 from _lib.layout import (
@@ -202,6 +205,7 @@ from _lib.layout import (
 from _lib.libraries import (
     FOLDER,
     FOUNDATIONS,
+    PROJECT_SOURCE,
     SHIPPED_SOURCE,
     Held,
     Library,
@@ -217,9 +221,10 @@ from _lib.libraries import (
 from _lib.plugins import seam
 from _lib.reading import ReadError, read_yaml, sha256
 from _lib.root import CONFIG, SHIPPED
-from _lib.scene import SceneResult, line_left
+from _lib.scene import SceneResult, length, line_left
 from _lib.scene_checks import SIZES, Found, Reach, SceneCheck
 from _lib.shipped import read as read_shipped
+from _lib.text import Faces
 
 #: The renderer that draws every piece's previews.
 PREVIEWS = "svg"
@@ -450,7 +455,8 @@ class Reading:
         """`finding` as it reads, with its level there: in validation where `validation`,
         else in the viewing step."""
         if validation and finding.lies_over_in and self.word_given(finding.lies_over_in):
-            finding = boxes.meant(finding)
+            touch = finding.code == letters.LETTERS_TOUCH
+            finding = letters.meant(finding) if touch else boxes.meant(finding)
         name, _, text = finding.library.partition("@")
         try:
             version = Version.parse(text)
@@ -2798,6 +2804,7 @@ SCENE_CHECKS = (
     NO_GROUND,
     boxes.NEAR_ALIGNMENT_CHECK,
     boxes.BOX_OVERLAP_CHECK,
+    letters.LETTERS_CHECK,
     SIZE_WIDTHS,
     BRAND_FORMS,
     signs.LEFT_TO_COLOUR,
@@ -2850,10 +2857,11 @@ def found_in(
         for language, result, scene in scenes
     }
     steps: dict[str, boxes.Step | None] = {}
+    faces = Faces(project.env.font_file)
     found: list[Found] = []
     for language, result, scene in scenes:
         try:
-            found.extend(_in_scene(project, language, result, scene, colours, shown, steps))
+            found.extend(_in_scene(project, language, result, scene, colours, shown, steps, faces))
         except Exception as exc:
             if stops is None:
                 raise
@@ -2881,11 +2889,13 @@ def _in_scene(
     colours: Mapping[str, Mapping[str, Any]],
     shown: Mapping[tuple[str, str], set[str]],
     steps: dict[str, boxes.Step | None],
+    faces: Faces,
 ) -> list[Found]:
     """What the checks that run on each scene alone find in one scene, in a fixed order: the
     engine's own findings, content the scene's size hides, contrast as drawn, colour roles the
     brand lacks, the renderers' unaccepted losses, components' statuses, pages with no ground
-    of their own, and the checks of boxes."""
+    of their own, the checks of boxes, and letters that touch across a text's lines, each
+    letter read from `faces`."""
     piece = project.piece
     size = result.scene.size_key
     served = [key for key in project.keys if project.size_key(key) == size]
@@ -2902,6 +2912,7 @@ def _in_scene(
         *((STATUSES, finding) for finding in _statuses(scene, project.env)),
         *((NO_GROUND, finding) for finding in _no_ground(piece, scene, drawn, served)),
         *_of_boxes(scene, steps[size]),
+        *_of_letters(project, scene, size, faces),
     ]
     pages = [str(page) for page in scene.get("pages", [])]
     return [_found(check, finding, language, size, pages) for check, finding in checked]
@@ -3039,6 +3050,85 @@ def _space_step(project: pl.Project, size: str) -> boxes.Step | None:
             except KeyError:
                 continue
     return boxes.smallest_step(values)
+
+
+def _of_letters(
+    project: pl.Project, scene: Mapping[str, Any], size: str, faces: Faces
+) -> list[tuple[SceneCheck, Finding]]:
+    """What the check of letters across lines finds in `scene`, at the key over the size axes
+    `size`, each finding at the piece's own file, as it names no version: the step comes from
+    the brand under the piece's lock, and the letters from its content (DEC-053 point 2)."""
+    found = letters.letters_touch(scene, faces, lambda text: _step_given(project, size, text))
+    return [
+        (letters.LETTERS_CHECK, dataclasses.replace(finding, file=pl.PIECE_FILE))
+        for finding in found
+    ]
+
+
+def _step_given(project: pl.Project, size: str, text: Mapping[str, Any]) -> letters.Given:
+    """Where the brand gives the step `text`'s lines take at the key `size`, every value axis
+    at its default (DEC-053, Context): the role the scene names as its line height's source,
+    the file and the field that give its number, and who owns that version; and the version
+    that holds the word, where it counts (point 4). The word counts where each role whose
+    line height is the step carries it on its token, and that token and the number its line
+    height takes lie in one version's file."""
+    brand, env = project.brand, project.env.at(size)
+    combination = keys.parse_key(size, brand.axes)
+    step = float(text.get("line-height", 0))
+    role = str((text.get("sources") or {}).get("line-height", "")).removeprefix("role:")
+    styles = {
+        str(run["style"])
+        for paragraph in text.get("paragraphs") or []
+        for run in paragraph
+        if run.get("style")
+    }
+    giving = [style for style in sorted(styles) if _line_height(env, style) == step] or [role]
+    found = {style: brand.step_of(style, combination) for style in {role, *giving}}
+    size_of = _font_size(env, role)
+    primary = found[role]
+    if primary is None:
+        who = f"the owner of the brand {brand.name}"
+        return letters.Given(role, step, size_of, "", "", "", who)
+    word = ""
+    each = [found[style] for style in giving]
+    if all(given is not None and given.word for given in each):
+        versions = {v for given in each if given for v in (given.token_version, given.version)}
+        if len(versions) == 1:
+            word = versions.pop()
+    who = _owner_of(project.held, primary.version)
+    return letters.Given(
+        role, step, size_of, primary.file, primary.field, primary.version, who, word
+    )
+
+
+def _line_height(env: pl.ProjectEnv, role: str) -> float | None:
+    """The line height the typography role `role` gives at `env`'s key, in px, as the scene
+    holds a length; None where it gives none."""
+    try:
+        value = env.role(role)
+        return length(float(value["fontSize"]["value"]) * float(value["lineHeight"]))
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
+def _font_size(env: pl.ProjectEnv, role: str) -> float:
+    """The font size the typography role `role` gives at `env`'s key, in px; 0 where it gives
+    none."""
+    try:
+        return float(env.role(role)["fontSize"]["value"])
+    except (KeyError, TypeError, ValueError):
+        return 0.0
+
+
+def _owner_of(held: Held, version: str) -> str:
+    """Who owns the library version `version` (`<name>@<version>`), by the source the list
+    gives its library (DEC-053 point 2): whoever maintains the capability, for a copy of a
+    library it ships (DEC-003 point 9); the project, for one of its own; else the library's
+    owner."""
+    source = held.source(version.partition("@")[0])
+    if source in (None, PROJECT_SOURCE):
+        return PROJECT
+    return owner_of(version, shipped=source == SHIPPED_SOURCE)
 
 
 #: The finding on a piece drawn at a size at which its top is as wide as at the default

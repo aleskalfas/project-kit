@@ -200,6 +200,7 @@ pkit:
         - visual-communication:DEC-071#1
         - visual-communication:DEC-071#3
         - visual-communication:DEC-072
+        - visual-communication:DEC-053#4
         - ADR-057#2
       artefact:
         - .pkit/cli/README.md#validate
@@ -1013,6 +1014,31 @@ For each combination of modes, the capability merges the brand's sources in reso
 ### Fonts
 
 A `fontFamily` token names each family's font file in the capability's extension key, `pkit.visual-communication`, as `font.body` does above. `files` maps each family to a file of the brand's version folder, or to `{"hash": "sha256:<hex>"}`. A family named by its hash is a font the brand may not ship. The project commits it in the location's `fonts/`, where the capability finds it by the hash of its bytes (DEC-004 point 9). `measure` is `file`: the font is measured from its file. A font file is committed unchanged with its licence, where its licence allows (DEC-004 point 9).
+
+### Lines set tight on purpose
+
+A brand marks a typography role whose lines it sets tight on purpose with `tight-lines: true` in the capability's extension key on the role's token (DEC-053 point 4):
+
+```json
+{
+  "type": {
+    "heading": {
+      "$type": "typography",
+      "$value": {"fontFamily": "{font.heading}", "fontSize": {"value": 48, "unit": "px"}, "fontWeight": 600, "letterSpacing": {"value": 0, "unit": "px"}, "lineHeight": 0.95},
+      "$extensions": {"pkit.visual-communication": {"tight-lines": true}}
+    }
+  }
+}
+```
+
+It says that letters that meet across the lines of a text whose line step comes from that role are meant, so validation states them as a fact, `letters-touch-meant`, in place of asking for attention ([what the check reports](checks.md#scenes)). On a typography token the extension holds `tight-lines: true` alone. Any other key or value there, and `tight-lines` on a token of another type, is `tokens-shape`. The word changes no value: the role draws as it did without it.
+
+- **It counts only where its version gives the step.** The word counts where the number the role's line height takes lies in the file of the version that holds the word, however the role's token reaches it, through a chain of aliases or through a role a base opens. So a word on a role whose value aliases a role another version gives, such as a base's, counts for nothing, and nor does a base's word on a role whose number a brand built on it gives, through a role the base opens. Where more than one role gives a text its step, each carries the word, and their line heights come from the one version that holds it.
+- **Only a released version's word counts.** It counts where its version is one the list marks released, whose folder still matches the list's hash, and for a copy of a brand the capability ships, where that hash is also the one the capability records. A word in a version not yet released gives the check nothing.
+- **A value given drops the base's word.** A brand that gives a role its base opens a value writes its own token for the role, which takes the base's place whole, its `$extensions` with it ([Open roles](#open-roles)). So the base's word no longer lies on the role's token, and the brand writes the word on its own token where it means the setting too.
+- **It says nothing on a group.** The word speaks for one role's step, so `tight-lines` in a group's `$extensions` gives nothing, and asks the brand's owner for attention, `tight-lines-refused`, without failing. On a picture role's group it is `picture-shape`, as any key there but the file's is.
+
+A brand's version that writes the word is released only on a capability that reads it, since its release reads the version in full and names that capability's version as the release it needs (DEC-014 point 1).
 
 ### Picture roles
 
