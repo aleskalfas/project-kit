@@ -3037,6 +3037,23 @@ answers:
       at: 2026-11-24T11:43:24Z
       outcome: unchanged
       unchanged-because: The adapters README's list of what an adapter declares gains the declaration of a session, and Claude Code's support declaration an answer to session-messaging-address; the tool access and the dispatching this page describes rest on declarations and answers that stay as they were.
+      deferred:
+        - anchor:
+            kind: path
+            value: .pkit/rules/core.md
+          reason: "Its \"Friction writers\" has the delegate decide the answers no change owes wherever the default branch's configuration names it, and never what COR-064 point 6 leaves to a person; COR-072 adds the level, the setting that names the delegate, the delegate's acceptance at accept and the stop on each machine, which the build makes true. Its follow-up: the build of COR-072 (#3417)."
+        - anchor:
+            kind: record
+            value: COR-050
+          reason: "Its \"Friction writers\" has the delegate decide the answers no change owes wherever the default branch's configuration names it, and never what COR-064 point 6 leaves to a person; COR-072 adds the level, the setting that names the delegate, the delegate's acceptance at accept and the stop on each machine, which the build makes true. Its follow-up: the build of COR-072 (#3417)."
+        - anchor:
+            kind: record
+            value: COR-051
+          reason: "Its \"Friction writers\" has the delegate decide the answers no change owes wherever the default branch's configuration names it, and never what COR-064 point 6 leaves to a person; COR-072 adds the level, the setting that names the delegate, the delegate's acceptance at accept and the stop on each machine, which the build makes true. Its follow-up: the build of COR-072 (#3417)."
+        - anchor:
+            kind: record
+            value: COR-064
+          reason: "Its \"Friction writers\" has the delegate decide the answers no change owes wherever the default branch's configuration names it, and never what COR-064 point 6 leaves to a person; COR-072 adds the level, the setting that names the delegate, the delegate's acceptance at accept and the stop on each machine, which the build makes true. Its follow-up: the build of COR-072 (#3417)."
   - artefact: .pkit/rules/README.md
     read:
       - 20261025T221340Z-215a759f.yaml
@@ -3090,6 +3107,31 @@ answers:
       at: 2026-11-24T11:43:28Z
       outcome: unchanged
       unchanged-because: Claude Code's "Harness support" gains a bullet for session-messaging-address; the account of which sessions load the rules, which this page relies on, stays as it was.
+      deferred:
+        - anchor:
+            kind: path
+            value: .pkit/rule-sets/ops.md
+          reason: "Its \"Raising a budget is a person's decision\" has a person accept the rule that needs room, and its conversion steps have a person accept each rule; COR-072 lets the delegate accept a rule at accept, holding one that needs a raise for the person, which the build makes true. Its follow-up: the build of COR-072 (#3417)."
+        - anchor:
+            kind: path
+            value: .pkit/rules/core.md
+          reason: "Its \"Raising a budget is a person's decision\" has a person accept the rule that needs room, and its conversion steps have a person accept each rule; COR-072 lets the delegate accept a rule at accept, holding one that needs a raise for the person, which the build makes true. Its follow-up: the build of COR-072 (#3417)."
+        - anchor:
+            kind: record
+            value: COR-051#5
+          reason: "Its \"Raising a budget is a person's decision\" has a person accept the rule that needs room, and its conversion steps have a person accept each rule; COR-072 lets the delegate accept a rule at accept, holding one that needs a raise for the person, which the build makes true. Its follow-up: the build of COR-072 (#3417)."
+        - anchor:
+            kind: record
+            value: COR-066#1
+          reason: "Its \"Raising a budget is a person's decision\" has a person accept the rule that needs room, and its conversion steps have a person accept each rule; COR-072 lets the delegate accept a rule at accept, holding one that needs a raise for the person, which the build makes true. Its follow-up: the build of COR-072 (#3417)."
+        - anchor:
+            kind: record
+            value: COR-069
+          reason: "Its \"Raising a budget is a person's decision\" has a person accept the rule that needs room, and its conversion steps have a person accept each rule; COR-072 lets the delegate accept a rule at accept, holding one that needs a raise for the person, which the build makes true. Its follow-up: the build of COR-072 (#3417)."
+        - anchor:
+            kind: record
+            value: COR-070
+          reason: "Its \"Raising a budget is a person's decision\" has a person accept the rule that needs room, and its conversion steps have a person accept each rule; COR-072 lets the delegate accept a rule at accept, holding one that needs a raise for the person, which the build makes true. Its follow-up: the build of COR-072 (#3417)."
   - artefact: docs/rules/README.md
     read:
       - 20261102T140915Z-ee6e244c.yaml
@@ -4178,3 +4220,40 @@ answers:
       at: 2026-11-24T11:44:30Z
       outcome: unchanged
       unchanged-because: The adapters README gains the declaration of a session and the new requirement; what it says of the requirements this use case rests on stays as written.
+      deferred:
+        - anchor:
+            kind: record
+            value: ADR-002#4
+          reason: "ADR-002 now has sessions run a copy of the hook made from the installed release, bounds what it allows by the model last realized, has it ask where it cannot judge by that model and keep its own verdicts through a decision fault, and the use case still has a fault defer the call to the harness (10b); #3412 builds it and rewrites the use case."
+        - anchor:
+            kind: record
+            value: ADR-007
+          reason: "ADR-007 now serves setup autonomy from the installed release, and under a session anchor or the harness's mark has it and its down form stop at a step that widens, makes the hook's copy or turns the hook on or off, naming the person's terminal, and the use case's setup runs every step wherever it is started; #3412 builds it and rewrites the use case."
+        - anchor:
+            kind: record
+            value: ADR-014#2
+          reason: "ADR-014 now has the hook run outside the sandbox, from the copy, under an interpreter the copy names by its fixed path, since a hook started through uv would read configuration a sandboxed command can write, and has uv run confined on Linux with a cache for each checkout, and the use case has the hook run the code under the operating system's python3 and adds a package cache as narrowing; #3412 builds it and rewrites the use case."
+        - anchor:
+            kind: record
+            value: ADR-014#3
+          reason: "ADR-014 now has the hook run outside the sandbox, from the copy, under an interpreter the copy names by its fixed path, since a hook started through uv would read configuration a sandboxed command can write, and has uv run confined on Linux with a cache for each checkout, and the use case has the hook run the code under the operating system's python3 and adds a package cache as narrowing; #3412 builds it and rewrites the use case."
+        - anchor:
+            kind: record
+            value: ADR-014#4
+          reason: "ADR-014 now has the hook run outside the sandbox, from the copy, under an interpreter the copy names by its fixed path, since a hook started through uv would read configuration a sandboxed command can write, and has uv run confined on Linux with a cache for each checkout, and the use case has the hook run the code under the operating system's python3 and adds a package cache as narrowing; #3412 builds it and rewrites the use case."
+        - anchor:
+            kind: record
+            value: ADR-025#2
+          reason: "ADR-025 now has the core ask where the bound that binds cannot be used and give a revoked grant's ask, name the interlocked commands beside the guardrails where it cannot read what a runner runs, and corrects that the hook runs outside the sandbox, from a copy of the installed release; the use case gives the interlock's ask and the naming deny (10f, 10g) and none of the rest; #3412 builds what is not built and rewrites the use case."
+        - anchor:
+            kind: record
+            value: ADR-025#5
+          reason: "ADR-025 now has the core ask where the bound that binds cannot be used and give a revoked grant's ask, name the interlocked commands beside the guardrails where it cannot read what a runner runs, and corrects that the hook runs outside the sandbox, from a copy of the installed release; the use case gives the interlock's ask and the naming deny (10f, 10g) and none of the rest; #3412 builds what is not built and rewrites the use case."
+        - anchor:
+            kind: record
+            value: ADR-025#7
+          reason: "ADR-025 now has the core ask where the bound that binds cannot be used and give a revoked grant's ask, name the interlocked commands beside the guardrails where it cannot read what a runner runs, and corrects that the hook runs outside the sandbox, from a copy of the installed release; the use case gives the interlock's ask and the naming deny (10f, 10g) and none of the rest; #3412 builds what is not built and rewrites the use case."
+        - anchor:
+            kind: record
+            value: ADR-028
+          reason: "ADR-028 now says the unsandboxed escape is a hole outside the autonomy posture too, wherever a call can reach the folders ADR-095 guards, closed there by a native ask that holds whatever the hook does, and the use case gives the hook's ask before such a call (10h) and no native ask, which no settings carry yet; #3412 builds it and rewrites the use case."
