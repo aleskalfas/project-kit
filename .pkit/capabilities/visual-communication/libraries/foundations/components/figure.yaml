@@ -47,3 +47,21 @@ parts:
 preferred:
   width: "=@size.figure"
   height: "=caption.bottom + @space.3"
+
+# The smallest text size of each medium the figure's page is made for (DEC-055 points 2,
+# 3 and 8).
+# The figure is made for a screen at hand and for paper. It is shown at its own size on a
+# screen, and printed at its own size, so each value is a fixed length.
+#
+# The screen at hand, 11 px: Apple's Human Interface Guidelines, "Typography", give a
+# minimum font size of 11 pt on iOS and iPadOS and of 10 pt on macOS. A point is the unit
+# those platforms lay out in, which a browser on them takes as one CSS px. One value holds
+# for every screen at hand, so the larger is taken.
+#
+# Paper, 10.67 px: PLOS ONE's figure guidelines ask that text within a figure be set at 8
+# to 12 point, a font size at the figure's printed size. The figure declares no physical
+# size, so it prints at the PDF export's px, 96 to the inch, and 8 pt, each a seventy-second
+# of an inch, is 10.67 px at the scene's rounding.
+smallest-text:
+  screen: 11
+  paper: 10.67

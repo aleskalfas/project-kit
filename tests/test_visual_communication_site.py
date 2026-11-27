@@ -293,12 +293,17 @@ def test_a_site_of_one_page_and_one_of_three_pass_the_check_under_neutral(locati
     found = [
         (level, finding.code, finding.file, finding.where)
         for finding, level in report.judged
-        if finding.code != "component-experimental"
+        if finding.code not in ("component-experimental", "text-size-unmeasured")
     ]
     assert sorted(found) == [
         ("fact", "picture-role-unvalued", f"visual/libraries/{name}/", "picture.logo")
         for name in (f"neutral/{built}", "test-brand/1.1.0")
     ]
+    assert {
+        (level, finding.file, finding.where)
+        for finding, level in report.judged
+        if finding.code == "text-size-unmeasured"
+    } == {("fact", f"visual/pieces/{name}/piece.yaml", "media") for name in ("page", "portal")}
     assert not report.failed()
 
 

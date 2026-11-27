@@ -8,7 +8,7 @@ key:
   form: 1
   hash: sha256
   format: 1
-  value: 9f74e0341490afd13268f7bdc80fe7382f86435c4fa4129031786f0813155061
+  value: f4a1e87d578ebb101b981698837be66d88ff910676d6d3fbc8ff5dc4530d8e93
   inputs:
     - file: content.cs.yaml
       sha256: 151dbbc838ad85baf0f8703cafe19def90ec17fc6641c7f79ebdffe2cf01cdf9
@@ -19,15 +19,15 @@ key:
     - library: foundations
       version: 1.2.0
       path: components/deck.yaml
-      sha256: 5a7ee2bb8ebcae4534c252931181e45b5a71684ec8d66b50f9bfab60ae8cd8fe
+      sha256: 05deee3a348a544368c000ea8762ebbbc9729805e6ece4338327b5c0077330f8
     - library: foundations
       version: 1.2.0
       path: components/figure.yaml
-      sha256: 6fe389ad65196cf8d16ee4f09231ae2719608f9487e6418bba6d803eb09dc6a4
+      sha256: 63b950b44b44b55cd699c55124ad69cea4e06709d8047660b2fbc28e5f47ff2a
     - library: foundations
       version: 1.2.0
       path: components/site.yaml
-      sha256: 1fe15655fb6ad6f4ea37004e63c7eeb5c884118ce07dc1eee27861cdb4c5c79b
+      sha256: 84816856beb9ad6ff9b14b4999a9934f379c9fda28a4d6fd6279ebb2e606d12c
     - library: foundations
       version: 1.2.0
       path: library.yaml
@@ -103,7 +103,7 @@ key:
     - library: starter
       version: 1.1.0
       path: README.md
-      sha256: 86c39fc2aa507fe844900f70107ce3b31abd20aa60da920be889d2d576862e4c
+      sha256: 817c2116930fac7abdf22781cc90101773b91d7f984615e97d2b4db3a31d6f10
     - library: starter
       version: 1.1.0
       path: components/aside.yaml
@@ -127,7 +127,7 @@ key:
     - library: starter
       version: 1.1.0
       path: components/connector.yaml
-      sha256: 5e801c88c9d85e0c3bcc7658f69670052f5256acad259e0bbf6568bf1af1eb5f
+      sha256: a439aaf28f8c816cf8a3cac38b7a6c77e68cce2472aa4876900c073843c531da
     - library: starter
       version: 1.1.0
       path: components/field.yaml
@@ -276,3 +276,8 @@ findings:
     message: 'the piece uses `starter/connector`, which is experimental: its library may still change it in any release'
     file: piece.yaml
     where: figure/body/ties[docs-doc-check]
+  - code: text-size-unmeasured
+    level: fact
+    message: the piece names no medium it is shown in under `media`, so no text's size was measured, in any language or at any size
+    file: piece.yaml
+    where: media

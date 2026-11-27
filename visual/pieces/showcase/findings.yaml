@@ -8,7 +8,7 @@ key:
   form: 1
   hash: sha256
   format: 1
-  value: 8f2994fe677f7a1c6e227df8d6940256e1190089da67b25f174ee8458b160f55
+  value: 0bf76a8ab81047c7aaa53934ced5c0a003e04ccbe5214a63d5e9289c36182e00
   inputs:
     - file: components/capability.yaml
       sha256: 49ab721151fd9313be944c5458fc6137819d61fbbe1d0bed713a7f6e0c385b4a
@@ -25,15 +25,15 @@ key:
     - library: foundations
       version: 1.2.0
       path: components/deck.yaml
-      sha256: 5a7ee2bb8ebcae4534c252931181e45b5a71684ec8d66b50f9bfab60ae8cd8fe
+      sha256: 05deee3a348a544368c000ea8762ebbbc9729805e6ece4338327b5c0077330f8
     - library: foundations
       version: 1.2.0
       path: components/figure.yaml
-      sha256: 6fe389ad65196cf8d16ee4f09231ae2719608f9487e6418bba6d803eb09dc6a4
+      sha256: 63b950b44b44b55cd699c55124ad69cea4e06709d8047660b2fbc28e5f47ff2a
     - library: foundations
       version: 1.2.0
       path: components/site.yaml
-      sha256: 1fe15655fb6ad6f4ea37004e63c7eeb5c884118ce07dc1eee27861cdb4c5c79b
+      sha256: 84816856beb9ad6ff9b14b4999a9934f379c9fda28a4d6fd6279ebb2e606d12c
     - library: foundations
       version: 1.2.0
       path: library.yaml
@@ -109,7 +109,7 @@ key:
     - library: starter
       version: 1.1.0
       path: README.md
-      sha256: 86c39fc2aa507fe844900f70107ce3b31abd20aa60da920be889d2d576862e4c
+      sha256: 817c2116930fac7abdf22781cc90101773b91d7f984615e97d2b4db3a31d6f10
     - library: starter
       version: 1.1.0
       path: components/aside.yaml
@@ -133,7 +133,7 @@ key:
     - library: starter
       version: 1.1.0
       path: components/connector.yaml
-      sha256: 5e801c88c9d85e0c3bcc7658f69670052f5256acad259e0bbf6568bf1af1eb5f
+      sha256: a439aaf28f8c816cf8a3cac38b7a6c77e68cce2472aa4876900c073843c531da
     - library: starter
       version: 1.1.0
       path: components/field.yaml
@@ -341,3 +341,8 @@ findings:
     message: 'the piece uses `starter/cell`, which is experimental: its library may still change it in any release'
     file: piece.yaml
     where: deck/slides[permissions]/visual/rows[steps]/cells[kind]
+  - code: text-size-unmeasured
+    level: fact
+    message: the piece names no medium it is shown in under `media`, so no text's size was measured, in any language or at any size
+    file: piece.yaml
+    where: media

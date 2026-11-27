@@ -43,6 +43,7 @@ Then choose each field of `piece.yaml`. Each is a flag of `pkit visual new` in s
 | `languages` | The first is the source language, such as `[en]`. Each language needs its content file. |
 | `audience` | Who the piece is for, in one sentence. Name the reader and what they already know, since the build loop reads the pages as that reader does. |
 | `shown` | Where the piece is shown, in words: the place and the medium. |
+| `media` | The media it is shown in, beside `shown`, from three words: `screen`, a screen at hand; `room`, a screen read from across a room; `paper`, a printed page. A check fails a text smaller than its top allows in a medium that shows it, and states as a fact where it measured none, such as for a piece that names no medium. Name them alone, such as `[room]`, where each medium shows every size the piece is drawn at. Or name the sizes each shows, such as `{screen: [desktop], room: [projector]}` for a deck read on a laptop and projected, so each size is held to the medium it is shown in ([`piece.yaml`](../../files.md#pieceyaml)). Keep it in agreement with `shown`. |
 | `explains` | `true` where the piece explains, rather than only shows. A figure of how parts relate explains. A title page only shows. |
 | `exports` | The formats an export makes. `pdf` makes one file for each language and combination of modes, which suits a presentation. `svg` makes one file for each page, which suits a figure. `html` makes a page file a browser opens, which suits a web page. `[]` makes none yet. |
 | `state` | `draft`. A draft's lock moves at each render. |
@@ -57,7 +58,7 @@ The command writes `state: draft`, and no `lock`: the first render writes it. Ad
 `pkit visual new <piece>` writes the piece's folder, `pieces/<piece>/`, from your choices. For the piece `first-talk`:
 
 ```
-pkit visual new first-talk --top foundations/deck --brand neutral --language en --audience "New members of the team, who have not seen the project yet." --shown "On a screen, at the team's weekly meeting." --explains --export pdf --mode colour-scheme=light,dark
+pkit visual new first-talk --top foundations/deck --brand neutral --language en --audience "New members of the team, who have not seen the project yet." --shown "On a screen seen from across the room, at the team's weekly meeting." --medium room --explains --export pdf --mode colour-scheme=light,dark
 ```
 
 | Field | Flag |
@@ -66,6 +67,7 @@ pkit visual new first-talk --top foundations/deck --brand neutral --language en 
 | `notations` | `--notation <library>`, once for each |
 | `languages` | `--language <language>`, once for each, the source language first |
 | `audience`, `shown` | `--audience <text>`, `--shown <text>` |
+| `media` | `--medium <medium>`, once for each; or `--medium <medium>=<size>,<size>`, once for each, to name the sizes each shows |
 | `explains` | `--explains` for `true`. Leave it out for `false`. |
 | `exports` | `--export <format>`, once for each. Leave it out for `[]`. |
 | `modes` | `--mode <axis>=<mode>,<mode>`, once for each axis |
@@ -81,7 +83,8 @@ top: foundations/deck
 brand: neutral
 languages: [en]
 audience: "New members of the team, who have not seen the project yet."
-shown: "On a screen, at the team's weekly meeting."
+shown: "On a screen seen from across the room, at the team's weekly meeting."
+media: [room]
 explains: true
 exports: [pdf]
 state: draft

@@ -1677,6 +1677,7 @@ LEFT_OUT_VALUES = {
     "audience": "Someone else.",
     "copy-place": "docs/images",
     "explains": True,
+    "media": ["screen", "room"],
     "pinned": True,
     "shown": "On a page.",
     "state": "published",

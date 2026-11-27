@@ -80,7 +80,9 @@ roles:
 # alone, so every mode of either is drawn from one scene. The device is a size: each of
 # its modes has a scene of its own, and a brand has it only where it gives it, with the
 # modes it gives (DEC-021 points 1 and 2). A projector is a screen read from across a
-# room, a fourth size of the foundations (DEC-021 point 1).
+# room, a fourth size of the foundations (DEC-021 point 1). A mode names what a piece is
+# drawn for, and the piece's media where it is shown, so no size chooses a medium
+# (DEC-055 point 1).
 axes:
   colour-scheme: {kind: value, modes: [light, dark], default: light}
   contrast: {kind: value, modes: [standard, high], default: standard}

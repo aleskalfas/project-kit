@@ -1,5 +1,5 @@
 """The formula and reference grammar, with dimensions (visual-communication DEC-005 points 1, 3,
-DEC-038 point 2).
+DEC-038 point 2, DEC-043 point 6).
 
 A *formula* is a string that starts with `=` and computes one number. It holds:
 
@@ -12,13 +12,17 @@ A *formula* is a string that starts with `=` and computes one number. It holds:
   component gets, `:index` and `:count`, an item's place among the items its list
   draws (from 1) and how many it draws, and `:place` and `:places`, which only a row's or a
   column's `cross-size` reads: the place of the item it sizes, from 1, and how many items
-  its list draws (`PLACE_NAMES`);
+  its list draws (`PLACE_NAMES`), and `:page-width` and `:page-height`, which only the
+  formula of a top's smallest text size reads: the size of the page a run lies on
+  (`PAGE_NAMES`);
 - a value of the component, by its name alone: `gap`;
 - a *path*: a part, then each exposed part below it, one name a step, then the
-  measure of the frame it reads, one of `x y width height right bottom center
-  middle`. The last segment is always the measure, so a part named `width` is still
-  read as `width.x`. A step into a list follows the list's part as `<list>:first`,
-  `<list>:last` or `<list>[<id>]`. A picture's exposed point reads as a part of zero
+  measure it reads: of the frame, one of `x y width height right bottom center middle`,
+  or, of a line, `own-center` or `own-middle`, across and down, the point halfway along
+  the stretch of its route that it alone runs (`OWN_MEASURES`, DEC-043 point 6). The last
+  segment is always the measure, so a part named `width` is still read as `width.x`. A
+  step into a list follows the list's part as `<list>:first`, `<list>:last` or
+  `<list>[<id>]`. A picture's exposed point reads as a part of zero
   size: `<part>.<point>.x`. A path may start with `{<option>}`, the path an option
   gives when it names an item, or an item's point: `={at}.x + @space.2`.
 
@@ -39,17 +43,31 @@ from dataclasses import dataclass
 from decimal import ROUND_HALF_UP, Decimal
 from functools import lru_cache
 
-#: The measures a path may end in.
-MEASURES = ("x", "y", "width", "height", "right", "bottom", "center", "middle")
+#: The measures a path may end in: those of a frame, then those of a line's own stretch.
+MEASURES = (
+    "x", "y", "width", "height", "right", "bottom", "center", "middle", "own-center", "own-middle"
+)  # fmt: skip
+
+#: The measures of a line alone, across and down: the point halfway along the stretch of its
+#: route that it alone runs, which another tie's line shares none of (DEC-043 point 6). Each
+#: reads, of a line that shares no stretch, what `center` and `middle` read. Whoever reads a
+#: formula refuses them on what is no line.
+OWN_MEASURES = {"own-center": "center", "own-middle": "middle"}
 
 #: The engine's names, without their mark.
-ENGINE_NAMES = ("width", "height", "index", "count", "place", "places")
+ENGINE_NAMES = ("width", "height", "index", "count", "place", "places", "page-width", "page-height")
 
 #: The engine's names that only the formula by which a row or a column sizes its items
 #: across their line reads, its `cross-size`: the place of the item it sizes, from 1, and how
 #: many items its list draws (DEC-038 point 2). Whoever reads a formula refuses them in any
 #: other.
 PLACE_NAMES = ("place", "places")
+
+#: The engine's names that only the formula of a top's smallest text size reads: the width
+#: and the height of the page a run lies on, which a share of the page is taken of
+#: (DEC-055 point 3). That formula reads no other name, and whoever reads a formula refuses
+#: them in any other.
+PAGE_NAMES = ("page-width", "page-height")
 
 #: The functions a formula may call, each with the least and the most arguments it takes.
 FUNCTIONS = {"min": (2, None), "max": (2, None), "round": (1, 1)}
@@ -65,7 +83,7 @@ _STEP = rf"{_NAME}(?::first|:last|\[{_ID}\])?"
 _TOKEN = re.compile(
     rf"(?P<number>[0-9]+(?:\.[0-9]+)?)"
     rf"|(?P<role>@{_SEGMENT}(?:\.{_SEGMENT})*)"
-    rf"|(?P<engine>:[a-z]+)"
+    rf"|(?P<engine>:[a-z]+(?:-[a-z]+)*)"
     rf"|(?P<function>(?:min|max|round)\()"
     rf"|(?P<path>(?:\{{{_NAME}\}}|{_STEP})(?:\.{_STEP})*)"
     rf"|(?P<op>[-+*/(),])"
@@ -93,7 +111,7 @@ class DivisionByZero(FormulaError):
 @dataclass(frozen=True)
 class Engine:
     """One of the engine's names: `:width`, `:height`, `:index`, `:count`, `:place`,
-    `:places`."""
+    `:places`, `:page-width`, `:page-height`."""
 
     name: str
 

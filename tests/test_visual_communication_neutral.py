@@ -433,6 +433,7 @@ def test_every_reference_render_passes_the_check_under_it(location: Path) -> Non
         ("fact", "picture-role-unvalued", f"visual/libraries/neutral/{built}/", "picture.logo")
     ]
     assert starter.on_signs(report.judged) == starter.UNSIGNED
+    assert starter.unmeasured(report.judged) == starter.no_medium(starter.COMPONENTS)
     assert starter.box_levels(report.judged) <= {"attention"}
     assert not report.failed()
 

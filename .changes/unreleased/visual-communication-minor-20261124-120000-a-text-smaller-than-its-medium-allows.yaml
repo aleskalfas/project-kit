@@ -1,0 +1,27 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Added
+body: >
+  A check fails a text smaller than its medium allows (DEC-055, #3185). A piece
+  names the media it is shown in under `media`, an optional field of
+  `piece.yaml`: a list of `screen`, `room` and `paper`, each showing every size
+  the piece is drawn at, or a mapping from each medium to the sizes it shows,
+  such as `{screen: [desktop], room: [projector]}`. A top declares the smallest
+  text size of each medium its pages are made for under `smallest-text`, an
+  optional key of a top component: a fixed length in px, or a share of the page
+  that reads only `:page-width` and `:page-height`, engine names no other
+  formula reads. The check, `text-size-by-medium`, reads each scene before any
+  renderer runs, and fails each run drawn below the smallest size of a medium
+  that shows its key, `text-too-small`, at its text's trace in the piece's own
+  file. Where it measures no text's size it states so as a fact,
+  `text-size-unmeasured`: for a piece that names no medium, as every piece
+  written before does, for a medium its top declares nothing for, for a size no
+  medium shows, and for a page where a share gives no smallest size. It states
+  its reach in its entry in the list of checks and in its code, and the viewing
+  step's report carries it. The check refuses a `media` or a `smallest-text` of
+  the wrong shape, and a share that reads `:page-height` at a page that asks
+  for no height, divides by zero or gives no length above zero. `pkit visual
+  new` takes the media as `--medium <medium>[=<size>,...]`. An export leaves
+  `media` out, so naming it changes no exported file. Every file format 1
+  accepted reads and draws as before.

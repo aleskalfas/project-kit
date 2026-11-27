@@ -220,12 +220,6 @@ def _print(folder: str, report: Mapping[str, Any], stand_ins: str) -> None:
         )
     for each in report["dropped"]:
         print(f"dropped: {_at(each)}: {_dropped(each)}")
-    if report.get(viewing.NOT_READ):
-        print(
-            f"dropped: through the SVG renderer, no span is read as "
-            f"{' or '.join(report[viewing.NOT_READ])}, so a text another part covers, or the "
-            f"page's edge cuts, is not named: read the images for it"
-        )
     for each in report["losses"]:
         accepted = " (accepted)" if each["accepted"] else ""
         print(f"loss{accepted}: {_at(each)}: `{each['what']}` {each['did']}: {each['why']}")
@@ -311,17 +305,22 @@ def _dropped(each: Mapping[str, Any]) -> str:
     """What the report says of a text or a span its page does not show in full, in words for
     its cause, with the share of its ink the cause loses where it gives one (DEC-037 point
     2)."""
+    span, text, why = f"a span of the text `{each['element']}`", each["text"], each["why"]
     if "whole" in each:
         what = "text" if each["whole"] else "part of the text"
-        return f"the tool drew nothing of the {what} `{each['element']}`: {each['text']!r}"
-    span, text, why = f"a span of the text `{each['element']}`", each["text"], each["why"]
+        subject = f"the {what} `{each['element']}`"
+        if why == viewing.viewing_browser.OFF_THE_PAGE:
+            return f"{subject} lies off its page: {text!r}"
+        return f"the tool drew nothing of {subject}: {text!r}"
     if why == viewing.viewing_browser.CUT:
         return (
-            f"{span} is cut by its page's edge, past which {_share(each)} of its ink lies: {text!r}"
+            f"{span} is cut by its page's edge, past which {_share(each)} of its ink lies"
+            f"{_island(each)}: {text!r}"
         )
     if why == viewing.viewing_browser.COVERED:
         return (
-            f"{span} is covered by a part over it, which hides {_share(each)} of its ink: {text!r}"
+            f"{span} is covered by a part over it, which hides {_share(each)} of its ink"
+            f"{_island(each)}: {text!r}"
         )
     if why == viewing.viewing_browser.OFF_THE_PAGE:
         return f"{span} lies off its page: {text!r}"
@@ -329,9 +328,17 @@ def _dropped(each: Mapping[str, Any]) -> str:
 
 
 def _share(each: Mapping[str, Any]) -> str:
-    """The share of a span's ink a cause loses, in whole percent, and never as none."""
+    """The share of a span's ink a cause loses, in whole percent, and never as none: of its
+    strong ink, or through the SVG renderer of its ink at the lightest level the reads take
+    where it holds no strong ink, so a faint mark lost whole reads 100% (DEC-045 point 2)."""
     percent = round(each["share"] * 100)
     return f"{percent}%" if percent else "under 1%"
+
+
+def _island(each: Mapping[str, Any]) -> str:
+    """What the report says of a cause that takes an island of a span's ink, leaving none of
+    it showing at its level, whatever its share (DEC-045 point 2)."""
+    return " (one island of it gone, such as a dot)" if each.get(viewing.ISLAND) else ""
 
 
 def _otherwise(each: Mapping[str, Any]) -> str:

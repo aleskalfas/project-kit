@@ -14,10 +14,11 @@
 person chooses (DEC-002 points 3 and 5, DEC-029 point 4).
 
 It writes `pieces/<piece>/` in the location: `piece.yaml`, with the top, the brand, the
-notations, the languages, the modes, the exports, `audience`, `shown` and `explains` it is
-given, and `state: draft`; a content file for each language, holding each field of the
-top it can leave empty, empty, a field of another type, such as a number, left out; and a
-brief that holds its binding and says nothing yet (`_lib/stamping.py`).
+notations, the languages, the modes, the exports, `audience`, `shown`, the media it is shown
+in and `explains` it is given, and `state: draft`; a content file for each language,
+holding each field of the top it can leave empty, empty, a field of another type, such as a
+number, left out; and a brief that holds its binding and says nothing yet
+(`_lib/stamping.py`).
 It writes no lock: the first render writes it, as for a piece written by hand.
 
 It writes in the location, so where the configuration records none it takes `visual/` and
@@ -30,6 +31,7 @@ writes the new folder as one change, and never writes over a file.
 Usage:
   pkit visual new <piece> --top <library>/<component> --brand <library>
                   --language <language>... --audience <text> --shown <text>
+                  [--medium <medium>[=<size>[,<size>...]]]...
                   [--explains] [--export <format>]... [--notation <library>]...
                   [--mode <axis>=<mode>[,<mode>...]]... [--location <path>]
 
@@ -74,6 +76,14 @@ def main() -> int:
     parser.add_argument("--audience", required=True, help="who the piece is for, in words")
     parser.add_argument("--shown", required=True, help="where the piece is shown, in words")
     parser.add_argument(
+        "--medium",
+        action="append",
+        default=[],
+        metavar="<medium>[=<size>[,<size>...]]",
+        help="a medium the piece is shown in, screen, room or paper, with the sizes it shows, "
+        "or none where it shows every size; repeat for each, each with its sizes or none with",
+    )
+    parser.add_argument(
         "--explains", action="store_true", help="the piece explains, rather than only shows"
     )
     parser.add_argument(
@@ -105,12 +115,23 @@ def main() -> int:
         if not said or not axis or not named:
             parser.error(f"--mode `{given}`: give it as <axis>=<mode>[,<mode>...]")
         modes.setdefault(axis, []).extend(named.split(","))
+    media: dict[str, list[str]] = {}
+    for given in args.medium:
+        medium, said, sizes = given.partition("=")
+        if not medium or (said and not sizes):
+            parser.error(f"--medium `{given}`: give it as <medium>[=<size>[,<size>...]]")
+        if medium in media:
+            parser.error(f"--medium `{medium}` is given twice: name each medium once")
+        media[medium] = sizes.split(",") if said else []
+    if len({bool(sizes) for sizes in media.values()}) > 1:
+        parser.error("--medium: name the sizes of every medium, or of none")
     chosen = stamping.Chosen(
         top=args.top,
         brand=args.brand,
         languages=tuple(args.language),
         audience=args.audience,
         shown=args.shown,
+        media=media if any(media.values()) else list(media),
         explains=args.explains,
         exports=tuple(args.export),
         notations=tuple(args.notation),
