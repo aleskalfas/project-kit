@@ -11,8 +11,11 @@ checks it after the run, hands back the run's files and takes it all down.
   refused when it is a link, when another user owns it, when the group or others can
   write it, or when it lies inside a shared temp folder or a working tree of the
   repository. Each run gets a
-  fresh folder in it, holding a pid file. Each confined run first removes the folder
-  of any run whose process is gone, as a killed run leaves its clone behind.
+  fresh folder in it, holding the process that made it by the name the backbone
+  gives it (`recorded_processes`, ADR-103), stored whole. Each confined run first
+  removes the folder of any run whose process the backbone reads as ended, as a
+  killed run leaves its clone behind, and keeps one whose process runs or of which
+  the backbone cannot tell (ADR-066 point 7).
 - **The clone.** It is made with `git clone --no-local --no-hardlinks --no-checkout`,
   so it shares no object file with the person's repository, by link or by reference.
   Where the clone lacks the commit, as when only a remote-tracking reference holds it,
@@ -68,13 +71,19 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, BinaryIO, Protocol
 
+from project_kit import harness_session
+from project_kit import recorded_processes as rp
+
 #: Where the run root lies, under the user's state folder.
 RUN_ROOT_PARTS = ("pkit", "agent-runs")
 
-#: The name each run's folder starts with, and the file in it that holds the pid of the
-#: process that made it.
+#: The name each run's folder starts with, and the file in it that holds the name the
+#: backbone gives the process that made it.
 RUN_PREFIX = "run-"
-PID_FILE = "pid"
+PROCESS_FILE = "process"
+
+#: The most of a run's process file that is read. A name is one short line.
+PROCESS_FILE_LIMIT = 1024
 
 #: The run's folder holds the clone and the folder of the run's `pkit`.
 CLONE = "clone"
@@ -293,52 +302,72 @@ def _working_trees(project_root: Path) -> list[Path]:
     ]
 
 
-def remove_stale(root: Path) -> None:
-    """Remove the folder of each run in `root` whose process is gone. A run's process
-    is the pid its pid file holds, else the pid its folder's name holds, as a run
-    killed before it wrote the file leaves it. A folder with neither is not a run's,
-    and is left alone, as is a link."""
+def reader(project_root: Path, system: rp.System) -> rp.Reader:
+    """The run command as it asks the backbone whether a recorded process runs: its
+    process space, derived for the repository at `project_root`, and the session the
+    adapter's declaration finds there (ADR-103 points 2 and 4)."""
+    found = harness_session.declaration(project_root)
+    return harness_session.reader(project_root, found, os.environ, system)
+
+
+def remove_stale(root: Path, asking: rp.Reader, system: rp.System) -> None:
+    """Remove the folder of each run in `root` whose process the backbone reads as
+    ended (ADR-066 point 7, ADR-103). A run's process is the one its process file
+    names, by the name the backbone gave it.
+
+    A folder is kept where its process runs, and where the backbone cannot tell: as
+    for a run of another repository, and for a folder that holds no name, such as
+    one a run killed before it wrote its file left, one whose process had no name,
+    or one an earlier release left, which held a pid alone. A folder whose name does
+    not start as a run's is not a run's, and is left alone, as is a link."""
     try:
         entries = list(os.scandir(root))
     except OSError:
         return
-    for entry in entries:
-        if not entry.name.startswith(RUN_PREFIX) or entry.is_symlink():
-            continue
-        pid = _pid_of(Path(entry.path))
-        if pid is not None and not _alive(pid):
-            remove_tree(Path(entry.path))
+    runs = [
+        Path(entry.path)
+        for entry in entries
+        if entry.name.startswith(RUN_PREFIX) and not entry.is_symlink()
+    ]
+    answers = rp.read([_recorded(folder) for folder in runs], asking, system)
+    for folder, answer in zip(runs, answers, strict=True):
+        if answer.state == rp.ENDED:
+            remove_tree(folder)
 
 
-def _pid_of(folder: Path) -> int | None:
-    """The pid of the process that made a run's folder, or None."""
-    with contextlib.suppress(OSError, ValueError):
-        return int((folder / PID_FILE).read_text(encoding="utf-8").strip())
-    named = folder.name.removeprefix(RUN_PREFIX).split("-", 1)[0]
-    return int(named) if named.isdigit() else None
-
-
-def _alive(pid: int) -> bool:
-    """Whether a process `pid` exists. One of another user's counts."""
-    if pid <= 0:
-        return False
+def _recorded(folder: Path) -> str | None:
+    """The name a run's process file holds, as it was written, or None where the
+    folder holds none: no such file, a link, no regular file, or one that cannot be
+    read. The file is never followed through a link, nor waited on as a pipe."""
     try:
-        os.kill(pid, 0)
-    except ProcessLookupError:
-        return False
-    except PermissionError:
-        return True
-    return True
-
-
-def _make_run_folder(root: Path) -> Path:
-    """A fresh folder for one run in `root`, its pid in its name and in its pid file."""
+        handle = os.open(folder / PROCESS_FILE, _FILE_FLAGS)
+    except OSError:
+        return None
     try:
-        folder = Path(tempfile.mkdtemp(prefix=f"{RUN_PREFIX}{os.getpid()}-", dir=root))
+        if not stat.S_ISREG(os.fstat(handle).st_mode):
+            return None
+        raw = os.read(handle, PROCESS_FILE_LIMIT)
+    except OSError:
+        return None
+    finally:
+        os.close(handle)
+    return raw.decode("utf-8", errors="replace").strip()
+
+
+def _make_run_folder(root: Path, asking: rp.Reader, system: rp.System) -> Path:
+    """A fresh folder for one run in `root`, its process file holding the name the
+    backbone gives this command's process, whose life bounds the run's clone. Where
+    the backbone gives it no name, the folder holds no file, and a later run keeps
+    the folder should this one be killed."""
+    named = rp.name(os.getpid(), asking, system)
+    try:
+        folder = Path(tempfile.mkdtemp(prefix=RUN_PREFIX, dir=root))
     except OSError as exc:
         raise Refused(f"the run's folder cannot be made in {root}: {exc.strerror or exc}") from exc
+    if named.name is None:
+        return folder
     try:
-        (folder / PID_FILE).write_text(f"{os.getpid()}\n", encoding="utf-8")
+        (folder / PROCESS_FILE).write_text(f"{named.name}\n", encoding="utf-8")
     except OSError as exc:
         remove_tree(folder)
         raise Refused(f"the run's folder cannot be written: {exc.strerror or exc}") from exc
@@ -565,13 +594,15 @@ def write_pkit(folder: Path, clone: Path) -> Path:
 def confinement(project_root: Path, commit: str) -> Generator[Confinement]:
     """The folders of one confined run at `commit`, for the length of the block.
 
-    Makes the run root and removes stale runs' folders, then makes the run's folder,
-    the clone, its provisioning, its workspace and the run's `pkit`. Raises `Refused`
-    when any of these cannot be made. The run's folder, the clone with it, is removed
-    on every exit."""
+    Makes the run root and removes the folders of runs whose process the backbone
+    reads as ended, then makes the run's folder, the clone, its provisioning, its
+    workspace and the run's `pkit`. Raises `Refused` when any of these cannot be made.
+    The run's folder, the clone with it, is removed on every exit."""
     root = run_root(project_root)
-    remove_stale(root)
-    folder = _make_run_folder(root)
+    system = rp.this_system()
+    asking = reader(project_root, system)
+    remove_stale(root, asking, system)
+    folder = _make_run_folder(root, asking, system)
     try:
         clone = folder / CLONE
         make_clone(project_root, commit, clone)
