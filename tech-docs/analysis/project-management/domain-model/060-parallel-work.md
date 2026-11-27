@@ -30,6 +30,7 @@ pkit:
         - project-management:DEC-063
         - project-management:DEC-076
         - project-management:DEC-081#3
+        - project-management:DEC-081#4
       artefact:
         - TERM-topology
         - TERM-seat
@@ -56,7 +57,7 @@ Three more concepts serve that work:
 - The seats that build take their work from the [ready Tasks](../glossary.md#term-ready-task--ready-task) ([DEC-059 point 7](../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool)).
 - A [builder agent](../glossary.md#term-builder-agent--builder-agent) builds each [Task](../glossary.md#term-task--task) a worker takes ([DEC-063](../../../../.pkit/capabilities/project-management/decisions/DEC-063-task-builder.md)).
 
-Each seat has a [state issue](../glossary.md#term-state-issue--state-issue), which shows which clone holds the seat now ([DEC-058](../../../../.pkit/capabilities/project-management/decisions/DEC-058-state-issues.md) and [DEC-059 point 3](../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#3-each-seat-has-a-state-issue-which-the-topology-names)). The state issue also shows the session that runs the seat's loop (DEC-059 point 3).
+Each seat has a [state issue](../glossary.md#term-state-issue--state-issue), which shows which clone holds the seat now ([DEC-058](../../../../.pkit/capabilities/project-management/decisions/DEC-058-state-issues.md) and [DEC-059 point 3](../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#3-each-seat-has-a-state-issue-which-the-topology-names)). The state issue also names the seat's [recorded session](../glossary.md#term-recorded-session--recorded-session) (DEC-059 point 3).
 
 A topology may also declare [pools](../glossary.md#term-pool--pool). Each seat that builds then takes its work only from the pools it serves. A person puts a [Milestone](../glossary.md#term-milestone--milestone)'s work into a pool by marking the Milestone ([DEC-061](../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md)).
 
@@ -65,7 +66,7 @@ These concepts serve the use cases in [040-work-in-parallel](../overview/README.
 ```mermaid
 classDiagram
   accTitle: Parallel work
-  accDescr: A topology declares seats, the settings the seats share, and may declare pools. One seat may be the organizer seat. A seat may give the seat's agent a scope, which names workstreams and kinds of work. A seat that builds serves pools, and a pool holds open Milestones. A seat that builds takes ready Tasks. A worker agent's seat may name one seat that directs the worker. A seat has one state issue, keyed by the seat's name. A clone generates a clone key. A clone with a number is an instance. An instance holds at most one seat, and takes the seat's name and number. An issue belongs to at most one owner, which is one instance, paired with the issue's assignee. An ownership makes the owner. A builder agent builds one Task.
+  accDescr: A topology declares seats, the settings the seats share, and may declare pools. One seat may be the organizer seat. A seat may give the seat's agent a scope, which names workstreams and kinds of work. A seat that builds serves pools, and a pool holds open Milestones. A seat that builds takes ready Tasks. A worker agent's seat may name one directing seat. A seat has one state issue, keyed by the seat's name. A clone generates a clone key. A clone with a number is an instance. An instance holds at most one seat, and takes the seat's name and number. An issue belongs to at most one owner, which is one instance, paired with the issue's assignee. An ownership makes the owner. A builder agent builds one Task.
   class Topology {
     seats
     shared settings
@@ -123,7 +124,7 @@ classDiagram
   Pool "1" --> "*" Milestone : holds the open
   Seat "1" --> "0..1" Scope : may give its agent
   Seat "*" ..> "*" ReadyTask : takes from
-  Seat "*" --> "0..1" Seat : may be directed by
+  Seat "*" --> "0..1" Seat : may name as its directing seat
   Seat "1" --> "1" StateIssue : has
   Clone "1" *-- "0..1" CloneKey : generates
   Clone "1" --> "0..1" Instance : is, with a number
@@ -207,7 +208,7 @@ A seat is one place in a [topology](../glossary.md#term-topology--topology), and
 - the agent definition its agent follows, the project-manager agent's by default (DEC-059 points 2 and [8](../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#8-the-agent-a-seat-names-runs-the-seats-role-through-the-pm-skill))
 - a [scope](../glossary.md#term-scope--scope), which is optional (DEC-059 point 2)
 - the [pools](../glossary.md#term-pool--pool) it serves, where it builds and the topology declares pools ([DEC-061 point 1](../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#1-the-topology-declares-pools-and-each-seat-that-builds-names-those-it-serves))
-- for a worker agent's seat, the seat that directs the worker, a planning agent's or a lead agent's, which is optional (DEC-059 point 2)
+- for a worker agent's seat, the worker's [directing seat](../glossary.md#term-directing-seat--directing-seat), a planning agent's or a lead agent's, which is optional (DEC-059 point 2)
 - the number of its [state issue](../glossary.md#term-state-issue--state-issue) ([DEC-059 point 3](../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#3-each-seat-has-a-state-issue-which-the-topology-names))
 - whether it is the [organizer seat](../glossary.md#term-organizer-seat--organizer-seat), whose clone may release other seats by force (DEC-059 point 2)
 
@@ -215,8 +216,8 @@ A seat is one place in a [topology](../glossary.md#term-topology--topology), and
 
 - A topology declares the seat (DEC-059 point 2).
 - At most one clone holds the seat at a time, and a clone holds at most one seat (DEC-059 point 4).
-- A worker agent's seat may name one seat that directs the worker. That seat directs only the worker agents whose seats name it (DEC-059 point 2).
-- The seat has one state issue, which logs each clone that takes the seat or releases the seat. The state issue also records the session that runs the seat's loop, whenever that session changes (DEC-059 point 3).
+- A worker agent's seat may name one directing seat. A directing seat directs only the worker agents whose seats name it (DEC-059 point 2).
+- The seat has one state issue, which logs each clone that takes the seat or releases the seat. The state issue also names the seat's [recorded session](../glossary.md#term-recorded-session--recorded-session) (DEC-059 point 3). The state issue logs a new recorded session only when the session changes ([DEC-081 point 4](../../../../.pkit/capabilities/project-management/decisions/DEC-081-delegation-between-seats.md#4-each-seats-state-issue-records-the-session-that-runs-the-seats-loop)).
 
 **States:** A seat is free until a clone takes the seat, and is held until that clone releases the seat. In the first and most tolerant mode, nothing else frees the seat but a release by force, which the seat's state issue logs. A retired seat stays in the list. A clone that holds a retired seat releases the seat at the clone's next command (DEC-059 points [5](../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#5-in-the-first-mode-a-seat-stays-taken-until-it-is-released) and 6).
 
