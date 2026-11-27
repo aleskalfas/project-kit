@@ -1,7 +1,7 @@
 ---
 id: DEC-054
 title: Through a browser, the viewing step names a cut or a cover that takes an island of a text's ink, however small
-status: proposed
+status: accepted
 date: 2026-11-27
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
