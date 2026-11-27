@@ -242,11 +242,12 @@ The request then takes one of two forms:
 An unconfined request may also hold this key:
 
 - `local_settings_from`: the absolute path of the person's checkout. The runner then copies the file its harness keeps for one checkout, out of git, from there into `folder` before the harness starts. It copies nothing where `folder` already holds that file, and refuses the run where a link lies on the way. Only the runner knows which file it is, so no capability names a harness's file.
-- `seat_permissions`, for a run in a reviewer's clone ([ADR-102](../../tech-docs/architecture/decisions/ADR-102-reviews-in-own-clone.md) point 3): an object of two absolute folders.
-  - `seat_clone` is the seat's clone, the checkout the review command runs in. `settings_folder` is a folder beside the reviewer's clone that the run does not work in.
+- `seat_permissions`: for a run in a reviewer's clone, an object of two absolute folders.
+  - `seat_clone`: the seat's clone, the checkout the review command runs in.
+  - `settings_folder`: a folder beside the reviewer's clone that the run does not work in.
   - The runner reads the allow, ask and deny rules of the settings file the seat's clone keeps in git. It passes them to the harness as the run's settings, and nothing else of that file: no mode, sandbox setting, added folder, hook or server. It writes them in `settings_folder`.
   - It refuses the run where it cannot read that file, or where `settings_folder` is a link or lies in or around `folder`.
-  - Where a snapshot of a realized model binds the seat's clone ([ADR-095](../../tech-docs/architecture/decisions/ADR-095-hook-out-of-reach.md) point 3), the runner also registers the hook from the copy, naming it. Realizing keeps no snapshot yet, so none binds. The runner names none, and the reviewer is held as it would be in the seat's clone.
+  - Where a snapshot of a realized model binds the seat's clone, the runner also registers the hook from the copy. The runner names that snapshot as the hook's bound. Realizing keeps no snapshot yet, so none binds. The runner names none, and the reviewer is held as it would be in the seat's clone.
 
 When the drift command starts a fixer, and in which form, is project-management's ([its README, "Starting the fixers"](../capabilities/project-management/README.md#starting-the-fixers--fix-drift)).
 
