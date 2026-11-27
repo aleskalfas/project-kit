@@ -278,6 +278,99 @@ def test_a_backbone_without_the_command_names_the_upgrade(ar: ModuleType, fake_p
     assert "`pkit upgrade`" in run.reason
 
 
+def _clone(ar: ModuleType, **overrides: object) -> object:
+    fields: dict[str, object] = {
+        "commit": "c" * 40,
+        "remote": "upstream",
+        "url": "git@github.com:owner/repo.git",
+        "default_branch": "main",
+        "branches": ("release",),
+        "head_ref": "refs/pull/7/head",
+        "head": "d" * 40,
+        **overrides,
+    }
+    return ar.ReviewerClone(**fields)
+
+
+def test_a_run_in_a_reviewers_clone_names_the_clone(ar: ModuleType, fake_pkit: Path) -> None:
+    _answer(fake_pkit, stdout=_document())
+    run = ar.run_in_review_clone(
+        "code-reviewer", "Review PR 7.", clone=_clone(ar), limit_seconds=720, effort="low"
+    )
+    assert run == ar.AgentRun("finished", 0, "the review\n", "", "")
+    seen = json.loads((fake_pkit / "log.json").read_text(encoding="utf-8"))
+    assert seen["argv"] == [
+        "agents",
+        "run",
+        "--clone-at",
+        "c" * 40,
+        "--clone-remote",
+        "upstream",
+        "--clone-url",
+        "git@github.com:owner/repo.git",
+        "--clone-default",
+        "main",
+        "--clone-branch",
+        "release",
+        "--clone-head-ref",
+        "refs/pull/7/head",
+        "--clone-head",
+        "d" * 40,
+        "--limit",
+        "720",
+        "--effort",
+        "low",
+        "--json",
+        "--",
+        "code-reviewer",
+    ]
+    assert seen["brief"] == "Review PR 7."
+
+
+def test_a_reviewers_clone_with_no_other_branch_names_none(ar: ModuleType, fake_pkit: Path) -> None:
+    _answer(fake_pkit, stdout=_document())
+    ar.run_in_review_clone("code-reviewer", "Go.", clone=_clone(ar, branches=()), limit_seconds=5)
+    seen = json.loads((fake_pkit / "log.json").read_text(encoding="utf-8"))
+    assert "--clone-branch" not in seen["argv"]
+
+
+@pytest.mark.parametrize(
+    ("given", "read"),
+    [
+        pytest.param("run-folder", "run-folder", id="the-run-folder"),
+        pytest.param(None, None, id="none"),
+        pytest.param("a-cause-pm-does-not-know", None, id="unknown"),
+        pytest.param(7, None, id="no-string"),
+    ],
+)
+def test_a_refusals_cause_reads_only_as_one_pm_knows(
+    ar: ModuleType, fake_pkit: Path, given: object, read: object
+) -> None:
+    _answer(
+        fake_pkit,
+        stdout=_document(ending="refused", exit_code=None, reason="no", refusal_cause=given),
+    )
+    run = ar.run_in_review_clone("code-reviewer", "Go.", clone=_clone(ar), limit_seconds=5)
+    assert (run.ending, run.refusal_cause) == (ar.REFUSED, read)
+
+
+def test_a_document_with_no_refusal_cause_reads_as_none(ar: ModuleType, fake_pkit: Path) -> None:
+    """A backbone older than the key writes none: the run reads as one with no cause."""
+    _answer(fake_pkit, stdout=_document(ending="refused", exit_code=None, reason="no"))
+    run = ar.run_agent("code-reviewer", "Go.", folder=fake_pkit, limit_seconds=5)
+    assert (run.ending, run.refusal_cause) == (ar.REFUSED, None)
+
+
+def test_a_backbone_without_the_clone_options_names_the_upgrade(
+    ar: ModuleType, fake_pkit: Path
+) -> None:
+    _answer(fake_pkit, stderr="Error: No such option: --clone-at\n", code=2)
+    run = ar.run_in_review_clone("code-reviewer", "Go.", clone=_clone(ar), limit_seconds=5)
+    assert run.ending == ar.NO_ANSWER
+    assert "has no such option" in run.reason
+    assert "older than project-management needs" in run.reason
+
+
 def test_a_run_with_no_document_names_how_pkit_ended(ar: ModuleType, fake_pkit: Path) -> None:
     _answer(fake_pkit, stderr="Error: not in a project tree.\n", code=1)
     run = ar.run_agent("code-reviewer", "Go.", folder=fake_pkit, limit_seconds=5)
