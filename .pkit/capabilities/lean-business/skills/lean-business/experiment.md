@@ -10,14 +10,14 @@ An *experiment* tests one assumption in a time box of fourteen days at most. It 
 
 ## 1. Choose the assumption
 
-The person's ranking names the riskiest untested assumption of a variant the open cycle explores. Ask which they want to test, and offer that one. They may choose another. Where a riskier one stays untested, `declare` will warn, and the order of work is theirs.
+The person's ranking names the riskiest untested assumption of a variant the open cycle explores. Offer that one, and ask which they want to test. They may choose another. Where a riskier one stays untested, `declare` will warn, and the order of work is theirs.
 
 ## 2. Choose the kind
 
 - **Generative,** to discover. It learns until a stopping rule ends it, and its result is held against a count set in advance. Talking with customers about their problem is the usual first experiment, and the person runs the interviews outside the capability. Problem discovery fits two such experiments of two weeks at most, a broad one and then a narrow one (DEC-001 point 2).
 - **Evaluative,** to measure traction. One action, one number measured at a step of the customer factory, held against an expected outcome. It runs its whole time box, since stopping it on a good early reading would bias it (DEC-003 point 3).
 
-Start the draft:
+Say which kind fits the assumption, and why, and ask. Then start the draft:
 
 ```
 pkit lean new-experiment <idea>--<experiment> --kind generative|evaluative --assumption <assumption> --cycle <cycle> [--author <name>]...
@@ -59,7 +59,7 @@ Only now work out the expected number with the person, from the model rather tha
 
 1. **Show the whole draft,** each field as written, and the estimates beside it.
 2. **Say what declaring does:** the declaration is frozen, and a time box starting today runs at once.
-3. **Ask** whether to declare it, then run `pkit lean declare <experiment>` without the flag and show them its question.
+3. **Say whether you would declare it as it stands,** and why, and ask whether to declare it. Then run `pkit lean declare <experiment>` without the flag and show them its question.
 4. **On their confirmation:**
 
    ```
@@ -70,13 +70,13 @@ The command records who declared it and when, the shortlisting it rests on and t
 
 ## Example
 
-The open cycle `meal-plan--first` explores `meal-plan--households`, whose riskiest assumption by the person's ranking is `planning-burden`. They want to talk with parents, so it is generative:
+The open cycle `meal-plan--first` explores `meal-plan--households`, whose riskiest assumption by the person's ranking is `planning-burden`. You offer it, and suggest talking with parents, a generative experiment, since nobody has yet heard them tell of the burden. They agree:
 
 ```
 pkit lean new-experiment meal-plan--parent-interviews --kind generative --assumption households--planning-burden --cycle first
 pkit lean draft-experiment meal-plan--parent-interviews --learn "Whether parents back at work lose real time planning the week's meals" --stopping-rule "Twelve interviews, or three in a row that bring nothing new" --start 2026-12-01 --end 2026-12-14
 ```
 
-You ask how many of twelve parents they think will tell of an evening a week lost to planning, and say nothing of your own. They guess six. You run `record-estimate meal-plan--parent-interviews 6` without the flag, show them its question, and on their confirmation run it with `--person-decided`. Then you agree the bar: seven parents who tell of an evening a week lost to planning. You point out that their own guess of six falls one short of it. They weigh it, and keep seven: fewer would be too thin a burden to build on, and a fail would tell them so. You draft it as the fit, show the whole draft, and ask whether to declare it. They answer yes on 29 November, confirm the command's question, and the experiment is declared, starting on 1 December.
+You ask how many of twelve parents they think will tell of an evening a week lost to planning, and say nothing of your own. They guess six. You run `record-estimate meal-plan--parent-interviews 6` without the flag, show them its question, and on their confirmation run it with `--person-decided`. Then you agree the bar: seven parents who tell of an evening a week lost to planning. You point out that their own guess of six falls one short of it. They weigh it, and keep seven: fewer would be too thin a burden to build on, and a fail would tell them so. You draft it as the fit, show the whole draft, recommend declaring it as it stands, and ask whether to declare it. They answer yes on 29 November, confirm the command's question, and the experiment is declared, starting on 1 December.
 
 Their second experiment, `meal-plan--price-page`, is evaluative. It tests `five-percent-pay` with one action: a page offering the plan at 8 EUR a month, paid at sign-up, shared in the two parents' groups. Half the visitors see it, and half a free waiting list, so its control is a split with half exposed. The person guesses 4 paying households. Only then do you work out the bar from the estimate's conversion: of about 120 visitors who see the price, 5% is 6. You name the gap between their 4 and the bar of 6. They keep the bar, since it is what the model needs, and declare it at least 6, sourced from the estimate, with the holidays as an effect, from 15 to 28 December. `declare` warns that `two-year-stay`, ranked riskier, is untested. The person goes on, since no fourteen-day test can show a two-year lifetime.

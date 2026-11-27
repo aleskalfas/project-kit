@@ -48,6 +48,8 @@ pkit:
         - .pkit/capabilities/lean-business/schemas/*.schema.json
         - .pkit/capabilities/lean-business/schemas/*.yaml
         - .pkit/capabilities/lean-business/skills/lean-business/lean-business.md
+        - .pkit/capabilities/lean-business/agents/lean-coach.md
+        - .pkit/schemas/privilege-catalog.yaml
       record:
         - lean-business:DEC-001#1
         - lean-business:DEC-001#3
@@ -77,9 +79,28 @@ pkit:
         - lean-business:DEC-003#5
         - lean-business:DEC-003#7
         - lean-business:DEC-003#8
+        - lean-business:DEC-004#1
+        - lean-business:DEC-004#2
+        - lean-business:DEC-004#3
+        - lean-business:DEC-004#4
+        - lean-business:DEC-004#5
+        - lean-business:DEC-004#6
+        - lean-business:DEC-004#7
+        - lean-business:DEC-004#8
+        - lean-business:DEC-004#9
       artefact:
         - .pkit/cli/README.md#validate
         - .pkit/cli/README.md#data-validate-path
+        - .pkit/cli/README.md#merge-target
+        - .pkit/adapters/claude-code/README.md#settings
+        - .pkit/adapters/claude-code/README.md#what-the-merge-keeps-under-permissions
+        - .pkit/capabilities/project-management/README.md#6-optional-enable-project-manager-as-the-default-claude-code-agent
+        - .pkit/permissions/README.md#default-agent-subject-resolution
+        - .pkit/permissions/README.md#grants-and-verdicts
+        - .pkit/permissions/README.md#the-read-only-text-filters-and-uv-run
+        - .pkit/permissions/README.md#what-keeps-a-grant-from-allowing
+        - docs/permissions/README.md#allow-a-command
+        - RS-OPS-017
 ---
 
 # lean-business capability
@@ -94,13 +115,15 @@ lean-business guides a person through the lean method of validating a business m
   - [lean-business:DEC-001-lean-business-discipline]: what it carries, its words, its seams with other capabilities, and how it credits the method.
   - [lean-business:DEC-002-lean-business-data-model]: an idea as a folder of data files that hold only what a person wrote or decided.
   - [lean-business:DEC-003-lean-business-process]: the processes of a variant, an experiment and a cycle, and why each judgement is the person's.
+  - [lean-business:DEC-004-lean-business-coach]: the lean coach, and, for any agent that follows the skill, whose answer it records and how it explains the method.
 
 - `schemas/` — the shape of each file of an idea and of the capability's configuration, each with its reference instance ([lean-business:DEC-002-lean-business-data-model]; "An idea's folder" below). `shapes.schema.json` holds the shapes they share: the ids, the references, a day, a person and a fingerprint.
 - `schemas/desk-stage.yaml`, `schemas/experiment-lifecycle.yaml` and `schemas/cycle-lifecycle.yaml` — the definitions of the three processes the process engine runs: a variant's stage at the desk, an experiment's life and a cycle's ([lean-business:DEC-003-lean-business-process]).
 - `scripts/check.py` — the capability's check, `pkit lean check`, and the `lean-business:check` member of `pkit validate` ("The check" below).
 - `scripts/*.py` — one for each of the other commands "Commands" below describes, and the predicates that the process engine, not you, runs for the capability's processes: for each process, the one that tells where a subject stands, and the gates its moves carry.
 - `scripts/_lib/` — the code the check and the commands share.
-- `skills/lean-business/` — the skill that guides a person through the loop with these commands, one sub-procedure for each step, every judgement left to the person ([lean-business:DEC-001-lean-business-discipline]).
+- `skills/lean-business/` — the skill that guides a person through the loop with these commands, one sub-procedure for each step, every judgement left to the person ([lean-business:DEC-001-lean-business-discipline]). On each judgement it offers its suggestions with its recommendation, and the person takes one, changes it or gives their own, save an experiment's estimate, a guess they make alone, and what happened, which they report (core rule 17; [lean-business:DEC-003-lean-business-process] point 5; [lean-business:DEC-002-lean-business-data-model] points 9 and 12). Any agent that follows it takes a judgement only from the person's own answer in its conversation, drafts nothing where no person answers, and explains the whole method in its own words, the parts the capability leaves for later included ([lean-business:DEC-004-lean-business-coach] points 7, 8 and 9).
+- `agents/lean-coach.md` — the lean coach's definition ("Starting the lean coach" below).
 
 ## Adopter setup
 
@@ -111,6 +134,18 @@ pkit capabilities install lean-business
 ```
 
 The ideas live in `lean-business/` at the repository's root, one folder per idea. The first command that writes an idea records that location in the capability's own configuration, `.pkit/capabilities/lean-business/project/config.yaml`. To keep the ideas elsewhere, record another location before the first idea, with `pkit lean set-location <path>` ([lean-business:DEC-002-lean-business-data-model] point 1). Where `lean-business/` already holds files of another kind, the first write is refused, writes nothing and names `set-location`. An idea's data is as private as the repository that holds it.
+
+### Starting the lean coach
+
+The lean coach, `lean-coach`, is a session's guide through the method ([lean-business:DEC-004-lean-business-coach]). Its first reply, whatever you open with, says where your ideas stand and what waits for you, from `pkit lean status`. From then on it guides as the skill does, and reads the skill again before each step and each judgement. Its grant withholds every tool that edits a file, the web tools and the tool that starts another agent. Its definition, not its grant, keeps its shell to the `pkit lean` commands, the methodology's read-only commands, reading files and version control's history, and a commit of an idea's files on your word, so that it writes an idea's files only through the commands. The grant removes only the likeliest ways around that limit. Where a commit owes answers on artefacts, it commits nothing, and gives you the commands for a session that can write them. Where nobody answers in its conversation, as when another session dispatches it as a helper, it writes nothing and asks nothing, and reports where the ideas stand.
+
+- **For one session,** start Claude Code as the coach in the repository: `claude --agent lean-coach`.
+- **For every session of the project,** make it the project's default agent. Add `"agent": "lean-coach"` to the project's additions to the settings, `.pkit/adapters/claude-code/settings/project/settings.json` <!-- unanchored: named as the file of the project's additions, which the adapter's README, linked and anchored here, states -->, and run `pkit merge`, which runs every merge target, the settings among them ([the Claude Code adapter's README, `settings/`](../../adapters/claude-code/README.md#settings), and [the CLI reference, "merge"](../../cli/README.md#merge-target)). The capability makes no agent a default by itself.
+- **How the merge picks the default.** It reads the baseline, then the project's additions, then each capability's overlay a project has turned on, then `.claude/settings.json` <!-- unanchored: named as the file the merge writes, which the adapter's README, linked and anchored here, states --> as it stands, and the last of them that names an `agent` wins ([the Claude Code adapter's README, `settings/`](../../adapters/claude-code/README.md#settings)). So where that last file already names one, or project-management's `enable-default-agent` has made its agent the default ([project-management's README](../project-management/README.md#6-optional-enable-project-manager-as-the-default-claude-code-agent)), that agent stays the default. A project has one default agent. Where another holds the place, start the coach for each session on an idea instead. The coach fits as the default of a repository kept only for ideas, since every session there has only its tools.
+- **The permissions its calls need:**
+  - **Whose calls they are.** Where the coach is the default agent, the permission model judges every call of a session as the coach's, `agent:lean-coach`, the commands you type into it included, so a grant to `operator` does not reach them. A session started with `--agent` may be judged as the project's default agent or as `operator` instead ([the permission model, "Default-agent subject resolution"](../../permissions/README.md#default-agent-subject-resolution)).
+  - **What to grant.** Beside loading its skill, the coach's calls are `pkit` commands, `git`, and reading and searching files, which the privileges `kit`, `vcs`, `repo-read` and `text-filter` recognize ([the privilege catalog](../../schemas/privilege-catalog.yaml), and for `text-filter`, [the permission model, "The read-only text filters and `uv run`"](../../permissions/README.md#the-read-only-text-filters-and-uv-run)). A grant of each to `all` covers them, and, where the coach is the default agent, so does a grant to the coach alone, such as `pkit permissions grant agent:lean-coach kit` ([the permission guide, "Allow a command"](../../../docs/permissions/README.md#allow-a-command)).
+  - **Which posture.** Keep the default, lenient posture, as [lean-business:DEC-004-lean-business-coach] point 5 accepts. A strict posture denies a call no grant allows ([the permission model, "Grants and verdicts"](../../permissions/README.md#grants-and-verdicts)), and two of the coach's calls are such: loading its skill, which no privilege recognizes, and a command that carries your words where they hold a construct that keeps every grant from allowing, such as a parenthesis or a dollar sign ([the permission model, "What keeps a grant from allowing"](../../permissions/README.md#what-keeps-a-grant-from-allowing)). Under the lenient posture, such a call goes to Claude Code's own settings, into which the merge writes an allow for each deployed skill ([the Claude Code adapter's README, "What the merge keeps under `permissions`"](../../adapters/claude-code/README.md#what-the-merge-keeps-under-permissions)).
 
 ## An idea's folder
 
@@ -199,7 +234,7 @@ Checks the files of the location, as "The check" above says.
 
 **Content, acts and moves.** Content, a canvas's words and links, its inputs, its target, the authors of a variant or a draft, and where the ideas live, is written without asking, and records neither who decided it nor when. A judgement is the person's ([lean-business:DEC-001-lean-business-discipline] point 3): an act records it, and a move takes the process engine with it ([lean-business:DEC-003-lean-business-process] point 5).
 
-- **The person's word.** At a terminal, the command asks, and a move asks its process's own prompt. Off one, it acts only with `--person-decided`, the flag by which an agent says the person decided in the session.
+- **The person's word.** At a terminal, the command asks, and a move asks its process's own prompt. Off one, it acts only with `--person-decided`, the flag by which an agent says the person decided in its own conversation with them ([lean-business:DEC-003-lean-business-process] point 5).
 - **Who and when.** An act records the person as git's `user.name`, refusing where git names none, and the day it ran. Two acts record less: `record-estimate` records the person and no day, and `rank` records neither, so it needs no name from git.
 - **A move** asks the engine first whether its gate lets it go, writes, then moves the subject to where the engine places it after the write. Where the engine refuses the move after the write, the command undoes everything it wrote, the location's record included (Adopter setup, above), and says so.
 

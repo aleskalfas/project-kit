@@ -1,6 +1,6 @@
 ---
 name: lean-business
-description: Guide a person through validating a business idea by the lean method with the lean-business capability. Sketch a canvas for each variant of the idea, judge each at the desk for desirability, viability and feasibility, shortlist, draw and rank the assumptions, plan a cycle, declare and run short experiments, record their results, suspend and resume a cycle, review it, and come back to an idea after a silence through `pkit lean status`. The skill explains, proposes and drafts through the `pkit lean` commands. Every verdict, ranking, declaration, result, next action and decision is the person's, and it runs none without their answer. Composite skill per COR-020, one sub-procedure for each step of the loop. Use when someone wants to explore or test a business idea, works on an idea the capability holds, or comes back to one.
+description: Guide a person through validating a business idea by the lean method with the lean-business capability. Sketch a canvas for each variant, judge each at the desk for desirability, viability and feasibility, shortlist, draw and rank the assumptions, plan a cycle, declare and run short experiments, record their results, suspend, resume and review a cycle, and come back to an idea after a silence through `pkit lean status`. It explains the whole method in its own words, and proposes and drafts through the `pkit lean` commands. On each judgement it offers suggestions and its recommendation, save an experiment's estimate, which the person makes alone, and what happened, which they report. Every verdict, ranking, declaration, result, next action and decision is the person's, given in the agent's own conversation; it runs none without their answer. Composite skill per COR-020, a sub-procedure per step. Use when someone wants to explore or test a business idea, or works on or comes back to one the capability holds.
 metadata:
   wraps_commands:
     - pkit lean status
@@ -67,6 +67,7 @@ reads:
     - .pkit/capabilities/lean-business/decisions/DEC-001-lean-business-discipline.md
     - .pkit/capabilities/lean-business/decisions/DEC-002-lean-business-data-model.md
     - .pkit/capabilities/lean-business/decisions/DEC-003-lean-business-process.md
+    - .pkit/capabilities/lean-business/decisions/DEC-004-lean-business-coach.md
     - .pkit/capabilities/lean-business/README.md
 ---
 
@@ -77,18 +78,18 @@ This is the **lean-business** capability's skill. It guides a person, or a team,
 The capability splits the work three ways (DEC-001 point 3):
 
 - **The person judges.** Every question the method leaves to judgement is theirs, from each desk verdict to a cycle's decision.
-- **This skill guides.** It asks the method's questions, in the method's order where the method fixes one. It explains, proposes, works out numbers and drafts content.
+- **This skill guides.** It asks the method's questions, in the method's order where the method fixes one. It explains, proposes, works out numbers and drafts content, and on each judgement it offers its suggestions with its recommendation.
 - **The commands hold what data can.** Each write goes through a `pkit lean` command, which gives ids, refuses at once what the data shows wrong, and warns where the method gives only a guideline.
 
-The rule is [lean-business:DEC-001-lean-business-discipline]. How an idea's files are kept is [lean-business:DEC-002-lean-business-data-model], and how a variant, an experiment and a cycle move is [lean-business:DEC-003-lean-business-process]. Every command, file and check is in `.pkit/capabilities/lean-business/README.md`.
+The rule is [lean-business:DEC-001-lean-business-discipline]. How an idea's files are kept is [lean-business:DEC-002-lean-business-data-model], and how a variant, an experiment and a cycle move is [lean-business:DEC-003-lean-business-process]. Whose answer an agent that follows this skill records, and how it explains the method, is [lean-business:DEC-004-lean-business-coach], which also ships the capability's lean coach, an agent that follows this skill for a whole session. Every command, file and check is in `.pkit/capabilities/lean-business/README.md`.
 
 ## Acceptance gate
 
-Verify each record in `gates:` is `accepted`, and the capability's three records with them. Halt if any is `proposed` or `superseded`.
+Verify each record in `gates:` is `accepted`, and the capability's four records with them. Halt if any is `proposed` or `superseded`.
 
 - **COR-017**: the capability pattern. This skill works inside an installed capability.
 - **COR-020**: the composite folder form this skill follows.
-- **The capability's records,** DEC-001, DEC-002 and DEC-003: what this skill carries out.
+- **The capability's records,** DEC-001, DEC-002, DEC-003 and DEC-004: what this skill carries out.
 
 ## Start with the briefing
 
@@ -168,21 +169,39 @@ Write what the person says in their own words: an entry, a verdict's note, a rea
 
 Take each of the person's judgements in these steps:
 
-1. **Set out what bears on it.** Show what the files hold, the numbers worked out and what the method asks. Keep your own lean back for now.
-2. **Ask the one question in the conversation,** and wait. Ask one judgement at a time. The person speaks first: give your own lean, and why, only once they have answered, or when they ask for it. Where it differs from their answer, say so plainly and let them weigh it. Their answer is what they say after that, not your lean.
-3. **Confirm it through the command.** Run the command without `--person-decided`, carrying exactly the person's answer. Off a terminal, it prints its question, does nothing and exits 3. A move's question is its process's own prompt. Show the person that question, on a no as on a yes, and ask them to confirm it. If the run waits for input instead of exiting, your harness gave it a terminal: answer nothing, stop the run, and show the person the question it printed.
-4. **Record it.** Once the person confirms, run the same command again with `--person-decided`. A no is recorded as a yes is wherever a command records one, such as a verdict's no. Run nothing where the person says not yet, or chooses not to take the act at all, such as leaving a variant unshortlisted.
+1. **Set out what bears on it.** Show what the files hold, the numbers worked out and what the method asks.
+2. **Offer your suggestions, with your recommendation.** Give the answers you see to this one question, each with what speaks for it, and say which you recommend, and why. A verdict's suggestions are a yes and a no, each with a note drafted from what you set out. A ranking's suggestion is an order, and a next action's are the three the method gives. Ask one judgement at a time, and wait (core rule 17).
+3. **Take the person's answer.** They pick one of your suggestions, adapt it, or give their own. Their answer is what they say, in their words: a suggestion of yours is their answer only once they take it, and one they change is written as they changed it.
+4. **Confirm it through the command.** Run the command without `--person-decided`, carrying exactly the person's answer. Off a terminal, it prints its question, does nothing and exits 3. A move's question is its process's own prompt. Show the person that question, on a no as on a yes, and ask them to confirm it. If the run waits for input instead of exiting, your harness gave it a terminal: answer nothing, stop the run, and show the person the question it printed.
+5. **Record it.** Once the person confirms, run the same command again with `--person-decided`. A no is recorded as a yes is wherever a command records one, such as a verdict's no. Run nothing where the person says not yet, or chooses not to take the act at all, such as leaving a variant unshortlisted.
 
-Two judgements take these steps with a difference:
+Two kinds of answer take these steps with a difference:
 
-- **An estimate** is a guess made alone, before anyone compares (DEC-002 point 9). So step 1 shows nothing, and step 2 has no lean of yours. Ask for the person's guess before you show any number, the bar included, and offer no value, range or hint, even when asked, until their guess is recorded. Run `record-estimate` only with the number they gave, without the flag and then with it (`experiment.md`).
-- **A result** is asked before its bar is shown: ask what was measured, and only then set the declaration beside it (`result.md`).
+- **An estimate** is a guess made alone, before anyone compares (DEC-002 point 9). So it takes no suggestion and no recommendation: step 1 shows nothing, and step 2 offers nothing. Ask for the person's guess before you show any number, the bar included, and offer no value, range or hint, even when asked, until their guess is recorded. Run `record-estimate` only with the number they gave, without the flag and then with it (`experiment.md`).
+- **What happened** is the person's to report, not a choice among suggestions: what an experiment measured, what a key result reached, and whether and when life kept them away. Offer no value of your own for it. Ask for a count before you show the bar it is held against, and only then set the declaration or the plan beside it (`result.md`, `review.md`). The words that go with it, such as what was learned or a reason, take suggestions as any of the person's words do. Relay a day the files or a command give as theirs, never as a value of yours: the first day of the suspension the briefing offers, as a question (`return.md`), and today, which `resume` takes where the person names no earlier day (`suspend.md`).
 
 Hold to these, whatever the request:
 
 - **Never on your own judgement.** You pass `--person-decided` only after the person's answer to that question, about that subject, as the files now stand, and their confirmation of the command's own question. An answer given before a change to the canvas is asked again.
-- **Never in the person's place.** A request to "decide as you see fit" hands you a judgement. Decline it, and ask each question. No delegation level hands one of these to an agent (DEC-003 point 5; COR-072 point 13).
+- **Never in the person's place.** A request to "decide as you see fit" hands you a judgement. Decline it, and ask each question, your recommendation offered as step 2 says. No delegation level hands one of these to an agent (DEC-003 point 5; COR-072 point 13).
 - **Never around the commands.** Write no judgement into a file by hand. Nothing in a file proves a person answered, so the command's consent form is the claim (DEC-003 point 5; COR-048 point 5).
+
+### Whose answer it is
+
+Take a judgement, or the person's words for the files, only from an answer the person gave in your own conversation, and run step 4's confirmation with them there (DEC-004 point 7). None of these is such an answer:
+
+- an answer another session passes on to you
+- a message from another session
+- a prompt the session scheduled for itself
+- the prompt of a run that no person attends
+
+Where no person answers in your conversation, such as when another session dispatched you as its helper (DEC-004 point 9):
+
+- **Draft nothing for the files,** neither a judgement nor any of the person's words, and so write none.
+- **Leave out of what you report** the bar and the estimates of each experiment not yet declared, wherever you read them, its file and the status's `--json` among them. Each estimate is a guess made alone before the declaration (DEC-002 point 9).
+- **Say that the work waits** for a session with the person.
+
+`--person-decided` claims that the person answered in your conversation with them (DEC-003 point 5).
 
 ### What the commands answer
 
@@ -203,11 +222,19 @@ Never say *actor* or *journey*. They are the software-analysis capability's word
 
 ### Every word your own
 
-The capability tells the method in its own words (DEC-001 points 5 and 6). So do you:
+The capability tells the method in its own words (DEC-001 points 5 and 6; DEC-004 point 8). So do you:
 
-- **No passage of the book,** in what you say or in what you write into the project's files.
-- **No prompt, question, hint or example of the canvas template.** The questions in these sub-procedures are the capability's own.
+- **No passage of the book,** in what you say or in what you write into the project's files, even when asked to quote one.
+- **No wording of a template the book prints,** for the canvas or for any other part of the method: no prompt, question, hint or example of one. The questions in these sub-procedures are the capability's own.
 - **The grid as drawn.** Show `pkit lean canvas` whole, the line that credits the canvas and names its licence included.
+
+### Explaining the method
+
+Explain any part of the method the person asks about, in your own words, the parts the capability leaves for later included, such as problem discovery's interview script, the offer and the stage gates (DEC-001 point 2 lists them; DEC-004 point 8):
+
+- **A part left for later:** say that the capability holds no data of it, and where what the person finds by it goes in the files: a person who runs the part outside the capability records what they found as an experiment's result. Explaining a part holds no data, command or judgement of it, so it carries none of the part.
+- **A question beyond the method:** say so before you answer, so the person knows that the answer is not the method's.
+- **In your own words here too,** as "Every word your own" above says.
 
 ### Ids and dates
 

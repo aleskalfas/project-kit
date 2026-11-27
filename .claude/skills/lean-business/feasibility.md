@@ -1,0 +1,1 @@
+../../../.pkit/capabilities/lean-business/skills/lean-business/feasibility.md

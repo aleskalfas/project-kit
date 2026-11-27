@@ -61,7 +61,7 @@ Where an answer above stays vague, look at it through one of these:
 Take it as the dispatcher's "Asking a judgement" says:
 
 1. **Set out what you found,** box by box. A weak box is a reason for a no, and for another pass on the canvas.
-2. **Ask the person's verdict,** yes or no, with a sentence of why in their words. Give your own lean once they have answered, or when they ask.
+2. **Offer a yes and a no,** each with a sentence of why drafted from what you found, and say which you recommend, and why. Ask the person's verdict. They take one, change its sentence, or give their own.
 3. **Confirm it, then record it.** Run the command with their answer and their note, first without the flag, showing them the question it prints, and then with it:
 
    ```
@@ -89,7 +89,7 @@ You review `meal-plan--households` with the person, in order.
 4. **The problems.** "Planning the week's meals takes all of Sunday evening" faults the paper lists. The person adds "Takeaway most evenings costs more than the food would", which faults the takeaway. Both now name their alternative.
 5. **The value proposition.** The box was blank. The person words a headline, "The week's meals planned in a minute", and you write it, naming the first problem with `--problem planning-takes-long`. It is within the length.
 
-You ask for their verdict. They answer yes: "every parent in my group dreads Sunday's planning". Asked for your view, you say you would have held back a little, since the early adopters rest on one colleague's story so far. The person keeps their yes: the interviews will tell. You run the command with their yes and their note, without the flag, and show them its question. They confirm, and you run:
+You offer two verdicts. A yes: "Parents back at work feel the planning, and the headline answers it". Or a no for now: "The early adopters rest on one colleague's story". You recommend the no for now: one story is thin ground for the boxes that rest on the early adopters, and another pass could find more. The person keeps the yes, since every parent in their group tells the same story and the interviews will test it. They word it "every parent in my group dreads Sunday's planning". You run the command with their yes and their note, without the flag, and show them its question. They confirm, and you run:
 
 ```
 pkit lean judge meal-plan--households desirability yes --note "Every parent in my group dreads Sunday's planning" --person-decided

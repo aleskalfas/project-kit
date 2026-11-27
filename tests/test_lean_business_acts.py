@@ -15,7 +15,7 @@ from tests.in_process import load
     "lean-business", "acts", "gates", "layout", "model", "timeline"
 )
 
-FIXTURE = Path(__file__).resolve().parent / "fixtures/lean-business/repo"
+FIXTURE = Path(__file__).resolve().parent / "fixtures/lean-business/.repo"
 IDEA = "lean-business/meal-plan"
 CYCLE = f"{IDEA}/cycles/first.yaml"
 INTERVIEWS = f"{IDEA}/experiments/first-interviews.yaml"

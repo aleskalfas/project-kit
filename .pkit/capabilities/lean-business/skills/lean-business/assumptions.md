@@ -34,14 +34,14 @@ Each is content, and its statement is in words the person agrees to. The command
 
 ## 3. Rank them, with the person
 
-The order is the person's. Ask for it first: which would hurt the model most if it turned out wrong? Help them weigh two things together:
+The order is the person's. The question is which would hurt the model most if it turned out wrong, and two things are weighed together:
 
 - **How likely it is wrong,** given what the person knows today.
 - **How much of the model falls with it.** A belief the whole canvas rests on, such as the top problem, outranks one that a change of price could mend.
 
 Customer risks usually come before technical ones: whether people want it before whether it can be built. An assumption that cannot be tested until later still takes its place by risk.
 
-Once they have given their order, or when they ask, give yours, with a sentence for each place where it differs. Take the ranking as the dispatcher's "Asking a judgement" says, and run it as they gave it:
+Offer an order of your own, with a sentence for each place, and ask for theirs. They take it, move what they weigh otherwise, or give their own. Take the ranking as the dispatcher's "Asking a judgement" says, and run it as they gave it:
 
 ```
 pkit lean rank <variant> <assumption> <assumption> ... --person-decided
@@ -64,7 +64,7 @@ pkit lean add-assumption meal-plan--households "Five in a hundred households rea
 pkit lean add-assumption meal-plan--households "Groups of new parents reach households who would pay" --kind feasibility --entry parent-groups --id groups-reach-parents
 ```
 
-You ask the person for their order. They put the planning burden first, then the two-year stay, which they trust least of the inputs, then the conversion, and the parents' groups last, since they are in two of them already. Asked for your view, you say you would have put the conversion before the stay, since no fourteen-day test can show a two-year lifetime. They keep their order: when a belief can be tested does not change how much rests on it. You run the ranking without the flag, show them its question, and on their confirmation run:
+You offer an order: the planning burden first, since the whole canvas rests on it; then the conversion, since five in a hundred is a high share for a page nobody has seen yet; then the two-year stay; and the parents' groups last, since the person is in two of them already. The person moves the stay before the conversion: it is the input that put the goal out of reach when the estimate tried it worse, so more of the model falls with it. You add that no fourteen-day test can show a two-year lifetime. They keep the stay where they put it, since when a belief can be tested does not change how much rests on it. You run the ranking as they gave it, without the flag, show them its question, and on their confirmation run:
 
 ```
 pkit lean rank meal-plan--households planning-burden two-year-stay five-percent-pay groups-reach-parents --person-decided

@@ -22,7 +22,7 @@ from tests.in_process import load
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCHEMAS = REPO_ROOT / ".pkit/capabilities/lean-business/schemas"
 FIXTURES = Path(__file__).resolve().parent / "fixtures/lean-business"
-IDEA = FIXTURES / "repo/lean-business/meal-plan"
+IDEA = FIXTURES / ".repo/lean-business/meal-plan"
 
 DOCUMENTS = ("config", "goal", "canvas", "assumptions", "experiment", "cycle")
 

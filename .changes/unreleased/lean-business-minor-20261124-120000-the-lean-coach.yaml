@@ -1,0 +1,34 @@
+component: lean-business
+kind: minor
+custom:
+  category: Added
+body: >
+  The lean coach, `lean-coach`, a session's guide through the method (#3426,
+  DEC-004). It loads the capability's skill when the session starts, reads
+  each step's sub-procedure and the skill's rules on judgements again before
+  each step and each judgement, and in its first reply, whatever the person
+  opens with, says where the ideas stand from `pkit lean status`. It is
+  granted only the tools that read and search files, the shell and the tool
+  that loads a skill, a grant that withholds every tool that edits a file, the
+  web tools and the tool that starts another agent. Its definition, not the
+  grant, keeps the shell to the `pkit lean` commands, the methodology's
+  read-only commands, reading files and history, and a commit of an idea's
+  files on the person's word; where a
+  commit owes answers on artefacts, it commits nothing and gives the person
+  the commands for another session. Where no person answers in its
+  conversation, it writes nothing and asks nothing, and reports where the
+  ideas stand. Start it for one session with `claude --agent lean-coach`, or
+  name it a project's default agent in the project's additions to the Claude
+  Code settings; the capability makes no agent a default. A project that runs
+  it keeps the default, lenient permission posture. The skill now offers its
+  suggestions, with its recommendation, on each judgement, and the person
+  takes one, changes it or gives their own. Two answers take no suggestion.
+  An experiment's estimate takes no number or hint until the person's guess
+  is recorded. What happened, such as what an experiment measured or when
+  life kept the person away, is the person's to report, and the skill offers
+  no value of its own for it. Any agent that follows the skill takes a
+  judgement only from the person's own answer in its conversation, never one
+  another session passes on. Where no person answers, it drafts nothing, and
+  leaves out of what it reports the bar and the estimates of an experiment
+  not yet declared. It explains any part of the method in its own words, the
+  parts the capability leaves for later included.

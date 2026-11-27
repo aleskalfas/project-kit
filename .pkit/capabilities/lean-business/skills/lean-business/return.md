@@ -13,7 +13,7 @@ pkit lean status <idea>
 
 - **Without an idea,** it gives one line for each: whether it has a goal, its variants by where they stand, whether it is dropped, and how many things wait on the person.
 - **With one,** it gives the briefing: whether the idea is dropped, the goal, each cycle, variant and experiment with where it stands, each assumption with its outcome, the canvas of each variant in play, and what waits on the person, each with the command that takes it. Its layout is the README's.
-- **`--json`** prints its structured form, which you may read for exact values. Show the person the plain form.
+- **`--json`** prints its structured form, which you may read for exact values. Show the person the plain form. Where no person answers in your conversation, read from it no bar of an experiment not yet declared, its `expected`, which the plain form leaves out: the dispatcher's "Whose answer it is" keeps a draft's bar and estimates out of what you report.
 
 Read the briefing before you propose anything. You and the person then start from one account of where things stand.
 

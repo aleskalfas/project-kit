@@ -81,7 +81,7 @@ Relay each warning the commands gave. They are guidelines, never refusals:
 - a headline over about 120 characters
 - a missing link
 
-Then ask the person whether the canvas tells one story. Where they see two, or once they have answered and you see two, such as two kinds of customer paying for different things, or two archetypes, say so and offer a split (`outcome.md`). Each variant is then judged on its own.
+Then say whether you see one story in the canvas or more, and why, and ask the person what they see. Where you see two, such as two kinds of customer paying for different things, or two archetypes, offer a split (`outcome.md`). Each variant is then judged on its own.
 
 ## 5. Revising a canvas
 
@@ -109,4 +109,4 @@ pkit lean add-entry meal-plan--service revenue-streams "Households pay 8 EUR a m
 pkit lean add-entry meal-plan--service revenue-streams "Grocers pay 200 EUR a month to have their offers in the plans"
 ```
 
-They told the paper lists at length, so you proposed "Lists on paper, written each weekend", and wrote it once they agreed. You leave the unfair advantage empty, since the person names nothing a rival would lack. When you show the grid, you ask whether it tells one story. The person sees two: households pay for their own plans, and grocers pay to reach cooks who use it free. You open `outcome.md` to split it.
+They told the paper lists at length, so you proposed "Lists on paper, written each weekend", and wrote it once they agreed. You leave the unfair advantage empty, since the person names nothing a rival would lack. When you show the grid, you say that you see two stories in it: households pay for their own plans, and grocers pay to reach cooks who use it free. You ask what the person sees. They see the same two, and you open `outcome.md` to split it.

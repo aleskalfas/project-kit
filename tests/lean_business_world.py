@@ -34,7 +34,7 @@ from tests.in_process import CAPABILITIES, load, route_pkit
 
 CAPABILITY = CAPABILITIES / "lean-business"
 SCRIPTS = CAPABILITY / "scripts"
-FIXTURE = Path(__file__).resolve().parent / "fixtures/lean-business/repo"
+FIXTURE = Path(__file__).resolve().parent / "fixtures/lean-business/.repo"
 
 IDEA = "lean-business/meal-plan"
 GOAL = f"{IDEA}/goal.yaml"

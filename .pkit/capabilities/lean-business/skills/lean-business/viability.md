@@ -58,7 +58,7 @@ Whether each number is within reach is the person's judgement, not the command's
 Take it as the dispatcher's "Asking a judgement" says:
 
 1. Set out the numbers and what breaks them.
-2. Ask the person's verdict, yes or no, with a sentence of why in their words. Give your own lean once they have answered, or when they ask.
+2. Offer a yes and a no, each with a sentence of why drafted from the numbers, and say which you recommend, and why. Ask the person's verdict. They take one, change its sentence, or give their own.
 3. Run the command with their answer and their note, first without the flag, showing them its question, and on their confirmation with it:
 
    ```
@@ -80,7 +80,7 @@ You read it to them. A household brings 96 EUR a year, so the goal of 240,000 EU
 
 You ask which input they trust least. The person names the lifetime: families they know drop such plans after a few months. You work it out with them: at a lifetime of one year, 2,500 leave each year, the channels must win 2,000, and 40,000 households must be reached. The person thinks the parents' groups and their workplaces could reach 20,000, not 40,000, so the lifetime is the leap of faith. You offer to write it as an assumption, and the conversion with it, and they agree.
 
-You ask for their verdict. They answer yes, in their words "reachable if families stay two years, and that is what we test first". You confirm it through the command's question, and run:
+You offer two verdicts. A yes: "Reachable if families stay two years". Or a no for now: "Out of reach unless families stay far longer than those I know". You recommend the yes, since the goal holds at the person's own inputs and the lifetime is now an assumption the cycle will test. The person takes the yes, and adds to its sentence: "reachable if families stay two years, and that is what we test first". You confirm it through the command's question, and run:
 
 ```
 pkit lean judge meal-plan--households viability yes --note "Reachable if families stay two years, and that is what we test first" --person-decided

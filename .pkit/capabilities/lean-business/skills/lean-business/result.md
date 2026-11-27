@@ -45,13 +45,13 @@ The command says what it works out to: a pass, a fail, or neither. Read it out a
 
 ## 4. The next action
 
-The next action is the person's (DEC-002 point 10). Explain the three, and ask which they take:
+The next action is the person's (DEC-002 point 10). Explain the three:
 
 - **Correct course:** the test or the model was off, and a changed test comes next, as a new experiment.
 - **Double down:** it worked, and the next experiment does more of what worked.
 - **Stop:** the experiment ends here, and nothing follows from it.
 
-Give your own lean once they have answered, or when they ask. Then confirm their answer through the command's question, and on their confirmation run:
+Say which you recommend, and why, and ask which they take. Then confirm their answer through the command's question, and on their confirmation run:
 
 ```
 pkit lean decide <experiment> correct-course|double-down|stop --person-decided
@@ -71,8 +71,8 @@ On 10 December, the person has run twelve interviews, and the last three brought
 pkit lean record-result meal-plan--parent-interviews --measured 8 --evidence "Notes of the twelve interviews, in the idea's shared folder" --learned "Parents in their first months back plan in a rush. Those back a year have a routine." --person-decided
 ```
 
-It passes. You ask what comes next. The person doubles down on parents in their first months back, and you record it.
+It passes. You recommend doubling down on parents in their first months back, since they told the burden most sharply, and ask what comes next. The person doubles down on them, and you record it.
 
-The price page ended on 28 December. You ask what it measured: three households paid. Its bar was at least 6, so it fails. Two of the visitors asked whether their employer could pay instead. The person decides to correct course, and declares a page for employers as a new experiment.
+The price page ended on 28 December. You ask what it measured: three households paid. Its bar was at least 6, so it fails. Two of the visitors asked whether their employer could pay instead. You recommend correcting course toward employers, since that question came unprompted. The person decides to correct course, and declares a page for employers as a new experiment.
 
 The grocers offer ran through the person's absence in January. Two grocers asked for a call that nobody answered. Once the cycle has resumed, the person records it as spoiled, and its assumption reads inconclusive. They declare the offer again for February.

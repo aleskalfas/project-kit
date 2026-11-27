@@ -13,7 +13,7 @@ Shelved and split are final (DEC-003 point 2). Each of these is a move of the pe
 A variant may be shortlisted once all three desk steps have a yes, none stale. The person may shortlist several variants of the idea, and a cycle may explore more than one (`plan-cycle.md`).
 
 1. **Set out the variants** that are feasible, each with its verdicts and their notes, and its estimate.
-2. **Ask** which the person would test, and whether to shortlist each, one at a time. Say which you would test first, and why, once they have answered, or when they ask.
+2. **Say which you would shortlist,** and which you would test first, and why. Then ask whether to shortlist each, one at a time.
 3. **On their yes,** confirmed through the command's question:
 
    ```
@@ -35,7 +35,7 @@ A no on a passed step instead takes the variant back, and withdraws its shortlis
 
 The person shelves a variant whose story they no longer believe in, or will not test. Its reason is their own, in their words.
 
-1. **Ask** whether to shelve it, and why. Say that it is final.
+1. **Say whether you would shelve it,** and why, with its reason drafted from what the person told you. Say that it is final, and ask.
 2. **On their answer,** confirmed through the command's question:
 
    ```
@@ -48,7 +48,7 @@ Its content stays editable, and nothing more rests on it. An idea whose every va
 
 Split a variant whose canvas tells more than one story, such as two kinds of customer paying for different things. Each new variant tells one story, of one archetype. A variant may be split while it is sketched or holds verdicts, but not once shortlisted (DEC-003 point 2).
 
-1. **Ask** which stories the person sees in the canvas, and what to call each new variant. Name the ones you see once they have answered, or when they ask.
+1. **Name the stories you see** in the canvas, with a name for each new variant, and ask which the person sees and what to call each.
 2. **Ask** whether to split it into those variants. Say that the variant split is final.
 3. **On their answer,** confirmed through the command's question:
 
@@ -70,7 +70,7 @@ It starts empty, and is sketched and judged from the start (DEC-003 point 2).
 
 ## Example
 
-The broad sketch `meal-plan--service` holds two stories, as the person saw. They call them `households` and `grocers`. You tell them the broad sketch will be closed, and ask whether to split it. They answer yes, and confirm the command's question:
+The broad sketch `meal-plan--service` holds two stories, as you and the person saw. You suggest calling them `households` and `grocers`, and they agree. You tell them the broad sketch will be closed, and ask whether to split it. They answer yes, and confirm the command's question:
 
 ```
 pkit lean split meal-plan--service --into households --into grocers --person-decided
@@ -84,7 +84,7 @@ pkit lean add-side meal-plan--grocers cooks
 pkit lean add-side meal-plan--grocers shops
 ```
 
-Once both variants are feasible, you show them side by side and ask which the person would test. They want both, the grocers first, since a grocer already asked. Asked for your view, you say you would start with households, since its early channel is the person's own circle. They keep both, and shortlist each, one question at a time:
+Once both variants are feasible, you show them side by side. You suggest shortlisting both, and testing households first, since its early channel is the person's own circle. They take both, and would start with the grocers, since a grocer already asked. They shortlist each, one question at a time:
 
 ```
 pkit lean shortlist meal-plan--households --person-decided
