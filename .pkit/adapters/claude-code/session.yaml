@@ -1,0 +1,33 @@
+schema_version: 1
+
+# The Claude Code adapter's declaration of a session (ADR-100 point 9, ADR-103
+# point 5): how a command finds the Claude Code session whose shell runs it,
+# that session's process and its messaging address. The backbone reads it as
+# data, through `pkit harness session`, and runs none of this adapter's code.
+# The adapters README, "What an adapter declares as data", says what each key
+# holds. Measured on macOS with Claude Code 2.1.330 and 2.1.331, and recorded on
+# project-kit#3461 (project-management DEC-084's Context, measurements 9 to 12,
+# and ADR-103's, 13 to 16).
+
+# The process the session's shell runs under, which ends when the session ends:
+# Claude Code names it in each command's environment (measurement 10).
+process:
+  variable: CLAUDE_PID
+
+# The address at which Claude Code delivers messages to the session. A command
+# reads it in `CLAUDE_CODE_MESSAGING_SOCKET`, and each message the session sends
+# carries it as `from="uds:<address>"`. The address is a local socket named
+# after the session's process, in a folder that names no user (measurements 9
+# and 10). An address of any other form is not given, so a harness that moved
+# it under a user's folder would put nothing on the tracker.
+messaging:
+  variable: CLAUDE_CODE_MESSAGING_SOCKET
+  reply_prefix: "uds:"
+  names_process: '/tmp/cc-socks/(?P<pid>[1-9][0-9]*)\.sock'
+
+# No platform reads a process by its id alone. On macOS a start time reads
+# wherever a command can read its process space whole, outside the sandbox and
+# in (measurements 13 and 16), so the id alone is needed nowhere there, and
+# inside the sandbox the space does not read whole, so every reading there
+# cannot tell. Linux is not measured (ADR-103, Implications).
+id_alone_platforms: []

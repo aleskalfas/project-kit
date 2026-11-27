@@ -148,6 +148,7 @@ here):
 | claim · handoff · abandon · release | the **instance** that claims, hands over, abandons or releases an issue of work, with its name where it has one, and for a handoff the **instance it goes to**. In a project with a topology it also names the **seat, the seat's number and the clone's key**, a handoff those of its target (refinement per [project-management:DEC-059-topology-of-seats]) |
 | state-marker | the **marker** that makes the issue a state issue, naming the **kind of state and its key**. GitHub records its author, which decides whether a read accepts the issue (refinement per [project-management:DEC-058-state-issues]) |
 | state-claim · state-release · state-force-release | the state's **key**, the **clone's key** and **where the clone lies**. A release by force also carries its **reason** (refinement per [project-management:DEC-058-state-issues]) |
+| state-session | the state's **key**, the **clone's key** and the **session** that runs the seat's loop: its name and machine, and, where they can be read, its **messaging address** and its **process**, by the name the backbone gives it (refinement per [project-management:DEC-081-delegation-between-seats] and [project-management:DEC-084-seat-session-address]) |
 
 **Composition — one mutation, one comment.** When a single mutation is both a move and an
 override (a gated transition that required a bypass), it is **one** comment, honouring

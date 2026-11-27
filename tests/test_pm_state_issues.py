@@ -204,6 +204,107 @@ def test_the_fold_names_the_comment_of_the_holders_take() -> None:
     assert si.fold([*held, _ev(si.RELEASE, "me", "a", 4)]).take is None
 
 
+#: Process names as the backbone gives them, stored and passed whole (ADR-103 point 2).
+P41 = "p1:aaaaaaaaaaaaaaaa:bbbbbbbbbbbbbbbb:-:41:1795515261.273034"
+P42 = "p1:aaaaaaaaaaaaaaaa:bbbbbbbbbbbbbbbb:-:42:1795518861.000001"
+LOOP = si.Session("planner", "laptop", "/tmp/cc-socks/41.sock", P41)
+LATER = si.Session("planner", "laptop", "/tmp/cc-socks/42.sock", P42)
+
+
+def _session(author: str, clone: str, n: int, session: si.Session = LOOP) -> si.StateEvent:
+    return si.StateEvent(
+        comment_id=n, author=author, type=si.SESSION, clone=clone, place="", session=session
+    )
+
+
+def test_the_holders_latest_session_is_the_seats_and_its_release_clears_it() -> None:
+    """DEC-081 point 4: only the holder's event counts, the latest counted one
+    wins, and the seat's release, by its clone or by force, clears it."""
+    held = [_ev(si.CLAIM, "me", "a", 1), _session("me", "a", 2), _session("me", "a", 3, LATER)]
+    assert si.fold(held).session == LATER
+    assert si.fold([*held, _ev(si.RELEASE, "me", "a", 4)]).session is None
+    assert si.fold([*held, _ev(si.FORCE_RELEASE, "bob", "z", 4)]).session is None
+    again = [*held, _ev(si.RELEASE, "me", "a", 4), _ev(si.CLAIM, "me", "a", 5)]
+    assert si.fold(again).holder is not None and si.fold(again).session is None
+
+
+def test_a_session_from_another_clone_or_on_a_free_seat_counts_for_nothing() -> None:
+    held = [_ev(si.CLAIM, "me", "a", 1), _session("me", "a", 2)]
+    for stray in (_session("me", "b", 3, LATER), _session("bob", "a", 3, LATER)):
+        folded = si.fold([*held, stray])
+        assert folded.session == LOOP and folded.events[-1].void
+    free = si.fold([_session("me", "a", 1)])
+    assert free.session is None and free.events[0].void
+
+
+def test_a_session_whose_event_names_no_name_or_no_machine_counts_for_nothing() -> None:
+    repo = FakeRepo()
+    _state_issue(repo)
+    _event(repo, 5, si.CLAIM, ME)
+    stamp = "<!-- pkit:audit v=1 event=state-session key=planner clone=key-me name=x id=a -->"
+    repo.post(5, stamp, author="me")
+    read = si.read(5, "seat", "planner", _run(repo))
+    assert _some(read.fold).session is None and _some(read.fold).events[-1].void
+
+
+def test_a_sessions_record_round_trips_through_the_log_and_the_region_shows_it() -> None:
+    repo = FakeRepo()
+    issue = _state_issue(repo)
+    run = _run(repo)
+    si.claim(5, "seat", "planner", ME, run)
+    out = si.record_session(5, "seat", "planner", ME, LOOP, run)
+    assert out.outcome == si.RECORDED and _some(_some(out.read).fold).session == LOOP
+    ev = _some(audit_log.parse(repo.bodies(5)[-1]))
+    assert ev.type == si.SESSION and ev.get("place") is None
+    assert (ev.get("address"), ev.get("process")) == (LOOP.address, LOOP.process)
+    assert "Its loop runs in the session `planner` on `laptop`." in issue.body
+
+
+def test_a_session_with_nothing_read_but_its_name_and_machine_is_recorded_so() -> None:
+    repo = FakeRepo()
+    _state_issue(repo)
+    run = _run(repo)
+    si.claim(5, "seat", "planner", ME, run)
+    bare = si.Session("planner", "laptop")
+    out = si.record_session(5, "seat", "planner", ME, bare, run)
+    assert out.outcome == si.RECORDED and _some(_some(out.read).fold).session == bare
+
+
+def test_a_session_already_recorded_posts_nothing_again() -> None:
+    repo = FakeRepo()
+    _state_issue(repo)
+    run = _run(repo)
+    si.claim(5, "seat", "planner", ME, run)
+    si.record_session(5, "seat", "planner", ME, LOOP, run)
+    posted = len(repo.bodies(5))
+    assert si.record_session(5, "seat", "planner", ME, LOOP, run).outcome == si.UNCHANGED
+    assert len(repo.bodies(5)) == posted
+    assert si.record_session(5, "seat", "planner", ME, LATER, run).outcome == si.RECORDED
+    assert len(repo.bodies(5)) == posted + 1
+
+
+def test_only_the_clone_that_holds_the_seat_records_its_session() -> None:
+    repo = FakeRepo()
+    _state_issue(repo)
+    run = _run(repo)
+    assert si.record_session(5, "seat", "planner", ME, LOOP, run).outcome == si.NOT_HOLDER
+    _event(repo, 5, si.CLAIM, ME)
+    out = si.record_session(5, "seat", "planner", OTHER, LOOP, run)
+    assert out.outcome == si.NOT_HOLDER and _some(out.holder).is_clone("me", "key-me")
+    assert repo.writes() == []
+
+
+def test_a_session_recorded_as_the_seat_is_released_by_force_is_not_the_seats() -> None:
+    repo = FakeRepo()
+    _state_issue(repo)
+    _event(repo, 5, si.CLAIM, ME)
+    repo.before_post = lambda n: (
+        _event(repo, n, si.FORCE_RELEASE, BOB, reason="stale") if len(repo.bodies(n)) == 2 else None
+    )
+    out = si.record_session(5, "seat", "planner", ME, LOOP, _run(repo))
+    assert out.outcome == si.NOT_HOLDER and out.holder is None
+
+
 # ---- create and finish --------------------------------------------------------------
 
 
@@ -669,6 +770,7 @@ def test_construction_every_write_comes_from_the_seams_constructors() -> None:
     number = _some(si.create("seat", "planner", "Seat planner", run).number)
     repo.issues[number].state = "CLOSED"
     si.claim(number, "seat", "planner", ME, run)
+    si.record_session(number, "seat", "planner", ME, LOOP, run)
     si.release(number, "seat", "planner", ME, run)
     si.claim(number, "seat", "planner", OTHER, run)
     si.force_release(number, "seat", "planner", BOB, "stale", run)

@@ -30,6 +30,7 @@ reads:
     - .pkit/capabilities/visual-communication/decisions/DEC-024-outside-programs-sandbox.md
     - .pkit/capabilities/visual-communication/decisions/DEC-029-piece-brief.md
     - .pkit/capabilities/visual-communication/decisions/DEC-030-design-agents.md
+    - .pkit/capabilities/visual-communication/decisions/DEC-045-svg-reads-cover-and-cut.md
     - .pkit/capabilities/visual-communication/decisions/DEC-070-ship-call-and-one-round.md
     - .pkit/capabilities/visual-communication/decisions/DEC-071-sketch-and-rebuild.md
     - .pkit/capabilities/visual-communication/README.md

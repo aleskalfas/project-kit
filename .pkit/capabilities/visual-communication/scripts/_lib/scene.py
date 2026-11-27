@@ -418,6 +418,8 @@ class _Emitter:
             elif node.unvalued:
                 self.unvalued[f"{instance.trace}/{name}"] = node.unvalued
         _lies_over(instance, parts)
+        if instance.tie is not None:
+            instance.report_shared_parts()
         # The pages of a top whose layouts are its pages' forms, each at the top's origin. A
         # page that takes its own height names where that height comes from (DEC-022 point 3).
         for page in instance.pages:

@@ -1,0 +1,132 @@
+answers:
+  - artefact: tech-docs/analysis/project-management/use-case-model/actors/ACT-planning-agent.md
+    read:
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261112T135407Z-115865f2.yaml
+      - 20261112T235648Z-31cd7a21.yaml
+      - 20261115T101625Z-39c9fced.yaml
+      - 20261115T215333Z-1b18b920.yaml
+      - 20261115T224755Z-89ab25f5.yaml
+      - 20261118T093416Z-ae3913ed.yaml
+      - 20261122T001341Z-1f604dc7.yaml
+      - 20261123T205048Z-8f7e6e4b.yaml
+      - 20261126T220933Z-3e415435.yaml
+    revalidated:
+      at: 2026-11-26T22:12:38Z
+      outcome: unchanged
+      unchanged-because: "Judged against this change whole, with the deferral of DEC-059 point 2 now naming #3523. The planning agent still files its work with no owner, into the Milestones the planner gives where pools are declared, and nothing before the planner approves the batch plan; the batch-plan procedure gains only a lead's filing for its workers, which the planning agent does not do. The topology's directing seat and next-task --task are built, and the planner's directing of its workers by message stays in that deferral."
+      deferred:
+        - anchor:
+            kind: record
+            value: project-management:DEC-059#2
+          reason: DEC-081's refinement of DEC-059 point 2 has a planner's seat direct the workers whose seats name it, by message where the harness carries messages. A message may wake a worker or name the ready Task it takes next, never work the tracker does not hold. The topology's directing seat and next-task --task are built. The actor, which only slices and files, gains the directing with the agent's messaging, its directives and reports, project-kit#3523.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-083-plan-across-scopes.md
+    read:
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261112T135407Z-115865f2.yaml
+      - 20261112T235648Z-31cd7a21.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T104927Z-f6afe126.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261114T135441Z-fd5c2dc0.yaml
+      - 20261114T140804Z-6f794478.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T090812Z-225d76fb.yaml
+      - 20261115T101625Z-39c9fced.yaml
+      - 20261115T162304Z-326cf373.yaml
+      - 20261115T180458Z-4e13664f.yaml
+      - 20261115T202513Z-2d70bae9.yaml
+      - 20261115T215333Z-1b18b920.yaml
+      - 20261115T224755Z-89ab25f5.yaml
+      - 20261116T072033Z-1fa3401d.yaml
+      - 20261116T095840Z-547638af.yaml
+      - 20261116T103723Z-5450c4f7.yaml
+      - 20261117T010941Z-d7ea213a.yaml
+      - 20261118T093416Z-ae3913ed.yaml
+      - 20261118T110156Z-9a08eba0.yaml
+      - 20261118T162554Z-507129b2.yaml
+      - 20261118T204901Z-88c68aa2.yaml
+      - 20261119T000044Z-b8eeff55.yaml
+      - 20261119T013318Z-c0734647.yaml
+      - 20261122T001341Z-1f604dc7.yaml
+      - 20261123T204526Z-d8337d55.yaml
+      - 20261126T220933Z-3e415435.yaml
+    revalidated:
+      at: 2026-11-26T22:12:41Z
+      outcome: updated
+      deferred:
+        - anchor:
+            kind: record
+            value: project-management:DEC-059#7
+          reason: DEC-081's refinement of DEC-059 point 7 lets a worker's directing seat name the ready Task the worker takes next. next-task --task, which takes such a Task only where the clone could take it of its own choosing, is built. Step 8, where each seat's agent takes its Tasks as UC-084 describes, gains the directing seat's message once the loop that sends and takes it is built, project-kit#3523.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-092-take-seat.md
+    read:
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261107T125436Z-9442a4b6.yaml
+      - 20261108T213649Z-c363a042.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T175333Z-b0d8bc0a.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261112T135407Z-115865f2.yaml
+      - 20261112T235648Z-31cd7a21.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261118T093416Z-ae3913ed.yaml
+      - 20261118T110156Z-9a08eba0.yaml
+      - 20261118T162554Z-507129b2.yaml
+      - 20261118T204901Z-88c68aa2.yaml
+      - 20261119T013318Z-c0734647.yaml
+      - 20261122T001341Z-1f604dc7.yaml
+      - 20261122T230042Z-201d3fa4.yaml
+      - 20261123T192706Z-a190aa12.yaml
+      - 20261123T204526Z-d8337d55.yaml
+      - 20261126T215411Z-182da8fc.yaml
+      - 20261126T220933Z-3e415435.yaml
+    revalidated:
+      at: 2026-11-26T22:12:45Z
+      outcome: updated
+      deferred:
+        - anchor:
+            kind: record
+            value: ADR-071
+          reason: "ADR-071's refinements for DEC-082, accepted and not built, have the seam fold a seat's pace apart from its holder, and write a setting of it by a person or the directing seat. Those for DEC-081 and DEC-084 are built: the session the holder last recorded, which the release clears, and the session's event, as step 7 and variants 4a and 7a to 7c say. Step 6's read, and what it prints, gain the seat's pace with DEC-082's build, project-kit#3462."
+        - anchor:
+            kind: record
+            value: project-management:DEC-059#3
+          reason: DEC-082's refinement of DEC-059 point 3, accepted and not built, has the seat's state issue keep the seat's pace, folded apart from its holder. DEC-081's, that the state issue also records the session that runs the seat's loop, is built, as step 7 and variants 1b, 4a and 7a to 7c say. Step 6's read, and what it prints, gain the seat's pace with DEC-082's build, project-kit#3462.

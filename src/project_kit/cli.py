@@ -1241,6 +1241,139 @@ def harness_report_command(ctx: click.Context, adapters: tuple[str, ...], as_jso
     ctx.exit(1 if harness_support.unmet_count(reports, known) else 0)
 
 
+@harness.command("session")
+@click.option(
+    "--reply",
+    "replies",
+    metavar="ADDRESS",
+    multiple=True,
+    help="A message's reply address to give in the form of a session's address. Repeatable.",
+)
+@click.option(
+    "--json", "as_json", is_flag=True, default=False, help="Write the document as one line of JSON."
+)
+def harness_session_command(replies: tuple[str, ...], as_json: bool) -> None:
+    """The harness session whose shell runs this command, as the adapter declares it.
+
+    Reads the one registered adapter's `session.yaml` as data (ADR-100 point 9),
+    and gives the session's process by the name the backbone gives it, only once a
+    null signal finds it in this command's process space, and its messaging
+    address only where it names that process (ADR-103 point 5). Each `--reply`
+    is brought into the address's form. Read-only; exit 0 whenever it read, the
+    document saying what it found.
+    """
+    import json
+    import os
+
+    from project_kit import harness_session, recorded_processes
+
+    target_root = find_target_root()
+    if target_root is None:
+        raise click.ClickException("not in a project tree.")
+    session = harness_session.read(
+        target_root, os.environ, recorded_processes.this_system(), replies=replies
+    )
+    if as_json:
+        click.echo(json.dumps(session.document(), sort_keys=True))
+        return
+    if not session.found:
+        click.echo(f"No harness session found: {session.why}.")
+    else:
+        click.echo(f"A session of the adapter {session.adapter} runs this command.")
+        click.echo(f"  process: {session.process or f'not named ({session.process_why})'}")
+        click.echo(f"  messaging address: {session.address or f'none ({session.address_why})'}")
+    for reply in session.replies:
+        click.echo(f"  reply {reply.given!r}: {reply.address or f'no address ({reply.why})'}")
+
+
+@main.group("recorded-process")
+def recorded_process() -> None:
+    """Whether a process a part of the methodology recorded still runs, read in one
+    place (ADR-103).
+
+    Each command reads a JSON request on standard input. `read` answers whether
+    each named process is running, ended, or whether pkit cannot tell, and
+    `compare` whether two names name one process. A name is the one `pkit harness
+    session` gives, stored and passed whole. Reference: `.pkit/cli/README.md`,
+    "Recorded-process commands".
+    """
+
+
+def _process_request(run: Callable[[object], dict[str, Any]]) -> dict[str, Any]:
+    """Read a JSON request on standard input and answer it with `run`. A request
+    it refuses prints no document and exits 1, saying why."""
+    import json
+
+    from project_kit import recorded_processes
+
+    text = click.get_text_stream("stdin").read()
+    try:
+        request: object = json.loads(text)
+    except (json.JSONDecodeError, ValueError) as exc:
+        raise click.ClickException(f"the request on standard input is no JSON: {exc}") from exc
+    try:
+        return run(request)
+    except recorded_processes.FormError as exc:
+        raise click.ClickException(f"refused: {exc}") from exc
+
+
+@recorded_process.command("read")
+@click.option(
+    "--json", "as_json", is_flag=True, default=False, help="Write the document as one line of JSON."
+)
+def recorded_process_read(as_json: bool) -> None:
+    """Answer whether each process a JSON request names runs.
+
+    Reads `{"names": [<name>, ...]}` on standard input, and answers each
+    `running`, `ended` or `cannot-tell`, with the reading that told and why.
+    `ended` only where this command could have seen the process, or the
+    machine has restarted since (ADR-103 point 3). Exit 1, with no document, on
+    a request it refuses.
+    """
+    import json
+    import os
+
+    from project_kit import harness_session, recorded_processes
+
+    target_root = find_target_root()
+    if target_root is None:
+        raise click.ClickException("not in a project tree.")
+    system = recorded_processes.this_system()
+    reader = harness_session.reader(
+        target_root, harness_session.declaration(target_root), os.environ, system
+    )
+    document = _process_request(lambda r: recorded_processes.read_document(r, reader, system))
+    if as_json:
+        click.echo(json.dumps(document, sort_keys=True))
+        return
+    for answer in document["answers"]:
+        click.echo(f"{answer['state']}: {answer['name']} ({answer['why']})")
+
+
+@recorded_process.command("compare")
+@click.option(
+    "--json", "as_json", is_flag=True, default=False, help="Write the document as one line of JSON."
+)
+def recorded_process_compare(as_json: bool) -> None:
+    """Answer whether two names name one process.
+
+    Reads `{"pairs": [[<name>, <name>], ...]}` on standard input, and answers each
+    pair `one`, `two` or `cannot-tell`. Reads no process. Exit 1, with no
+    document, on a request it refuses.
+    """
+    import json
+
+    from project_kit import recorded_processes
+
+    document = _process_request(recorded_processes.compare_document)
+    if as_json:
+        click.echo(json.dumps(document, sort_keys=True))
+        return
+    for pair in document["pairs"]:
+        left, right = pair["names"]
+        click.echo(f"{pair['answer']}: {left} and {right} ({pair['why']})")
+
+
 @main.group("pull-request")
 def pull_request() -> None:
     """Landing a pull request on the hosting service — the one merge mechanic.

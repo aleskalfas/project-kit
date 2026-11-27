@@ -163,6 +163,23 @@ def test_that_an_ask_reaches_a_person_is_answered_at_cost_for_the_version_measur
     assert (result.result, result.grade) == (INDETERMINATE, AT_COST)
 
 
+def test_a_sessions_messaging_address_is_answered_for_the_versions_measured() -> None:
+    """DEC-084's requirement is observed inside a session. Claude Code's answer is
+    bounded to the versions DEC-084's measurements ran on, so the report resolves it
+    indeterminate."""
+    (requirement,) = [
+        r for r in harness_support.requirements(REPO) if r.id == "session-messaging-address"
+    ]
+    assert requirement.observation_point == "in-session"
+    document = harness_support.load_declaration(REPO, "claude-code")
+    assert document is not None
+    answer = document["requirements"]["session-messaging-address"]
+    assert (answer["grade"], answer["harness_versions"]) == ("at-cost", ["2.1.330", "2.1.331"])
+    (report,) = harness_support.report(REPO, ["claude-code"])
+    (result,) = [r for r in report.results if r.requirement.id == "session-messaging-address"]
+    assert (result.result, result.grade) == (INDETERMINATE, AT_COST)
+
+
 # --- resolution -------------------------------------------------------------------------
 
 

@@ -10,7 +10,8 @@ same change updates the pin, beside the changeset that declares the break.
 Every backbone command that prints a document for a program has its contracts here, or in
 a module this one gathers: `tests/test_backbone_documents_account.py`,
 `tests/test_backbone_documents_pull_request.py`,
-`tests/test_backbone_documents_process.py` and `tests/test_backbone_documents_components.py`.
+`tests/test_backbone_documents_process.py`, `tests/test_backbone_documents_components.py`
+and `tests/test_backbone_documents_session.py`.
 `tests/backbone_documents_baseline.txt` names the commands no contract pins yet, and is
 empty; nothing is ever added to it. Each way a command prints for a program other than
 `--json` is named here, with why no contract pins it (`OTHER_OUTPUT`).
@@ -51,6 +52,7 @@ from tests import test_backbone_documents_account as account_documents
 from tests import test_backbone_documents_components as component_documents
 from tests import test_backbone_documents_process as process_documents
 from tests import test_backbone_documents_pull_request as pull_request_documents
+from tests import test_backbone_documents_session as session_documents
 from tests import test_friction_artefacts as artefacts_tests
 from tests import test_friction_revisit as revisit_tests
 from tests import test_rule_reach as reach
@@ -2315,6 +2317,7 @@ _MODULES: tuple[Mapping[str, tuple[Contract, ...]], ...] = (
     pull_request_documents.CONTRACTS,
     process_documents.CONTRACTS,
     component_documents.CONTRACTS,
+    session_documents.CONTRACTS,
 )
 
 #: The contracts of each backbone command that prints a document for a program, by the

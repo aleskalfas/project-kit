@@ -40,7 +40,7 @@ Terms:
 - **Painted as a box is,** with a fill, a stroke and the stroke's width, and an override reaches it as it reaches a box ([visual-communication:DEC-001-visual-communication-discipline] point 6).
 - **None to draw.** Where the instance has no such concept, or the concept maps no sign, the part is not drawn and has zero size at its place, as an empty picture has (DEC-025 point 1).
 - **A state changes the paint, never the sign.**
-- **The component places it,** as it places any part.
+- **The component places it,** as it places any part. A tie's component keeps it, as every part it draws beside the tie's line, off any stretch where that line runs along other ties' lines, and centres it on none of those lines, unless it stands at the tie's end and each of those ties draws the same there. Where the component places the sign halfway along the stretch only its tie runs, the engine keeps it so, spreading those ties along their side where the sign would not fit (refinement per [visual-communication:DEC-043-shared-tie-trunks] point 6).
 
 ### 3. A text part may draw a run's sign, and a ground behind a run
 

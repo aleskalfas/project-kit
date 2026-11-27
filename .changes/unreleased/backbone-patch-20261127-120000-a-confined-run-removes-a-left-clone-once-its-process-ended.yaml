@@ -1,0 +1,15 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  A confined `pkit agents run` removes a clone a killed run left only once the
+  backbone reads the process that made it as ended, and keeps it where the
+  backbone cannot tell (ADR-066 point 7, ADR-103). Each run's folder under
+  `agent-runs` now records that process by the name the backbone gives it, in
+  a file named `process`. Before, the removal read the process by its id alone,
+  so a run in a process space of its own, such as one a Linux sandbox may give
+  each command, could remove a live run's clone. A clone of another
+  repository's run, of a repository with no `origin` remote, or of an earlier
+  release, whose folder held a bare id in its `pid` file, is now kept: delete
+  such a folder yourself once its run has ended. The CLI reference says so.

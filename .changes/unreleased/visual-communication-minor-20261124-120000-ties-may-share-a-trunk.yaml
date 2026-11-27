@@ -1,0 +1,22 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Added
+body: >
+  Ties may share a trunk (#3083, visual-communication DEC-043). A part that
+  repeats over a list of ties may name one of the list's end fields under
+  `trunk`. The ties that meet one side of an item there, and draw alike with
+  corners, then meet it at one point: the tie that reaches least far runs as
+  any connector does, and each other branches off its first leg with full
+  turns, the farthest-reaching nearest the item. Each tie stays a line of its
+  own, and the scene holds nothing new. A line gains two measures,
+  `own-center` and `own-middle`, the point halfway along the stretch it alone
+  runs, which read what `center` and `middle` read on a line that shares
+  nothing. The starter's connector stands its sign there, so it draws as
+  before. A group with no room, whose ties would cross, that would add a
+  crossing, or whose part placed by those measures would not fit, is drawn
+  spread, and the check states it (`trunk-spread`), as it states ties that
+  form no group (`trunk-ungrouped`). A part placed otherwise on a shared
+  stretch fails in its component (`trunk-part`), and a `trunk` naming no end
+  field is refused (`component-shape`). It breaks nothing an adopter holds:
+  without `trunk`, every piece draws as before.

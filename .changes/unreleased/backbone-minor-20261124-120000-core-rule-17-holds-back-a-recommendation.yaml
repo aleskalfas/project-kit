@@ -1,0 +1,13 @@
+component: backbone
+kind: minor
+custom:
+  category: Changed
+body: >
+  Core rule 17 (`backbone:RS-OPS-017`) still has an agent discuss one decision
+  at a time, with its recommendation. Where the procedure the agent follows has
+  the user answer alone, as with a guess at a number made before it is
+  compared, the agent now gives no recommendation, or any hint of one, until
+  the user's answer is recorded. The set `OPS` moves to 8.0.0, since the rule
+  is tightened, and its budget rises from 2335 to 2371 words to hold it. No
+  migration: `.pkit/rules/core.md` keeps its path and arrives by sync as
+  before.
