@@ -340,6 +340,8 @@ def _invoke_set(rpr, monkeypatch, tmp_path, *, collection, labels, opt_outs=()):
         sha="",
         say=None,
         confined=False,
+        clone=None,
+        issue=None,
     ):
         invoked.append(name)
         return "APPROVED", "body"

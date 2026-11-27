@@ -5,7 +5,9 @@ backbone's run command, `pkit agents run`, which starts the runner the
 project's adapter registers, and the runner starts the harness. This module is
 the one place project-management asks. `review-pr` starts its reviewers
 through it (`run_agent`, the unconfined form), and so does `fix-drift` each
-fixer a person watches, in a working copy of its own (DEC-069 point 2).
+fixer a person watches, in a working copy of its own (DEC-069 point 2). In a
+seat's clone, `review-pr` starts each reviewer in a clone of its own, which the
+backbone makes from the code host (`run_in_review_clone`, ADR-102 point 2).
 `run_confined` is the confined form, which every fixer's run takes, watched
 or not, once it is built and the harness holds it: a clone at a pinned
 commit, under the rules `permissions/runs.yaml` declares. The drift command
@@ -30,8 +32,10 @@ signal on; there the runner still ends the harness at the run's limit.
 The agent's name goes last, after `--`, so no name is read as an option.
 
 When the backbone cannot answer (no `pkit`, a backbone that predates the
-command, a run past pm's bound, an answer pm cannot read), the run is one with
-no answer, and the reason names the cause.
+command or the form asked for, a run past pm's bound, an answer pm cannot
+read), the run is one with no answer, and the reason names the cause. A refused
+run carries the cause the backbone names, `RUN_FOLDER` where it could not make
+or write its folder for the run, as from inside a sandbox on Linux.
 """
 
 from __future__ import annotations
@@ -77,6 +81,28 @@ CLEAN = "clean"
 BREACH = "breach"
 NOT_RUN = "not-run"
 
+#: The cause of a refusal the backbone names where it cannot make or write its
+#: folder for the run (`AgentRun.refusal_cause`). Any other value reads as no
+#: cause pm knows.
+RUN_FOLDER = "run-folder"
+
+
+@dataclass(frozen=True)
+class ReviewerClone:
+    """The clone a reviewer runs in, in a seat's clone (ADR-102 point 2): the
+    `commit` it is checked out at, the default branch's head; the `remote` its one
+    remote is named, and its `url`; the `default_branch`; the `branches` fetched
+    besides it; and the code host's reference for the change's head, `head_ref`,
+    which must resolve to `head`."""
+
+    commit: str
+    remote: str
+    url: str
+    default_branch: str
+    branches: tuple[str, ...]
+    head_ref: str
+    head: str
+
 
 @dataclass(frozen=True)
 class AgentRun:
@@ -87,7 +113,10 @@ class AgentRun:
     A confined run (`run_confined`) also carries the check of its clone, its
     verdict and what changed; the folder its files were copied to; the calls
     the harness refused; and each command it ran outside the sandbox. An
-    unconfined run leaves them empty."""
+    unconfined run leaves them empty.
+
+    A refused run carries `refusal_cause` where the backbone names one it reads
+    (`RUN_FOLDER`), and None otherwise."""
 
     ending: str
     exit_code: int | None = None
@@ -99,6 +128,7 @@ class AgentRun:
     files: str | None = None
     refused_calls: tuple[str, ...] = ()
     excluded: tuple[str, ...] = ()
+    refusal_cause: str | None = None
 
     @property
     def breached(self) -> bool:
@@ -124,6 +154,43 @@ def run_agent(
     argv = [*ARGV, "--folder", str(folder), "--limit", str(limit_seconds)]
     if local_settings:
         argv.append("--local-settings")
+    return _run(name, brief, argv, limit_seconds=limit_seconds, effort=effort)
+
+
+def run_in_review_clone(
+    name: str,
+    brief: str,
+    *,
+    clone: ReviewerClone,
+    limit_seconds: int,
+    effort: str | None = None,
+) -> AgentRun:
+    """Run agent `name` once on `brief`, unconfined, in a clone of its own the
+    backbone makes as `clone` names it, and removes once the run ends (ADR-102
+    points 2 and 3). The runner carries the person's local settings in, and
+    gives the run the rules of the seat's clone `pkit` runs in. Never raises for
+    what the run did."""
+    argv = [
+        *ARGV,
+        "--clone-at",
+        clone.commit,
+        "--clone-remote",
+        clone.remote,
+        "--clone-url",
+        clone.url,
+        "--clone-default",
+        clone.default_branch,
+    ]
+    for branch in clone.branches:
+        argv += ["--clone-branch", branch]
+    argv += [
+        "--clone-head-ref",
+        clone.head_ref,
+        "--clone-head",
+        clone.head,
+        "--limit",
+        str(limit_seconds),
+    ]
     return _run(name, brief, argv, limit_seconds=limit_seconds, effort=effort)
 
 
@@ -205,15 +272,17 @@ def _read(command: str, returncode: int, stdout: str, stderr: str) -> AgentRun:
             return run
         return AgentRun(NO_ANSWER, reason=f"{command} answered {problem}")
     said = [line.strip() for line in stderr.splitlines() if line.strip()]
-    if any("No such command" in line for line in said):
-        return AgentRun(
-            NO_ANSWER,
-            reason=(
-                f"{command}: the `pkit` that ran — {_which()} — has no such command, so this "
-                "project's backbone is older than project-management needs. Upgrade the "
-                "backbone (`pkit upgrade`), or put a `pkit` that has the command first on PATH"
-            ),
-        )
+    for missing in ("command", "option"):
+        if any(f"No such {missing}" in line for line in said):
+            return AgentRun(
+                NO_ANSWER,
+                reason=(
+                    f"{command}: the `pkit` that ran — {_which()} — has no such {missing}, so "
+                    "this project's backbone is older than project-management needs. Upgrade "
+                    f"the backbone (`pkit upgrade`), or put a `pkit` that has the {missing} "
+                    "first on PATH"
+                ),
+            )
     return AgentRun(
         NO_ANSWER,
         reason=f"{command} exited {returncode}" + (f": {said[-1]}" if said else " with no answer"),
@@ -246,7 +315,8 @@ def _from_document(document: Mapping[str, Any]) -> tuple[AgentRun | None, str]:
     confined = _confined_keys(document)
     if isinstance(confined, str):
         return None, confined
-    return AgentRun(str(ending), exit_code, **texts, **confined), ""
+    cause = RUN_FOLDER if document.get("refusal_cause") == RUN_FOLDER else None
+    return AgentRun(str(ending), exit_code, **texts, **confined, refusal_cause=cause), ""
 
 
 def _confined_keys(document: Mapping[str, Any]) -> dict[str, Any] | str:
