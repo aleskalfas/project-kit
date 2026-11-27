@@ -438,14 +438,16 @@ class _Emitter:
     def _short(self, trace: str, short: Shortfall) -> None:
         """A component, or a list, that gets less than it asks for. One that asks for more
         than zero, `asks` None, says why: its list sizes it by place, or it takes the size it
-        is given (DEC-038 point 5, DEC-073 point 1). The finding lies at the content
-        (DEC-073 point 4)."""
-        asks = short.asks
-        asked = f"{length(asks)}" if asks is not None else f"more than 0, {short.why}"
+        is given, and what gave it; one that asks for less than zero names its formula
+        (DEC-038 point 5, DEC-073 points 1 and 4). The finding lies at the content, or in the
+        component `use` names."""
+        asked = f"{length(short.asks)}" if short.asks is not None else "more than 0"
+        said = ", ".join(each for each in (asked, short.why, short.by) if each)
         self.ctx.report(
             "gets-less",
-            f"{trace} gets {length(short.gets)} px of {short.size} and asks for {asked}",
+            f"{trace} gets {length(short.gets)} px of {short.size} and asks for {said}",
             where=trace,
+            use=short.use,
         )
 
     def _source(self, instance: Instance, node: Node, key: str) -> str:

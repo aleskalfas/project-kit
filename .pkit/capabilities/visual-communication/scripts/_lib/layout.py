@@ -252,9 +252,14 @@ value that cannot be computed is zero.
 
 **No room.** No frame has a size below zero: the size an instance gets, the size a list
 gives each item and the size a part's formula gives its part are each held at zero where
-they come out below it (DEC-073 point 3). An instance that asks for no size along an axis
-takes what it is given there, and is short of it where it gets zero, but a tie, and one
-that lies in an instance with no size there (`shortfalls`, points 1 and 2).
+they come out below it, and a held item's place advances by its held size and the gap
+(DEC-073 point 3). An instance placed below the top needs more than zero along each axis,
+unless it asks for zero there (`shortfalls`, point 1). One that asks for no size there
+takes what it is given, and is short where it gets none, but a tie, and one that lies in
+an instance with no size there (point 2). One that asks for less than zero is short where
+it gets none. The finding lies at the content where the size rests on what the content
+placed, as the formulas that gave it read it, and else in the component that gave it, or,
+for one that asks for less than zero, in its own (`rests_on_placing`, point 4).
 
 **Where a finding lies** is the file a person edits to mend it. A finding in a component,
 or in what a component's part gave the component it places, names that component as
@@ -399,6 +404,17 @@ CROSS_SIZE = "cross-size"
 ACROSS: Mapping[str, tuple[str, ...]] = {
     "width": ("width", "right", "center"),
     "height": ("height", "bottom", "middle"),
+}
+
+#: The places and sizes of a part that each measure a path ends in reads: `right`,
+#: `center` and `own-center` read its `x` and its `width`, and so down.
+_MEASURED: Mapping[str, tuple[str, ...]] = {
+    "x": ("x",),
+    "y": ("y",),
+    "width": ("width",),
+    "height": ("height",),
+    **{measure: ("x", "width") for measure in ("right", "center", "own-center")},
+    **{measure: ("y", "height") for measure in ("bottom", "middle", "own-middle")},
 }
 
 #: The facts of its export a text part may show (DEC-006 point 7). They are no entry of
@@ -3693,24 +3709,29 @@ class Context:
 
 @dataclass(frozen=True)
 class Arrangement:
-    """A list's items along one axis: each item's offset and size, and the size they ask
-    for together."""
+    """A list's items along one axis: each item's offset and size, the size they ask for
+    together, and, along the line, the length its gaps take."""
 
     offsets: tuple[float, ...]
     sizes: tuple[float, ...]
     asked: float
+    gaps: float = 0.0
 
 
 @dataclass(frozen=True)
 class Shortfall:
     """A size an instance gets that is less than it asks for: the size, what it gets, and
     what it asks for, None where it asks for more than zero, for the reason `why` gives
-    (DEC-038 point 5, DEC-073 point 1)."""
+    (DEC-038 point 5, DEC-073 point 1). `by` says what gave the size, or the formula by
+    which it asks for less than zero, and `use` names the component whose file the
+    finding lies in, empty where it lies at the content (DEC-073 point 4)."""
 
     size: str
     gets: float
     asks: float | None
     why: str = ""
+    by: str = ""
+    use: str = ""
 
 
 @dataclass(frozen=True)
@@ -4968,7 +4989,7 @@ class Instance:
     def _compute(self, cell: tuple[str, ...]) -> Any:
         kind, name = cell[0], cell[1]
         if kind == "size":
-            return max(self._size(name), 0.0)  # no frame below zero (DEC-073 point 3)
+            return _held_at_zero(self._size(name))  # no frame below zero (DEC-073 point 3)
         if kind == "stretch":
             return self._stretch(name)
         if kind == "preferred":
@@ -4987,7 +5008,7 @@ class Instance:
             return self.number(f"values.{name}", self.component.values[name])
         if kind == "part":
             value = self._geometry(name, cell[2])
-            return max(value, 0.0) if cell[2] in ("width", "height") else value
+            return _held_at_zero(value) if cell[2] in ("width", "height") else value
         if kind == "lines":
             return self._lines(name)
         if kind == "points":
@@ -5260,8 +5281,9 @@ class Instance:
         it, with `sizes: shares`, the items share the part's size, less the gaps, in
         proportion to the share its list's weight gives each, and equally where every
         share is the same (DEC-010 point 4). Each item's size is held at zero where it comes
-        out below, and the list still asks for what its items' sizes come to before they
-        are held, so a list that shares its line asks for the line it is given (DEC-073
+        out below, and each item's place advances from the one before by that one's held
+        size and the gap. A list asks for what its items' held sizes come to, and one that
+        shares its line for the line it is given, so its items carry the finding (DEC-073
         point 3)."""
         node = self.nodes[name]
         part, items = node.part, node.items
@@ -5274,10 +5296,11 @@ class Instance:
         if axis == "cross":
             align = self.setting(name, "align-items")
             stretched = align == "stretch" and given is not None
-            asked = None if stretched else [item.get("preferred", size) for item in items]
+            asked = None
+            if not stretched:
+                asked = [_held_at_zero(item.get("preferred", size)) for item in items]
             line = given if given is not None else max(asked or [0.0])
             sizes = [line] * count if align == "stretch" else list(asked or [])
-            sizes = [max(each, 0.0) for each in sizes]
             shift = {"center": 0.5, "end": 1.0}.get(align, 0.0)
             offsets = tuple((line - each) * shift for each in sizes)
             return Arrangement(offsets, tuple(sizes), max(asked) if asked else line)
@@ -5287,7 +5310,7 @@ class Instance:
         sharing = self.setting(name, "sizes")
         shares = self._item_shares(name, items) if sharing == "shares" else []
         if sharing == "own":
-            sizes = [item.get("preferred", size) for item in items]
+            sizes = [_held_at_zero(item.get("preferred", size)) for item in items]
         elif given is None:
             how = "equally" if sharing == "equal" else "by its items' weights"
             message = f"{self.trace}/{name}: the list shares its {size} {how}, and is given none"
@@ -5298,7 +5321,7 @@ class Instance:
         else:
             sizes = [(given - gaps) / count] * count if count else []
         asked = sum(sizes) + gaps
-        sizes = [max(each, 0.0) for each in sizes]
+        sizes = [_held_at_zero(each) for each in sizes]
         free = given - asked if given is not None else 0.0
         justify = self.setting(name, "justify-content")
         if justify == "space-between" and count > 1 and free > 0:
@@ -5308,7 +5331,7 @@ class Instance:
         for each in sizes:
             offsets.append(at)
             at += each + gap
-        return Arrangement(tuple(offsets), tuple(sizes), asked)
+        return Arrangement(tuple(offsets), tuple(sizes), asked, gaps)
 
     def _sized_across(self, name: str, given: float | None) -> Arrangement:
         """A list's items across its line, each the size its `cross-size` gives at the
@@ -6512,11 +6535,13 @@ class Instance:
         return f"its style `{run.word}`" if run.word is not None else "its part's paint"
 
     def shortfalls(self) -> list[Shortfall]:
-        """Each size this instance gets that is less than it asks for. An item its list sizes
-        across its line by place asks across it for more than zero besides (DEC-038 point
-        5). So does an instance that asks for no size along an axis and takes what it is
-        given there, but a tie, and one that lies in an instance with no size there, which
-        has none to give (DEC-073 points 1 and 2). Raises `Fault`."""
+        """Each size this instance gets that is less than it asks for, or that is zero where
+        it needs more (DEC-073 point 1). An item its list sizes across its line by place
+        asks across it for more than zero besides, wherever it lies (DEC-038 point 5). One
+        that asks for less than zero, but a tie, is short where it gets none. One that asks
+        for no size along an axis takes what it is given there, and is short where it gets
+        none, but a tie, and one that lies in an instance with no size there, which has none
+        to give (points 1 and 2). The top is not judged. Raises `Fault`."""
         if self.parent is None:
             return []
         short: list[Shortfall] = []
@@ -6531,9 +6556,173 @@ class Instance:
                 short.append(Shortfall(size, gets, asks))
             elif gets <= 0.0 and sized:
                 short.append(Shortfall(size, gets, None, "as its list sizes it by place"))
+            elif gets <= 0.0 and asks is not None and asks < 0.0 and self.tie is None:
+                short.append(self._below_zero(size, gets, asks))
             elif gets <= 0.0 and taken:
-                short.append(Shortfall(size, gets, None, f"as it takes the {size} it is given"))
+                short.append(self._no_room(size, gets))
         return short
+
+    def _below_zero(self, size: str, gets: float, asks: float) -> Shortfall:
+        """The shortfall of this instance, which asks for less than zero along `size`, by
+        its own formula: it lies in its own component, or at the content where that formula
+        rests on what the content placed (`asks_rest`, DEC-073 point 4)."""
+        physical = self.component.physical_size is not None
+        axis = "width" if size == "height" and physical else size
+        where, value, _ = self.pick(f"preferred.{axis}", self.component.preferred.get(axis))
+        by = f"by `{where}` of `{self.component.use}`, `{value}`"
+        use = "" if self.asks_rest(size) else self.component.use
+        return Shortfall(size, gets, asks, "less than 0", by, use)
+
+    def _no_room(self, size: str, gets: float) -> Shortfall:
+        """The shortfall of this instance, which asks for no `size` and is given none: what
+        gave it the size, its list's share of its line, its list's stretch or its part's
+        formula. The finding lies at the content where that size rests on what the content
+        placed: a share of a line that more items than its gaps leave room for, or a formula
+        that rests on it (`rests_on_placing`). Otherwise it lies in the component that gave
+        the size (DEC-073 point 4)."""
+        parent = self.parent
+        assert parent is not None  # the top is not judged
+        name = self.part_name
+        node = parent.nodes[name]
+        part = node.part
+        where = f"parts.{name}.{size}"
+        raw = part.spec.get(size)
+        rests = raw is not None and parent.rests_on_placing(where, raw)
+        if self.is_item and size == part.main:
+            line = parent.get("part", name, size)
+            gaps = parent.get("main", name).gaps
+            by = (
+                f"by its list `{name}`, which shares {_said(line)} px less {_said(gaps)} px "
+                f"of gaps among {len(node.items)} items"
+            )
+            rests = rests or line > 0.0  # more items than its gaps leave room for
+        elif self.is_item:
+            line = parent.get("part", name, size)
+            by = f"by its list `{name}`, which stretches it across its line of {_said(line)} px"
+        else:
+            _, value, _ = parent.pick(where, raw)
+            by = f"by the part `{name}` of `{parent.component.use}`, `{value}`"
+        use = "" if rests else parent.component.use
+        return Shortfall(size, gets, None, f"as it takes the {size} it is given", by, use)
+
+    # -- what a size rests on
+
+    def takes_placed(self, size: str) -> bool:
+        """Whether this instance takes its `size` from where it is placed, rather than
+        getting what it asks for (DEC-073 point 4): by its part's formula, its list's share
+        of its line or its stretch, or a `cross-size`; a page by its top, and a tie by its
+        part's whole frame. A top that asks for no height, of pages that are its layouts'
+        forms, takes its tallest page's."""
+        parent = self.parent
+        if parent is None:
+            return (
+                size == "height"
+                and bool(self.component.forms)
+                and not self.component.asks_for(size)
+            )
+        if self.takes_own(size):
+            return False
+        if self._is_forms_page or self.tie is not None:
+            return True
+        part = parent.nodes[self.part_name].part
+        if not self.is_item:
+            return size in part.spec
+        if size == part.main:
+            return parent.setting(self.part_name, "sizes") != "own"
+        sized = parent.sized_by_place(self.part_name) is not None
+        return sized or parent.setting(self.part_name, "align-items") == "stretch"
+
+    def asks_rest(self, size: str, seen: set[tuple[int, str]] | None = None) -> bool:
+        """Whether what this instance asks for along `size` rests on what the content placed:
+        its formula under `preferred` does, or, for a height its physical size sets, the
+        formula of its width (DEC-034 point 3, `rests_on_placing`)."""
+        if size == "height" and self.component.physical_size is not None:
+            size = "width"
+        raw = self.component.preferred.get(size)
+        return raw is not None and self.rests_on_placing(f"preferred.{size}", raw, seen)
+
+    def rests_on_placing(
+        self, where: str, raw: Any, seen: set[tuple[int, str]] | None = None
+    ) -> bool:
+        """Whether the formula at the key path `where`, through its switches, rests on what
+        the content placed (DEC-073 point 4). It does where it reads, itself, through a
+        named value or through a part of this component: a size this instance takes from
+        where it is placed (`takes_placed`), or one it asks for by a formula that rests on
+        it; its place in its list, `:index` or `:count`, or an item's in the list a
+        `cross-size` sizes; an item of a list, or an end of a tie; the size of a list, which
+        follows from how many items the content gives it; or the size of what the content
+        places in a slot. A role, an option's word and a text's measured size are none of
+        it. It reads the formulas alone, and computes no value."""
+        seen = set() if seen is None else seen
+        if (id(self), where) in seen:
+            return False
+        seen.add((id(self), where))
+        where, _, _ = self.pick(where, raw)
+        formula = self.component.formulas.get(where)
+        if formula is None:
+            return False
+        return any(self._reads_placing(ref, seen) for ref in formula.references())
+
+    def _reads_placing(self, ref: fm.Reference, seen: set[tuple[int, str]]) -> bool:
+        """Whether a formula's reference rests on what the content placed
+        (`rests_on_placing`)."""
+        if isinstance(ref, fm.Engine):
+            if ref.name in ("width", "height"):
+                return self.takes_placed(ref.name) or self.asks_rest(ref.name, seen)
+            return ref.name in ("index", "count", *fm.PLACE_NAMES)
+        if isinstance(ref, fm.Value):
+            raw = self.component.values.get(ref.name)
+            return raw is not None and self.rests_on_placing(f"values.{ref.name}", raw, seen)
+        if not isinstance(ref, fm.Path):
+            return False  # a role
+        if ref.option is not None or not ref.steps:
+            return True  # an end of a tie, or an item an option names
+        first, rest = ref.steps[0], ref.steps[1:]
+        node = self.nodes.get(first.name)
+        if node is None or first.item is not None:
+            return node is not None  # an item of a list
+        if rest:
+            child = node.child
+            below = fm.Path(None, rest, ref.measure)
+            return child is not None and child._reads_placing(below, seen)
+        return any(self._part_rests(first.name, key, seen) for key in _MEASURED[ref.measure])
+
+    def _part_rests(self, name: str, key: str, seen: set[tuple[int, str]]) -> bool:
+        """Whether the place or the size `key` of the part `name` rests on what the content
+        placed: its formula does, or, where it gives none, what fills it (`rests_on_placing`).
+        A connector runs between the ends the content names, a list asks for what its items
+        come to, and a slot holds what the content places in it."""
+        node = self.nodes[name]
+        part, spec = node.part, node.part.spec
+        if part.kind == "line":
+            if "connect" in spec:
+                return True
+            ends = ("x1", "x2") if key in ("x", "width") else ("y1", "y2")
+            return any(
+                self.rests_on_placing(f"parts.{name}.{end}", spec[end], seen)
+                for end in ends
+                if end in spec
+            )
+        if key in spec:
+            return self.rests_on_placing(f"parts.{name}.{key}", spec[key], seen)
+        if key in ("x", "y") or not node.present:
+            return False
+        if part.kind in ("text", "image"):
+            # A text's height follows its lines, and an image's its picture's proportion,
+            # each at the width the part gives.
+            width = spec.get("width")
+            return (
+                key == "height"
+                and width is not None
+                and self.rests_on_placing(f"parts.{name}.width", width, seen)
+            )
+        if part.kind == "slot":
+            return True
+        if node.child is not None:
+            return node.child.asks_rest(key, seen)
+        if part.kind == "repeat":
+            return self.component.ties(part) is None or self.takes_placed(key)
+        return False
 
 
 def _point_part(item: Instance, point: str) -> str | None:
@@ -6743,6 +6932,11 @@ def _connector(
 def _said(value: float) -> str:
     """A length in a message, as the scene holds it."""
     return f"{trunks.held(value):g}"
+
+
+def _held_at_zero(size: float) -> float:
+    """A size of a frame, held at zero where it comes out below (DEC-073 point 3)."""
+    return max(size, 0.0)
 
 
 def _width(line: _Line | None) -> float:
