@@ -1,7 +1,7 @@
 ---
 id: DEC-074
 title: The capability supports one browser, Chrome
-status: proposed
+status: accepted
 date: 2026-11-27
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
