@@ -18,6 +18,11 @@ points 1, 2, 4, 8 and 10; #1742, #1744). The confined form has its own tests,
   checkout's local settings copied into the folder: a file the folder holds
   stays, a link on the way refuses the run, and a run refused before its start
   carries nothing (ADR-066 point 10);
+- in a reviewer's clone, it passes the harness, with `--settings`, a file of the
+  seat's clone's allow, ask and deny rules and nothing else, written in the
+  settings folder the request names, and refuses a settings folder in or around
+  the run's folder, a link on the way to the seat's settings, and settings it
+  cannot read as rules (ADR-102 point 3);
 - at the limit it ends the harness and every process still descended from it,
   a shell command in a session of its own included, and asked to stop it ends
   them first;
@@ -291,6 +296,16 @@ def test_the_command_line_is_the_closed_set(runner: ModuleType) -> None:
         "run-1",
     ]
     assert set(runner.FLAGS) == {"-p", "--agents", "--agent", "--effort"}
+    # A run in a reviewer's clone adds one flag, and only there.
+    assert runner.command("claude", "code-reviewer", None, settings=Path("/r/settings.json")) == [
+        "claude",
+        "-p",
+        "--agent",
+        "code-reviewer",
+        "--settings",
+        "/r/settings.json",
+    ]
+    assert set(runner.REVIEWER_FLAGS) == set(runner.FLAGS) | {"--settings"}
 
 
 @pytest.mark.parametrize(
@@ -310,6 +325,184 @@ def test_the_command_line_is_the_closed_set(runner: ModuleType) -> None:
 def test_no_flag_outside_the_set_is_ever_passed(runner: ModuleType, flag: str) -> None:
     with pytest.raises(runner.Refused, match="not in the closed set"):
         runner.check_flags(["claude", "-p", flag, "bypassPermissions"])
+
+
+# --- a reviewer's clone ---------------------------------------------------------------
+
+
+_SEAT_SETTINGS = {
+    "permissions": {
+        "allow": ["Bash(git log:*)"],
+        "ask": ["Bash(gh pr merge:*)"],
+        "deny": ["Read(./.env)"],
+        "defaultMode": "bypassPermissions",
+        "additionalDirectories": ["/"],
+    },
+    "hooks": {"PreToolUse": [{"matcher": "*", "hooks": []}]},
+    "sandbox": {"enabled": False},
+    "enabledMcpjsonServers": ["a-server"],
+}
+
+
+def _seat(tmp_path: Path, settings: object = _SEAT_SETTINGS) -> tuple[Path, Path, Path]:
+    """A seat's clone with `settings` as its project settings, a reviewer's clone,
+    and the settings folder beside it."""
+    seat = tmp_path / "seat"
+    (seat / ".claude").mkdir(parents=True)
+    if settings is not None:
+        text = settings if isinstance(settings, str) else json.dumps(settings)
+        (seat / ".claude" / "settings.json").write_text(text, encoding="utf-8")
+    run_folder = tmp_path / "run"
+    clone = run_folder / "clone"
+    _deploy(clone)
+    rules = run_folder / "rules"
+    rules.mkdir(mode=0o700)
+    return seat, clone, rules
+
+
+def _in_clone(seat: Path, clone: Path, rules: Path, **overrides: object) -> dict[str, object]:
+    return _request(
+        clone,
+        local_settings_from=str(seat),
+        seat_permissions={"seat_clone": str(seat), "settings_folder": str(rules)},
+        **overrides,
+    )
+
+
+def test_a_reviewer_gets_the_seats_rules_and_nothing_else(
+    tmp_path: Path, env: dict[str, str]
+) -> None:
+    seat, clone, rules = _seat(tmp_path)
+    record = tmp_path / "record.json"
+    _script(
+        _bin(env) / "claude",
+        "import json, sys\nsys.stdin.read()\n"
+        "settings = sys.argv[sys.argv.index('--settings') + 1]\n"
+        f"open({str(record)!r}, 'w').write(json.dumps({{'argv': sys.argv[1:], "
+        "'settings': json.load(open(settings))}))\n",
+    )
+    answer = _run(_in_clone(seat, clone, rules), env)
+    assert answer["ending"] == "finished", answer
+    seen = json.loads(record.read_text(encoding="utf-8"))
+    written = rules / "settings.json"
+    assert seen["argv"] == ["-p", "--agent", "my-reviewer", "--settings", str(written)]
+    assert seen["settings"] == {
+        "permissions": {
+            "allow": ["Bash(git log:*)"],
+            "ask": ["Bash(gh pr merge:*)"],
+            "deny": ["Read(./.env)"],
+        }
+    }
+    # No snapshot binds the seat's clone yet (ADR-095), so no hook of the runner's.
+    assert "hooks" not in seen["settings"]
+    assert stat.S_IMODE(written.stat().st_mode) == 0o600
+
+
+@pytest.mark.parametrize(
+    ("settings", "rules_seen"),
+    [
+        pytest.param(None, {"allow": [], "ask": [], "deny": []}, id="no-settings-file"),
+        pytest.param({}, {"allow": [], "ask": [], "deny": []}, id="no-permissions"),
+        pytest.param(
+            {"permissions": {"deny": ["Edit"]}},
+            {"allow": [], "ask": [], "deny": ["Edit"]},
+            id="only-denies",
+        ),
+    ],
+)
+def test_the_seats_rules_it_lacks_are_none(
+    runner: ModuleType, tmp_path: Path, settings: object, rules_seen: dict[str, list[str]]
+) -> None:
+    seat, _clone, _rules = _seat(tmp_path, settings)
+    assert runner.seat_settings(seat) == {"permissions": rules_seen}
+
+
+@pytest.mark.parametrize(
+    ("settings", "says"),
+    [
+        pytest.param("{nope", "not a JSON document", id="no-json"),
+        pytest.param("[1]", "no object of permissions", id="no-object"),
+        pytest.param({"permissions": []}, "no object of permissions", id="permissions-a-list"),
+        pytest.param({"permissions": {"allow": "Bash"}}, "allow rules", id="rules-a-string"),
+        pytest.param({"permissions": {"deny": [7]}}, "deny rules", id="a-rule-no-string"),
+    ],
+)
+def test_seat_settings_it_cannot_read_as_rules_refuse_the_run(
+    runner: ModuleType, tmp_path: Path, settings: object, says: str
+) -> None:
+    seat, _clone, _rules = _seat(tmp_path, settings)
+    with pytest.raises(runner.Refused, match=says):
+        runner.seat_settings(seat)
+
+
+@pytest.mark.parametrize(
+    ("linked", "says"),
+    [
+        pytest.param(".claude", "a symbolic link on the way", id="its-folder"),
+        pytest.param(".claude/settings.json", "cannot be read", id="the-file"),
+    ],
+)
+def test_a_link_on_the_way_to_the_seats_settings_refuses_the_run(
+    runner: ModuleType, tmp_path: Path, linked: str, says: str
+) -> None:
+    seat, _clone, _rules = _seat(tmp_path, None)
+    elsewhere = tmp_path / "elsewhere"
+    (elsewhere / ".claude").mkdir(parents=True)
+    (elsewhere / ".claude" / "settings.json").write_text("{}", encoding="utf-8")
+    target = seat / linked
+    if target.exists():
+        target.rmdir()
+    target.symlink_to(elsewhere / linked)
+    with pytest.raises(runner.Refused, match=says):
+        runner.seat_settings(seat)
+
+
+def test_a_seats_settings_that_are_no_regular_file_refuse_the_run(
+    runner: ModuleType, tmp_path: Path
+) -> None:
+    seat, _clone, _rules = _seat(tmp_path, None)
+    os.mkfifo(seat / ".claude" / "settings.json")
+    with pytest.raises(runner.Refused, match="not a regular file"):
+        runner.seat_settings(seat)
+
+
+def test_seat_permissions_it_does_not_run_are_refused(runner: ModuleType, tmp_path: Path) -> None:
+    seat, clone, rules = _seat(tmp_path)
+    cases: list[tuple[object, str]] = [
+        ("a string", "not an object of seat_clone and settings_folder"),
+        ({"seat_clone": str(seat)}, "not an object of seat_clone and settings_folder"),
+        ({"seat_clone": "seat", "settings_folder": str(rules)}, "seat_clone 'seat'"),
+        ({"seat_clone": str(seat), "settings_folder": str(clone)}, "lies in or around"),
+        (
+            {"seat_clone": str(seat), "settings_folder": str(clone / ".claude")},
+            "lies in or around",
+        ),
+        ({"seat_clone": str(seat), "settings_folder": str(clone.parent)}, "lies in or around"),
+    ]
+    link = tmp_path / "linked-rules"
+    link.symlink_to(rules)
+    cases.append(({"seat_clone": str(seat), "settings_folder": str(link)}, "is a link"))
+    for permissions, says in cases:
+        request = _request(clone, seat_permissions=permissions)
+        with pytest.raises(runner.Refused, match=says):
+            runner.read_request(json.dumps(request))
+
+
+def test_a_confined_request_takes_no_seat_permissions(runner: ModuleType, tmp_path: Path) -> None:
+    request = _request(tmp_path, confined={}, seat_permissions={})
+    del request["folder"]
+    with pytest.raises(runner.Refused, match="does not run: seat_permissions"):
+        runner.read_request(json.dumps(request))
+
+
+def test_a_reviewer_refused_before_its_start_writes_no_settings(
+    tmp_path: Path, env: dict[str, str]
+) -> None:
+    seat, clone, rules = _seat(tmp_path)
+    _script(_bin(env) / "claude", "print('should not run')\n")
+    answer = _run(_in_clone(seat, clone, rules, agent="not-deployed"), env)
+    assert answer["ending"] == "refused" and "is not deployed" in str(answer["reason"])
+    assert list(rules.iterdir()) == []
 
 
 def test_a_flags_value_never_reads_as_a_flag(runner: ModuleType) -> None:

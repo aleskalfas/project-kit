@@ -1,0 +1,25 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  `pkit agents run` takes a third form, a run in a reviewer's clone (ADR-102
+  points 2 and 3). With `--clone-at`, `--clone-remote`, `--clone-url`,
+  `--clone-default`, `--clone-head-ref` and `--clone-head` together, and
+  `--clone-branch` for each branch fetched besides, the run works in a clone
+  of its own, which the command makes from the code host in the run root a
+  confined run's clone lies in, and removes once the run ends. The clone
+  shares no object with your repository, holds no hook, and has one remote,
+  at the address given, whose push address no push can use. It fetches the
+  default branch, each branch named and the change's head through the code
+  host's reference for it, leaving out file contents until a read needs them,
+  and is checked out at the commit given with no branch. A head reference that
+  does not resolve to `--clone-head` refuses the run. A clone a killed run
+  left is removed only once its recorded process reads as ended, as for a
+  confined run. The runner the clone registers runs from the clone's root,
+  given your project as the checkout of your local settings and, under the
+  new request key `seat_permissions`, as the clone whose settings give the
+  run's rules, with a folder beside the clone to write them in. The run's
+  document gains `refusal_cause`: `run-folder` where the backbone cannot make
+  or write its folder for the run, as from inside a sandbox on Linux, else
+  null. The confined form names that cause too.

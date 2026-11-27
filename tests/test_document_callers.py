@@ -805,15 +805,21 @@ PROJECT_MANAGEMENT_AGENT_RUN = Caller(
     untold=lambda outcome: isinstance(outcome, tuple) and outcome[0] is None,
     nothing=lambda: pm_agent_runs._from_document({}),
     readings={
-        f"{way}:{name}": _breached
-        for way, name in (
-            ("missing", "check"),
-            ("missing", "check.verdict"),
-            ("null", "check.verdict"),
-            ("unknown", "check.verdict"),
-            ("missing", "check.changes"),
-            ("null", "check.changes"),
-        )
+        **{
+            f"{way}:{name}": _breached
+            for way, name in (
+                ("missing", "check"),
+                ("missing", "check.verdict"),
+                ("null", "check.verdict"),
+                ("unknown", "check.verdict"),
+                ("missing", "check.changes"),
+                ("null", "check.changes"),
+            )
+        },
+        # A backbone older than the key prints none, and a cause pm does not know is
+        # none it can name a way out for: the contract reads both as no cause.
+        "missing:refusal_cause": same,
+        "unknown:refusal_cause": same,
     },
 )
 
