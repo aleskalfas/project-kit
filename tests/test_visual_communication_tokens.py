@@ -687,7 +687,8 @@ RELEASED_NEUTRAL = RELEASES / "neutral" / "1.0.0"
 
 #: The shared roles the foundations being built add to their release 1.0.0, each with the role
 #: its default aliases (DEC-022 points 3 and 5, DEC-036 point 3, DEC-032 point 1, DEC-004
-#: point 7).
+#: point 7), the type of a page's title and the lead type among them (DEC-008 point 2,
+#: DEC-072 point 1).
 SITE = tokens.Role("size.site", "dimension", "size.slide")
 LINE = tokens.Role("size.line", "dimension", "size.figure")
 MARKS = {
@@ -699,7 +700,16 @@ ORDER_ROLES = {
     "family.order.last": tokens.Role("family.order.last", "color", "family.neutral.fill"),
     "family.order.text": tokens.Role("family.order.text", "color", "family.neutral.text"),
 }
-ADDED = {"size.site": SITE, "size.line": LINE, **MARKS, **ORDER_ROLES}
+TITLE = tokens.Role("type.title", "typography", "type.heading")
+LEAD = tokens.Role("type.lead", "typography", "type.body")
+ADDED = {
+    "size.site": SITE,
+    "size.line": LINE,
+    **MARKS,
+    **ORDER_ROLES,
+    "type.title": TITLE,
+    "type.lead": LEAD,
+}
 
 #: The pairs of an order's text with each of its ends, which the foundations being built add
 #: to their release 1.0.0 (DEC-032 point 2).
@@ -728,8 +738,10 @@ def test_the_foundations_being_built_add_the_size_axis_device_and_their_roles_al
     from across a room, and the default `desktop` (DEC-021 point 1). `size.site`, a
     dimension whose default is `size.slide` (DEC-004 point 7), `size.line`, the length of
     a line, whose default is `size.figure` (DEC-022 point 5), the lengths of a run's sign
-    and ground, each of whose defaults is `space.1` (DEC-036 point 3), and an order's roles
-    with their pairs (DEC-032 points 1 and 2). Every other declaration is their release
+    and ground, each of whose defaults is `space.1` (DEC-036 point 3), an order's roles
+    with their pairs (DEC-032 points 1 and 2), the type of a page's title, whose default is
+    `type.heading` (DEC-008 point 2), and the type of running text read before the body,
+    whose default is `type.body` (DEC-072 point 1). Every other declaration is their release
     1.0.0's."""
     assert foundations.findings == ()
     assert foundations.axes["device"] == DEVICE
@@ -805,7 +817,9 @@ def test_a_brand_that_gives_no_size_reads_on_the_foundations_being_built_as_on_t
     the roles the foundations add, each at the value of the role its default aliases: the
     site at its slide's width, a line at its figure's (DEC-022 points 3 and 5, DEC-004
     point 7), a run's sign's and ground's lengths at its smallest space (DEC-036 point 3),
-    and an order's ends and text at its neutral family's fill and text (DEC-032 point 1)."""
+    an order's ends and text at its neutral family's fill and text (DEC-032 point 1), a
+    page's title in its heading's type (DEC-008 point 2), and the lead in its body's
+    (DEC-072 point 1)."""
     before = tokens.read_brand(folder, released)
     read = tokens.read_brand(folder, foundations)
     assert read.findings == before.findings

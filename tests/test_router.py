@@ -12,12 +12,15 @@ spawned; the routing *decision* is what is under test.
 from __future__ import annotations
 
 import os
+import tomllib
 from pathlib import Path
 from typing import Any
 
 import pytest
 
 from project_kit import router
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
 class _ExecCalled(Exception):
@@ -255,10 +258,23 @@ def test_is_routed_child_reads_loop_guard(tmp_path: Path) -> None:
 
 def test_pinned_base_is_git_tag_pin(tmp_path: Path) -> None:
     base = router._pinned_base("1.100.0")
-    assert base[0] == "uvx"
-    assert "--from" in base
-    assert f"{router.DISTRIBUTION_GIT_URL}@v1.100.0" in base
-    assert base[-1] == "project-kit"
+    assert base == ["uvx", "--from", f"{router.DISTRIBUTION_GIT_URL}@v1.100.0", "pkit"]
+
+
+def test_the_pinned_base_runs_a_console_script_the_package_declares() -> None:
+    """uv runs from a package only an executable the package provides, and refuses
+    any other as the command, so the command the pinned base names is one of the
+    console scripts `pyproject.toml` declares (#3408)."""
+    pyproject = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+
+    assert router._pinned_base("1.100.0")[-1] in pyproject["project"]["scripts"]
+
+
+def test_the_pinned_command_is_the_pinned_base_as_typed() -> None:
+    """A message names the run the router makes, word for word (#3408)."""
+    assert router.pinned_command("1.100.0") == (
+        f"uvx --from {router.DISTRIBUTION_GIT_URL}@v1.100.0 pkit"
+    )
 
 
 # --- Route 1: source checkout → exec the dispatcher ----------------------------

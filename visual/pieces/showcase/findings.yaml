@@ -8,7 +8,7 @@ key:
   form: 1
   hash: sha256
   format: 1
-  value: 0d9a346c15bf2d8ab3a0b2ade250aba4380b2ee013bf87361da42ff3213e5d04
+  value: 0bf76a8ab81047c7aaa53934ced5c0a003e04ccbe5214a63d5e9289c36182e00
   inputs:
     - file: components/capability.yaml
       sha256: 49ab721151fd9313be944c5458fc6137819d61fbbe1d0bed713a7f6e0c385b4a
@@ -25,15 +25,15 @@ key:
     - library: foundations
       version: 1.2.0
       path: components/deck.yaml
-      sha256: e6e21ae70cee4abd54e0122e1e161b7c6225a4bec1798ade5847cfb2fedfca57
+      sha256: 05deee3a348a544368c000ea8762ebbbc9729805e6ece4338327b5c0077330f8
     - library: foundations
       version: 1.2.0
       path: components/figure.yaml
-      sha256: 6fe389ad65196cf8d16ee4f09231ae2719608f9487e6418bba6d803eb09dc6a4
+      sha256: 63b950b44b44b55cd699c55124ad69cea4e06709d8047660b2fbc28e5f47ff2a
     - library: foundations
       version: 1.2.0
       path: components/site.yaml
-      sha256: 1fe15655fb6ad6f4ea37004e63c7eeb5c884118ce07dc1eee27861cdb4c5c79b
+      sha256: 84816856beb9ad6ff9b14b4999a9934f379c9fda28a4d6fd6279ebb2e606d12c
     - library: foundations
       version: 1.2.0
       path: library.yaml
@@ -41,7 +41,7 @@ key:
     - library: foundations
       version: 1.2.0
       path: roles.yaml
-      sha256: d4b2b89578fe6e0da82ac82a47d565be0ce24569de76fcd301c69ff598036c72
+      sha256: cc33840c1b3f8e22d6876f5ba6b528f56d64aed8216ad370569d80c60f4bee68
     - library: neutral
       version: 1.1.0
       path: fonts/LICENSE-Source-Code-Pro.txt
@@ -73,7 +73,7 @@ key:
     - library: neutral
       version: 1.1.0
       path: tokens/base.tokens.json
-      sha256: 8ece0918ad3b3e357e6f50adc0f0403ccf837601a26cced9168a982b0a63b4d5
+      sha256: 9815aa3f3b2f36b6894e71efbbdeb01525209d058659ea6b862d9c820c80d470
     - library: neutral
       version: 1.1.0
       path: tokens/dark.tokens.json
@@ -89,11 +89,11 @@ key:
     - library: neutral
       version: 1.1.0
       path: tokens/phone.tokens.json
-      sha256: c80c9d3095df0d6eb4a20095860fa292fb94c7e611c12466e29e524ea0da068b
+      sha256: e8128d0bbef32a175171e747b11edd966bd6517bf587828467b394fd7fafb455
     - library: neutral
       version: 1.1.0
       path: tokens/projector.tokens.json
-      sha256: 9efdf88b4b8d3974ae4cde70e4b277b853a3a93e881349b7c8eb5dc95c2e77ee
+      sha256: ac8c38a56f681f6f42126ca196caa47f00c3702a3d846d34a0083b98ce058de0
     - library: neutral
       version: 1.1.0
       path: tokens/tablet.tokens.json
@@ -109,7 +109,7 @@ key:
     - library: starter
       version: 1.1.0
       path: README.md
-      sha256: 617a18adeed285318d34448749d5b266b1fc8f2ec02726a2b1d048b039a2e47d
+      sha256: 817c2116930fac7abdf22781cc90101773b91d7f984615e97d2b4db3a31d6f10
     - library: starter
       version: 1.1.0
       path: components/aside.yaml
@@ -133,7 +133,7 @@ key:
     - library: starter
       version: 1.1.0
       path: components/connector.yaml
-      sha256: abdc1b7f912a7eff607ea48d0d3d7b89010fd91db07ad2192068e677cb4c9a5d
+      sha256: a439aaf28f8c816cf8a3cac38b7a6c77e68cce2472aa4876900c073843c531da
     - library: starter
       version: 1.1.0
       path: components/field.yaml
@@ -157,7 +157,7 @@ key:
     - library: starter
       version: 1.1.0
       path: components/layers.yaml
-      sha256: 4c6fb8dbfce7148faaecbe18ba69609682d4cb73d6ca802dfbcd9f8036d3edc3
+      sha256: 0aaff4cff00034209d5c414409e251ac0cf2726959459cbc8ac634368765414b
     - library: starter
       version: 1.1.0
       path: components/legend.yaml
@@ -208,12 +208,16 @@ key:
       sha256: 869eebf4dd39a3cdda0523d2d21d801a0885d6b3810c50f40bad20ff7f73bf3f
     - library: starter
       version: 1.1.0
+      path: components/title.yaml
+      sha256: 4b56795e784c59ce8b8ffc8722324ad733e1a954e171aeb6ca5ebd1b04dc672c
+    - library: starter
+      version: 1.1.0
       path: library.yaml
       sha256: f0199e2c8f8f78046a1f9a46cb95be0588555afc42ff3b3fe5e17b1da29364f7
     - library: starter
       version: 1.1.0
       path: roles.yaml
-      sha256: 6f583607c22621ff8a30c63813d92968e3afc4890aa49021f02929ac751a5623
+      sha256: c8166929a7b094b1db6e86396b63981b8ac73a6651cbb7f81a11bef2b2f54a4a
 findings:
   - code: size-width
     level: attention
@@ -232,11 +236,32 @@ findings:
     message: 'the piece uses `piece/wiring`, which is experimental: its library may still change it in any release'
     file: piece.yaml
     where: deck/slides[connect]/visual
+  - code: near-alignment
+    level: attention
+    message: "the gaps down in `deck/slides[connect]/visual` nearly agree: 16 px, between `deck/slides[connect]/visual/fillers` and `deck/slides[connect]/visual/gains`; and 19.99 px, between `deck/slides[connect]/visual/frame` and `deck/slides[connect]/visual/evidence`: 3.99 px apart, more than a pixel of rounding and less than the brand's smallest step of space, `space.1`, 4 px"
+    file: piece.yaml
+    where: deck/slides[connect]/visual
+    fix: where it is a fault, put the parts on one line, or a step of space apart, where its fix belongs; where it is meant, leave it
+    who: the reviewer, `graphic-design-reviewer`, who judges on the image whether the place is a fault or is meant
   - code: component-experimental
     level: fact
     message: 'the piece uses `piece/capability`, which is experimental: its library may still change it in any release'
     file: piece.yaml
     where: deck/slides[connect]/visual/opener[project-management]
+  - code: near-alignment-between-groups
+    level: attention
+    message: "at `deck/slides[connect]/visual/slots` and `deck/slides[connect]/visual/fillers`, parts of different groups nearly line up down, by more than a pixel of rounding and less than the brand's smallest step of space, `space.1`, 4 px: `deck/slides[connect]/visual/slots[doc-check]/name` and `deck/slides[connect]/visual/fillers[living-docs]/sign`, their tops 2 px apart; `deck/slides[connect]/visual/slots[doc-check]/name` and `deck/slides[connect]/visual/fillers[living-docs]/role`, their bottoms 2 px apart"
+    file: piece.yaml
+    where: deck/slides[connect]/visual/slots
+    fix: where it is a fault, put the parts on one line, or a step of space apart, where its fix belongs; where it is meant, leave it
+    who: the reviewer, `graphic-design-reviewer`, who judges on the image whether the place is a fault or is meant
+  - code: near-alignment-between-groups
+    level: attention
+    message: "at `deck/slides[connect]/visual/slots` and `deck/slides[connect]/visual/fillers`, parts of different groups nearly line up down, by more than a pixel of rounding and less than the brand's smallest step of space, `space.1`, 4 px: `deck/slides[connect]/visual/slots[use-cases]/name` and `deck/slides[connect]/visual/fillers[software-analysis]/name`, their tops 2 px apart"
+    file: piece.yaml
+    where: deck/slides[connect]/visual/slots
+    fix: where it is a fault, put the parts on one line, or a step of space apart, where its fix belongs; where it is meant, leave it
+    who: the reviewer, `graphic-design-reviewer`, who judges on the image whether the place is a fault or is meant
   - code: component-experimental
     level: fact
     message: 'the piece uses `piece/slot`, which is experimental: its library may still change it in any release'
@@ -272,6 +297,20 @@ findings:
     message: 'the piece uses `starter/code`, which is experimental: its library may still change it in any release'
     file: piece.yaml
     where: deck/slides[install]/visual/panels#1
+  - code: near-alignment-between-groups
+    level: attention
+    message: "at `deck/slides[install]/visual/under/panels#2/panels` and `deck/slides[install]/visual/under/panels#2/under`, parts of different groups nearly line up across, by more than a pixel of rounding and less than the brand's smallest step of space, `space.1`, 4 px: `deck/slides[install]/visual/under/panels#2/panels#1/entries[core]/box` and `deck/slides[install]/visual/under/panels#2/under/command/text`, their centres 1.26 px apart"
+    file: piece.yaml
+    where: deck/slides[install]/visual/under/panels#2/panels
+    fix: where it is a fault, put the parts on one line, or a step of space apart, where its fix belongs; where it is meant, leave it
+    who: the reviewer, `graphic-design-reviewer`, who judges on the image whether the place is a fault or is meant
+  - code: near-alignment-between-groups
+    level: attention
+    message: "at `deck/slides[install]/visual/under/panels#2/panels` and `deck/slides[install]/visual/under/panels#2/under`, parts of different groups nearly line up across, by more than a pixel of rounding and less than the brand's smallest step of space, `space.1`, 4 px: `deck/slides[install]/visual/under/panels#2/panels#1/entries[yours]/label` and `deck/slides[install]/visual/under/panels#2/under/command/box`, their right edges 1.17 px apart"
+    file: piece.yaml
+    where: deck/slides[install]/visual/under/panels#2/panels
+    fix: where it is a fault, put the parts on one line, or a step of space apart, where its fix belongs; where it is meant, leave it
+    who: the reviewer, `graphic-design-reviewer`, who judges on the image whether the place is a fault or is meant
   - code: component-experimental
     level: fact
     message: 'the piece uses `starter/legend`, which is experimental: its library may still change it in any release'
@@ -302,3 +341,8 @@ findings:
     message: 'the piece uses `starter/cell`, which is experimental: its library may still change it in any release'
     file: piece.yaml
     where: deck/slides[permissions]/visual/rows[steps]/cells[kind]
+  - code: text-size-unmeasured
+    level: fact
+    message: the piece names no medium it is shown in under `media`, so no text's size was measured, in any language or at any size
+    file: piece.yaml
+    where: media

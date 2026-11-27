@@ -28,6 +28,9 @@ pkit:
         - project-management:DEC-059
         - project-management:DEC-061
         - project-management:DEC-063
+        - project-management:DEC-076
+        - project-management:DEC-081#3
+        - project-management:DEC-081#4
       artefact:
         - TERM-topology
         - TERM-seat
@@ -54,7 +57,7 @@ Three more concepts serve that work:
 - The seats that build take their work from the [ready Tasks](../glossary.md#term-ready-task--ready-task) ([DEC-059 point 7](../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool)).
 - A [builder agent](../glossary.md#term-builder-agent--builder-agent) builds each [Task](../glossary.md#term-task--task) a worker takes ([DEC-063](../../../../.pkit/capabilities/project-management/decisions/DEC-063-task-builder.md)).
 
-Each seat has a [state issue](../glossary.md#term-state-issue--state-issue), which shows which clone holds the seat now ([DEC-058](../../../../.pkit/capabilities/project-management/decisions/DEC-058-state-issues.md) and [DEC-059 point 3](../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#3-each-seat-has-a-state-issue-which-the-topology-names)).
+Each seat has a [state issue](../glossary.md#term-state-issue--state-issue), which shows which clone holds the seat now ([DEC-058](../../../../.pkit/capabilities/project-management/decisions/DEC-058-state-issues.md) and [DEC-059 point 3](../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#3-each-seat-has-a-state-issue-which-the-topology-names)). The state issue also names the seat's [recorded session](../glossary.md#term-recorded-session--recorded-session) (DEC-059 point 3).
 
 A topology may also declare [pools](../glossary.md#term-pool--pool). Each seat that builds then takes its work only from the pools it serves. A person puts a [Milestone](../glossary.md#term-milestone--milestone)'s work into a pool by marking the Milestone ([DEC-061](../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md)).
 
@@ -63,7 +66,7 @@ These concepts serve the use cases in [040-work-in-parallel](../overview/README.
 ```mermaid
 classDiagram
   accTitle: Parallel work
-  accDescr: A topology declares seats, the settings the seats share, and may declare pools. One seat may be the organizer seat. A seat may give the seat's agent a scope, which names workstreams and kinds of work. A seat that builds serves pools, and a pool holds open Milestones. A seat that builds takes ready Tasks. A seat has one state issue, keyed by the seat's name. A clone generates a clone key. A clone with a number is an instance. An instance holds at most one seat, and takes the seat's name and number. An issue belongs to at most one owner, which is one instance, paired with the issue's assignee. An ownership makes the owner. A builder agent builds one Task.
+  accDescr: A topology declares seats, the settings the seats share, and may declare pools. One seat may be the organizer seat. A seat may give the seat's agent a scope, which names workstreams and kinds of work. A seat that builds serves pools, and a pool holds open Milestones. A seat that builds takes ready Tasks. A worker agent's seat may name one directing seat. A seat has one state issue, keyed by the seat's name. A clone generates a clone key. A clone with a number is an instance. An instance holds at most one seat, and takes the seat's name and number. An issue belongs to at most one owner, which is one instance, paired with the issue's assignee. An ownership makes the owner. A builder agent builds one Task.
   class Topology {
     seats
     shared settings
@@ -121,6 +124,7 @@ classDiagram
   Pool "1" --> "*" Milestone : holds the open
   Seat "1" --> "0..1" Scope : may give its agent
   Seat "*" ..> "*" ReadyTask : takes from
+  Seat "*" --> "0..1" Seat : may name as its directing seat
   Seat "1" --> "1" StateIssue : has
   Clone "1" *-- "0..1" CloneKey : generates
   Clone "1" --> "0..1" Instance : is, with a number
@@ -135,7 +139,7 @@ classDiagram
 ```mermaid
 flowchart LR
   accTitle: How an issue's owner moves
-  accDescr: An issue has no owner until an instance starts the issue, or files the issue from a seat other than the planning agent's. Where two instances take the issue at the same instant, the lower number keeps the issue. A hand-over moves the issue to another instance. A close, a move back from In Progress, or a new assignee clears the owner. In a project with a topology, an ownership that lapses, or whose seat is released, stops counting. An ownership whose build waits does not lapse.
+  accDescr: An issue has no owner until an instance starts the issue, or files the issue and so claims it. Two filings claim nothing: the planning agent's, and a lead agent's for the work it leaves to worker agents. Where two instances take the issue at the same instant, the lower number keeps the issue. A hand-over moves the issue to another instance. A close, a move back from In Progress, or a new assignee clears the owner. In a project with a topology, an ownership that lapses, or whose seat is released, stops counting. An ownership whose build waits does not lapse.
   none[No owner] --> taken([Started by an instance, or filed by one])
   taken --> owned[Owned by that instance]
   owned --> clash([Taken by another instance at the same instant])
@@ -204,6 +208,7 @@ A seat is one place in a [topology](../glossary.md#term-topology--topology), and
 - the agent definition its agent follows, the project-manager agent's by default (DEC-059 points 2 and [8](../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#8-the-agent-a-seat-names-runs-the-seats-role-through-the-pm-skill))
 - a [scope](../glossary.md#term-scope--scope), which is optional (DEC-059 point 2)
 - the [pools](../glossary.md#term-pool--pool) it serves, where it builds and the topology declares pools ([DEC-061 point 1](../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#1-the-topology-declares-pools-and-each-seat-that-builds-names-those-it-serves))
+- for a worker agent's seat, the worker's [directing seat](../glossary.md#term-directing-seat--directing-seat), a planning agent's or a lead agent's, which is optional (DEC-059 point 2)
 - the number of its [state issue](../glossary.md#term-state-issue--state-issue) ([DEC-059 point 3](../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#3-each-seat-has-a-state-issue-which-the-topology-names))
 - whether it is the [organizer seat](../glossary.md#term-organizer-seat--organizer-seat), whose clone may release other seats by force (DEC-059 point 2)
 
@@ -211,7 +216,8 @@ A seat is one place in a [topology](../glossary.md#term-topology--topology), and
 
 - A topology declares the seat (DEC-059 point 2).
 - At most one clone holds the seat at a time, and a clone holds at most one seat (DEC-059 point 4).
-- The seat has one state issue, which logs each clone that takes the seat or releases the seat (DEC-059 point 3).
+- A worker agent's seat may name one directing seat. A directing seat directs only the worker agents whose seats name it (DEC-059 point 2).
+- The seat has one state issue, which logs each clone that takes the seat or releases the seat. The state issue also names the seat's [recorded session](../glossary.md#term-recorded-session--recorded-session) (DEC-059 point 3). The state issue logs a new recorded session only when the session changes ([DEC-081 point 4](../../../../.pkit/capabilities/project-management/decisions/DEC-081-delegation-between-seats.md#4-each-seats-state-issue-records-the-session-that-runs-the-seats-loop)).
 
 **States:** A seat is free until a clone takes the seat, and is held until that clone releases the seat. In the first and most tolerant mode, nothing else frees the seat but a release by force, which the seat's state issue logs. A retired seat stays in the list. A clone that holds a retired seat releases the seat at the clone's next command (DEC-059 points [5](../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#5-in-the-first-mode-a-seat-stays-taken-until-it-is-released) and 6).
 
@@ -341,6 +347,7 @@ A clone is a working copy of a [project](../../core/glossary.md#term-project--pr
 **Always true:**
 
 - In a project with a topology, a clone that holds no seat marks no [issue](../glossary.md#term-issue--issue), and is guarded by nothing (DEC-059 point 6).
+- Under a credential that names no user's account, such as a GitHub App's, a clone claims no issue, whatever its number. The system still reads the [owner](../glossary.md#term-owner--owner) for such a clone. So the system refuses a [Task](../glossary.md#term-task--task) an instance owns, unless a [bypass](../glossary.md#term-bypass--bypass) gives a reason ([DEC-076 point 4](../../../../.pkit/capabilities/project-management/decisions/DEC-076-app-credentials.md#4-start-work-keeps-its-refusal-against-the-person-the-agent-works-for)). In a project with a topology, such a clone takes no seat that builds, and starts no Task ([DEC-076 point 6](../../../../.pkit/capabilities/project-management/decisions/DEC-076-app-credentials.md#6-in-a-project-with-a-topology-a-clone-under-such-a-credential-builds-nothing)).
 
 ## Clone key
 
@@ -410,9 +417,10 @@ The owner of an [issue](../glossary.md#term-issue--issue) is the [instance](../g
 **Relations:**
 
 - An issue has at most one owner once a clash is resolved ([DEC-035 point 6](../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#6-the-clash-guard-catches-and-resolves-it-does-not-lock)).
-- An instance that files work owns all of that work, the parents and the Tasks under the parents ([DEC-035 point 3](../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#3-a-clone-claims-at-creation-for-the-whole-tree)). The planning agent files with no owner, so the planning agent's work joins the [ready Tasks](../glossary.md#term-ready-task--ready-task) that every [seat](../glossary.md#term-seat--seat) shares ([DEC-059 point 7](../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool)). Where the topology declares [pools](../glossary.md#term-pool--pool), that work joins the pool of each [Task](../glossary.md#term-task--task)'s [Milestone](../glossary.md#term-milestone--milestone) ([DEC-061 point 4](../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#4-a-task-is-in-the-pool-of-its-milestone)).
+- An instance that files work owns all of that work, the parents and the Tasks under the parents ([DEC-035 point 3](../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#3-a-clone-claims-at-creation-for-the-whole-tree)). In a project with a topology, a lead agent's instance owns only the work the lead agent files to build itself ([DEC-081 point 3](../../../../.pkit/capabilities/project-management/decisions/DEC-081-delegation-between-seats.md#3-the-topology-names-the-seat-that-directs-each-worker)).
+- The planning agent files all its work with no owner. So does a lead agent, for the work the lead agent leaves to worker agents. That work joins the [ready Tasks](../glossary.md#term-ready-task--ready-task) that every [seat](../glossary.md#term-seat--seat) shares ([DEC-059 point 7](../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool) and DEC-081 point 3). Where the topology declares [pools](../glossary.md#term-pool--pool), that work joins the pool of each [Task](../glossary.md#term-task--task)'s [Milestone](../glossary.md#term-milestone--milestone) ([DEC-061 point 4](../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#4-a-task-is-in-the-pool-of-its-milestone)).
 
-**States:** An issue has no owner until an instance files the issue or starts the issue, and a hand-over moves the owner to another instance. A close, a move back from In Progress, or a new assignee clears the owner (DEC-035 points 3 to 5).
+**States:** An issue has no owner until an instance starts the issue, or files the issue and so claims it. A hand-over moves the owner to another instance. A close, a move back from In Progress, or a new assignee clears the owner (DEC-035 points 3 to 5).
 
 **Always true:**
 
@@ -641,6 +649,7 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 
 **State issue:**
 
+- [UC-064 — Define the Milestones and workstreams the work falls into, and roll a date-based Milestone forward](../use-case-model/use-cases/010-plan/UC-064-define-milestones-and-workstreams.md)
 - [UC-082 — Set up my project's topology in the project's committed configuration, so that every clone reads the same seats](../use-case-model/use-cases/040-work-in-parallel/UC-082-set-up-topology.md)
 - [UC-085 — Never work on a Task another agent already works on](../use-case-model/use-cases/040-work-in-parallel/UC-085-leave-task-to-its-owner.md)
 - [UC-090 — See which agent works on which issue, without visiting each agent](../use-case-model/use-cases/040-work-in-parallel/UC-090-see-who-works-on-what.md)

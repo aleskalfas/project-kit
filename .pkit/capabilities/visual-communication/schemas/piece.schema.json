@@ -60,6 +60,34 @@
       "description": "Where the piece is shown, in words.",
       "$ref": "defs.schema.json#/$defs/text"
     },
+    "media": {
+      "description": "The media the piece is shown in, from the capability's words (DEC-055 point 1): `screen`, a screen at hand; `room`, a screen read from across a room; `paper`, a printed page. A list, each medium once, where each shows every size the piece is drawn at; or a mapping from each medium to the sizes it shows, each a mode of the size axis the piece is drawn at, named once under it. Either names one medium at least. The check of a text's size measures by it, and the review reads it beside `shown`. No scene reads it.",
+      "oneOf": [
+        {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/medium"
+          }
+        },
+        {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": {
+            "$ref": "#/$defs/medium"
+          },
+          "additionalProperties": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "$ref": "defs.schema.json#/$defs/name"
+            }
+          }
+        }
+      ]
+    },
     "explains": {
       "description": "Whether the piece explains, rather than only shows.",
       "type": "boolean"
@@ -163,6 +191,16 @@
     "lock": {
       "description": "The version of each library the piece uses; a render writes it.",
       "$ref": "defs.schema.json#/$defs/lock"
+    }
+  },
+  "$defs": {
+    "medium": {
+      "description": "One of the media the capability names, by its word (DEC-055 point 1).",
+      "enum": [
+        "screen",
+        "room",
+        "paper"
+      ]
     }
   }
 }

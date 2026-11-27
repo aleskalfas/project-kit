@@ -14,7 +14,9 @@ local folder, for a person or an agent to read (DEC-015, DEC-020 point 5, DEC-02
 
 It reads the piece's own file with its lock, computes the scenes under that lock and never
 moves it. It runs no helper and no producer, draws a produced picture as it stands, keeps
-no finding, takes no number and records no location. Its images show what a preview fills,
+no findings record, takes no number and records no location. It runs the checks a render
+runs on each scene it computes, and its report gives each image the findings that hold on
+it, with the checks that measured it (DEC-062). Its images show what a preview fills,
 and it says where one shows a stand-in, with why (`exports.preview_filling`). It reads a
 piece through the HTML renderer where the piece declares `html`, and through the SVG
 renderer otherwise; `--renderer` names either. Each renderer has a folder of its own in
@@ -156,8 +158,8 @@ def _look(root: Path, args: argparse.Namespace) -> int:
     folder = viewing.folder_of(args.piece, wanted.renderer)
     pl.writable(root, root / folder / viewing.REPORT)
     filling = exports.preview_filling(project.piece)
-    results = viewing.scenes(project, wanted.languages, wanted.keys, facts=filling.facts)
-    viewed = viewing.view(project, results, wanted)
+    results, found = viewing.measured(project, wanted, facts=filling.facts)
+    viewed = viewing.view(project, results, wanted, found)
     written = viewing.write(root, folder, viewed)
     if viewed.stopped:
         _print_stop(written, viewed.report)
@@ -167,8 +169,8 @@ def _look(root: Path, args: argparse.Namespace) -> int:
 
 
 def _print(folder: str, report: Mapping[str, Any], stand_ins: str) -> None:
-    """What a run prints: the report, and `stand_ins`, what it says of a stand-in an image
-    shows, where one does."""
+    """What a run prints: the report, what the checks found first, and `stand_ins`, what it
+    says of a stand-in an image shows, where one does."""
     print(f"look: {len(report['images'])} image(s) in {folder}")
     _print_lock_and_renderer(report)
     tool = report["tool"]
@@ -185,6 +187,7 @@ def _print(folder: str, report: Mapping[str, Any], stand_ins: str) -> None:
         print(f"forced colours do not show: {forced['does-not-show']}")
     for each in report.get("page-files", []):
         print(f"page file: {folder}{each['file']}, to open in your own browser")
+    _print_checked(report)
     through_svg = report["renderer"]["name"] == viewing.SVG
     for image in report["images"]:
         band = image.get("band")
@@ -230,6 +233,35 @@ def _print(folder: str, report: Mapping[str, Any], stand_ins: str) -> None:
     if stand_ins:
         print(f"look: {stand_ins}")
     print(f"report: {folder}{viewing.REPORT}")
+
+
+def _print_checked(report: Mapping[str, Any]) -> None:
+    """What the checks found on the scenes the run computed (DEC-062 points 1 and 2): each
+    image's findings, each finding on no image drawn, each check that did not measure an
+    image, and why, and the release that ran them."""
+    capability = report["capability"]
+    print(
+        f"checks: {capability['name']} {capability['version']}, by the code a render runs; "
+        f"the reach of each in {viewing.REPORT}"
+    )
+    for image in report["images"]:
+        band = image.get("band")
+        if band and band["number"] > 1:
+            continue
+        for each in image["findings"]:
+            print(f"found: {_at(image)}: {_finding(each)}")
+        for each in image["not-measured"]:
+            print(f"not measured: {_at(image)}: `{each['check']}`: {each['why']}")
+    for each in report["on-no-image"]:
+        where = ", ".join(str(each[at]) for at in ("language", "key", "page") if each[at])
+        print(f"on no image drawn: {where or 'the piece'}: {_finding(each)}")
+
+
+def _finding(each: Mapping[str, Any]) -> str:
+    """A finding the report gives, in words: its label and check, its level, where it lies and
+    what it says."""
+    check = f" ({each['check']})" if each["check"] else ""
+    return f"`{each['label']}`{check}, {each['level']}, {each['location']}: {each['message']}"
 
 
 def _print_stop(folder: str, report: Mapping[str, Any]) -> None:

@@ -65,13 +65,24 @@ roles:
   type.heading: {type: typography}
   type.strong: {type: typography}
   type.code: {type: typography}
+  # The type of a page's title, which names the whole page, so a brand can set it apart
+  # from the heads of the page's parts: a brand that gives it no value sets a page's title
+  # as a heading (DEC-004 point 7).
+  type.title: {type: typography, default: '{type.heading}'}
+  # The type of running text read before the body, such as a page's opening paragraph or
+  # the line under a slide's title, so a brand can set it apart from the body: a brand that
+  # gives it no value sets it as the body, so it still reads as running text (DEC-004 point
+  # 7, DEC-072 point 1).
+  type.lead: {type: typography, default: '{type.body}'}
   picture.logo: {type: picture}
 
 # The shared axes (DEC-004 point 2). The colour scheme and the contrast change colours
 # alone, so every mode of either is drawn from one scene. The device is a size: each of
 # its modes has a scene of its own, and a brand has it only where it gives it, with the
 # modes it gives (DEC-021 points 1 and 2). A projector is a screen read from across a
-# room, a fourth size of the foundations (DEC-021 point 1).
+# room, a fourth size of the foundations (DEC-021 point 1). A mode names what a piece is
+# drawn for, and the piece's media where it is shown, so no size chooses a medium
+# (DEC-055 point 1).
 axes:
   colour-scheme: {kind: value, modes: [light, dark], default: light}
   contrast: {kind: value, modes: [standard, high], default: standard}

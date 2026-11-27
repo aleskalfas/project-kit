@@ -34,9 +34,12 @@ process:
 # rules, `.pkit/rules/project.md`, kept as a plain file (COR-069 point 3):
 # `pkit validate` fails the file past it. Lowered by the trim (#2261) to the
 # trimmed file's 290 words with room for about 50 more (COR-069 point 4); a
-# growth past it is a raise a person authorises.
+# growth past it is a raise a person authorises. Raised by the maintainer to
+# 600 for rule 5 (#3249), then lowered to the file's 490 words with room for
+# about 50 more once rule 5 said only what project-kit adds to the
+# visual-communication capability's one round (#3478).
 rule-sets:
-  plain-file-budget: 340
+  plain-file-budget: 540
 
 # `friction` — anchors and friction (COR-050 point 14). `enforcing` from the
 # day the check exists (ADR-055 point 5).
@@ -160,6 +163,7 @@ friction:
     - .pkit/adapters/claude-code/*.sh
     - .pkit/adapters/claude-code/harness-support.yaml
     - .pkit/adapters/claude-code/permission-enforcement.yaml
+    - .pkit/adapters/claude-code/session.yaml
     - .pkit/adapters/claude-code/tool-access.json
     - .pkit/adapters/claude-code/settings/**
   # Left out of anchoring and of the measures (COR-050 point 7).

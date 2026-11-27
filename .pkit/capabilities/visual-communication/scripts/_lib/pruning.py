@@ -47,11 +47,8 @@ from typing import Any
 from _lib import copies, current_copy, fingerprint, records
 from _lib import pipeline as pl
 from _lib.files import Change, FileError, read_bound, without_binding
-from _lib.libraries import Held, LibraryError, Version
+from _lib.libraries import PROJECT_SOURCE, Held, LibraryError, Version
 from _lib.reading import ReadError
-
-#: The kind of source the list gives a library of the project's own (DEC-003 point 4).
-PROJECT_SOURCE = "project"
 
 
 @dataclass(frozen=True)

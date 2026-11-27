@@ -8,6 +8,7 @@ pkit:
         - .pkit/capabilities/visual-communication/package.yaml
         - .pkit/capabilities/visual-communication/agents/graphic-design-reviewer.md
         - .pkit/capabilities/visual-communication/agents/graphic-designer.md
+        - .pkit/capabilities/visual-communication/agents/graphic-sketcher.md
         - .pkit/capabilities/visual-communication/skills/visual-author/*.md
         - .pkit/capabilities/visual-communication/scripts/status.py
         - .pkit/capabilities/visual-communication/scripts/work-paths.py
@@ -20,11 +21,14 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/write-code.py
         - .pkit/capabilities/visual-communication/scripts/look.py
         - .pkit/capabilities/visual-communication/scripts/pages.py
+        - .pkit/capabilities/visual-communication/scripts/draft.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/drafts.py
         - .pkit/capabilities/visual-communication/scripts/before-after.py
         - .pkit/capabilities/visual-communication/scripts/mark-final.py
         - .pkit/capabilities/visual-communication/scripts/upgrade.py
         - .pkit/capabilities/visual-communication/scripts/outdated.py
         - .pkit/capabilities/visual-communication/scripts/take-up.py
+        - .pkit/capabilities/visual-communication/scripts/intent.py
         - .pkit/capabilities/visual-communication/scripts/new.py
         - .pkit/capabilities/visual-communication/scripts/prune.py
         - .pkit/capabilities/visual-communication/scripts/_lib/files.py
@@ -42,12 +46,15 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/grant.py
         - .pkit/capabilities/visual-communication/scripts/_lib/pipeline.py
         - .pkit/capabilities/visual-communication/scripts/_lib/root.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/intent.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/briefs.py
         - .pkit/capabilities/visual-communication/scripts/_lib/plugins/__init__.py
         - .pkit/capabilities/visual-communication/rule-sets/vis.md
         - .pkit/capabilities/visual-communication/rule-sets/comm.md
         - .pkit/capabilities/visual-communication/rule-sets/graphic.md
         - .pkit/capabilities/visual-communication/releases/starter/releases.yaml
         - .pkit/capabilities/visual-communication/design-knowledge/README.md
+        - .pkit/capabilities/visual-communication/schemas/review.schema.json
       record:
         - visual-communication:DEC-001#1
         - visual-communication:DEC-001#3
@@ -77,7 +84,26 @@ pkit:
         - visual-communication:DEC-030#3
         - visual-communication:DEC-030#4
         - visual-communication:DEC-030#5
+        - visual-communication:DEC-030#6
         - visual-communication:DEC-030#8
+        - visual-communication:DEC-046#2
+        - visual-communication:DEC-055#1
+        - visual-communication:DEC-068#1
+        - visual-communication:DEC-068#4
+        - visual-communication:DEC-068#6
+        - visual-communication:DEC-068#7
+        - visual-communication:DEC-070#1
+        - visual-communication:DEC-070#2
+        - visual-communication:DEC-070#3
+        - visual-communication:DEC-070#4
+        - visual-communication:DEC-070#5
+        - visual-communication:DEC-070#6
+        - visual-communication:DEC-071#1
+        - visual-communication:DEC-071#2
+        - visual-communication:DEC-071#3
+        - visual-communication:DEC-071#4
+        - visual-communication:DEC-071#5
+        - visual-communication:DEC-071#6
         - COR-017
         - COR-070#1
         - COR-073#3
@@ -89,14 +115,17 @@ pkit:
         - COR-054#5
         - COR-055#3
         - ADR-059#1
+        - ADR-097
       artefact:
         - .pkit/capabilities/visual-communication/files.md#contents
         - .pkit/capabilities/visual-communication/files.md#a-piece
+        - .pkit/capabilities/visual-communication/files.md#the-brief
         - .pkit/capabilities/visual-communication/files.md#picture-files
         - .pkit/capabilities/visual-communication/files.md#brands
         - .pkit/capabilities/visual-communication/files.md#notations
         - .pkit/capabilities/visual-communication/files.md#the-binding
         - .pkit/capabilities/visual-communication/files.md#the-clones-local-folder
+        - .pkit/capabilities/visual-communication/files.md#the-sketch-in-the-agent-workspace
         - .pkit/capabilities/visual-communication/files.md#the-foundations
         - .pkit/capabilities/visual-communication/files.md#the-libraries-the-capability-ships
         - .pkit/capabilities/visual-communication/files.md#the-library-folder
@@ -106,6 +135,7 @@ pkit:
         - .pkit/capabilities/visual-communication/files.md#the-location
         - .pkit/capabilities/visual-communication/files.md#how-a-command-finds-it
         - .pkit/capabilities/visual-communication/files.md#the-lock
+        - .pkit/capabilities/visual-communication/files.md#the-makers-record-of-drafts
         - .pkit/capabilities/visual-communication/files.md#what-a-release-compares
         - .pkit/capabilities/visual-communication/files.md#what-the-location-holds
         - .pkit/capabilities/visual-communication/files.md#the-browser
@@ -147,6 +177,8 @@ pkit:
         - .pkit/capabilities/visual-communication/outputs.md#when-the-browser-stops
         - .pkit/capabilities/visual-communication/outputs.md#under-forced-colours
         - .pkit/capabilities/visual-communication/outputs.md#a-pipelines-drawings
+        - .pkit/capabilities/visual-communication/outputs.md#where-the-reviews-reports-are-kept
+        - .pkit/capabilities/visual-communication/outputs.md#what-pkit-visual-pages-prints
         - .pkit/rules/README.md#a-capabilitys-rules
         - .pkit/capabilities/visual-communication/checks.md#
         - .pkit/capabilities/visual-communication/checks.md#contents
@@ -163,6 +195,7 @@ pkit:
         - .pkit/adapters/claude-code/README.md#deploy-skillssh
         - .pkit/cli/README.md#sync
         - .pkit/cli/README.md#validate
+        - .pkit/cli/README.md#machine-readable-output
 ---
 
 # visual-communication capability
@@ -172,16 +205,16 @@ Visual work made from reusable parts. A *piece*, such as a presentation or a fig
 ## What this capability ships
 
 - **The commands** `pkit visual …`, also reachable as `pkit visual-communication …`. Each is described under [Commands](#commands).
-- **The file formats,** format 1: a schema for each kind of file a piece, a library or a command writes, under `schemas/`. Each file names its schema in its first lines ([The binding](files.md#the-binding)), so `pkit validate` checks its shape.
+- **The file formats,** format 1: a schema for each kind of file a piece, a library or a command writes, under `schemas/`. Each file names its schema in its first lines ([The binding](files.md#the-binding)), so `pkit validate` checks its shape. Another gives the form of the reviewer's document, whose kept copies `pkit validate` does not check ([The binding](files.md#the-binding)). Another, beside format 1, gives the form of the viewing step's report, which is no file of the format and names no schema ([What the report says](outputs.md#what-the-report-says)).
 - **The foundations library:** a few shared roles, the shared axes, six colour families, and three top components: `figure`, for a figure, `deck`, for a presentation, and `site`, for a web page or a portal ([The foundations](files.md#the-foundations)). Its version being built adds an order's roles, the two ends a brand gives an order's colour steps and the text on them, apart from the families. Its versions 1.0.0 and 1.1.0 are released, each under `releases/foundations/<version>/`, and its version being built stays under `libraries/foundations/` ([The libraries the capability ships](files.md#the-libraries-the-capability-ships)). Release 1.1.0 is the first to hold `site`, and `pkit visual add foundations` takes it.
-- **The starter library:** patterns, such as `layers` and `network`, and blocks, such as `card` and `code`, each experimental. Its README lists each pattern by the question it answers, then each block ([The patterns, by the question they answer](libraries/starter/README.md#the-patterns-by-the-question-they-answer), [The blocks](libraries/starter/README.md#the-blocks)). `pkit visual add starter` brings it in. Its version 1.0.0 is released, under `releases/starter/1.0.0/`, and needs release 0.3.0. Its version being built stays under `libraries/starter/`. It adds the web parts, such as `header` and `form`, which draw a site's pages at every size ([The web parts, by their job on a page](libraries/starter/README.md#the-web-parts-by-their-job-on-a-page)). It draws each concept's sign beside its colour, and adds the pattern `legend`, which says what each colour and sign stands for ([Signs](libraries/starter/README.md#signs)). Its `layers` shades each level by its place, a step of an order, drawn by the block `level`, under foundations that declare an order's ends, as their version being built does ([An order's steps](libraries/starter/README.md#an-orders-steps), [Values, states and colour](components.md#values-states-and-colour)). So `pkit visual add starter --being-built` takes them. They need the foundations' release 1.1.0, which `pkit visual add foundations` takes.
+- **The starter library:** patterns, such as `layers` and `network`, and blocks, such as `card` and `code`, each experimental. Its README lists each pattern by the question it answers, then each block ([The patterns, by the question they answer](libraries/starter/README.md#the-patterns-by-the-question-they-answer), [The blocks](libraries/starter/README.md#the-blocks)). `pkit visual add starter` brings it in. Its version 1.0.0 is released, under `releases/starter/1.0.0/`, and needs release 0.3.0. Its version being built stays under `libraries/starter/`. It adds the web parts, such as `header` and `form`, which draw a site's pages at every size, and `title`, which draws a page's title apart from the heads of its parts where the brand gives the title's type a size of its own ([The web parts, by their job on a page](libraries/starter/README.md#the-web-parts-by-their-job-on-a-page)). It draws each concept's sign beside its colour, and adds the pattern `legend`, which says what each colour and sign stands for ([Signs](libraries/starter/README.md#signs)). Its `layers` shades each level by its place, a step of an order, drawn by the block `level`, under foundations that declare an order's ends, as their version being built does ([An order's steps](libraries/starter/README.md#an-orders-steps), [Values, states and colour](components.md#values-states-and-colour)). So `pkit visual add starter --being-built` takes them. Its version being built needs the foundations' version being built, which `pkit visual add foundations --being-built` takes, and is released after it: the type its `title` sets a page's title in defaults to `type.title`, which only that version declares ([The foundations](files.md#the-foundations)).
 - **The neutral brand:** a brand to start from, with a value for every shared role and the fonts it draws in ([The neutral brand](files.md#the-neutral-brand)). It gives no logo. Its version being built gives a desktop's, a tablet's, a phone's and a projector's sizes, and an order's two ends, in greys. `pkit visual add neutral` brings it in. Its version 1.0.0 is released, under `releases/neutral/1.0.0/`, and its version being built stays under `libraries/neutral/`.
 - **Five plugins:** the SVG renderer, which draws the previews and the SVG exports; the PDF renderer, which draws a piece as one PDF for each language and combination of modes; the HTML renderer, which draws a piece's pages as real text over shapes in the HTML exports, and whose pages `pkit visual look` draws through a browser; the CSS code writer, which writes a brand out as CSS variables; and the JSON code writer, which writes a brand's resolved values as one JSON document ([Plugins](outputs.md#plugins), [The SVG renderer](outputs.md#the-svg-renderer), [The PDF renderer](outputs.md#the-pdf-renderer), [The HTML renderer](outputs.md#the-html-renderer), [Written code](outputs.md#written-code), [The JSON code writer](outputs.md#the-json-code-writer)).
 - **The check,** the `visual-communication:check` member of `pkit validate` ([In `pkit validate`](checks.md#in-pkit-validate)).
-- **Two agents:** `graphic-designer`, which designs a piece from its brief and builds the project's own libraries ([The designer](#the-designer)), and `graphic-design-reviewer`, which reads a piece's drawn pages and reports what no check measures ([The reviewer](#the-reviewer)).
+- **Three agents:** `graphic-designer`, which designs a piece from its brief and builds the project's own libraries ([The designer](#the-designer)); `graphic-sketcher`, which draws the sketch a new presentation starts with ([The sketch](#the-sketch)); and `graphic-design-reviewer`, which reads a piece's drawn pages and reports what no check measures ([The reviewer](#the-reviewer)).
 - **The skill** `visual-author`, which guides whoever draws a piece, from its first files to pages that read ([Drawing a piece](#drawing-a-piece)).
 - **Its operational rules,** the loaded rule set `VIS` in `rule-sets/vis.md` and the file generated from it, `rules.md` ([COR-070](../../decisions/core/COR-070-capability-loaded-rules.md)). Wherever the capability is installed, every session loads `rules.md` ([A capability's rules](../../rules/README.md#a-capabilitys-rules)). Its rules say how an agent goes on where the session's sandbox stops a look ([visual-communication:DEC-024-outside-programs-sandbox] point 6).
-- **The rules of visual communication,** in two rule sets ([visual-communication:DEC-028-principles-of-visual-communication] point 2). `COMM`, in `rule-sets/comm.md`, asks whether a piece says the right thing. `GRAPHIC`, in `rule-sets/graphic.md`, asks whether it looks right. A project's own rule set may inherit either, as in `inherits: [visual-communication:COMM@1]` ([COR-051](../../decisions/core/COR-051-rule-sets.md) point 7). They bind on no piece yet, since a piece's content is not something rules bind on. Until then they guide whoever designs or judges a piece (DEC-028 point 5).
+- **The rules of visual communication,** in two rule sets ([visual-communication:DEC-028-principles-of-visual-communication] point 2). `COMM`, in `rule-sets/comm.md`, asks whether a piece says the right thing. `GRAPHIC`, in `rule-sets/graphic.md`, asks whether it looks right. A project's own rule set may inherit either, as in `inherits: [visual-communication:COMM@2]` ([COR-051](../../decisions/core/COR-051-rule-sets.md) point 7). They bind on no piece yet, since a piece's content is not something rules bind on. Until then they guide whoever designs or judges a piece (DEC-028 point 5).
 - **Its design knowledge,** in [`design-knowledge/`](design-knowledge/README.md): what the published practice of visual communication teaches, a short file for each topic, each idea credited to its author, and an index that says when to read each topic ([visual-communication:DEC-030-design-agents] point 8). The designer and the reviewer read it. It holds no rule, no value and no threshold.
 - `decisions/DEC-NNN-*.md`: the principles every piece, library and renderer follows.
 
@@ -223,7 +256,7 @@ The skill `visual-author` walks steps 1 to 6 with you, or with the agent that dr
 4. **See it.** [`pkit visual look <piece>`](#pkit-visual-look-piece) draws each page as an image, with a report of what the images cannot show ([The viewing step](outputs.md#the-viewing-step)). [The reviewer](#the-reviewer) can read them for you.
 5. **Check it.** `pkit visual check <piece>`, or `pkit validate`, reports what the piece breaks ([What the check reports](checks.md)).
 6. **Commit the piece's folder:** `piece.yaml`, the content, its brief, its `pictures/` and `findings.yaml` ([The findings record](checks.md#the-findings-record)). The previews stay local to the clone ([The clone's local folder](files.md#the-clones-local-folder)).
-7. **Hand it out.** `pkit visual export <piece>` makes a numbered export in each format the piece declares, and records the version in the piece's `exports.yaml`. Commit `exports.yaml`; the exported files stay local until they are handed out ([Exports](outputs.md#exports)). A published piece's export also writes its current copy, the unnumbered files a page links to. Commit that too ([The current copy](outputs.md#the-current-copy)).
+7. **Hand it out,** once you judge that it ships. That call is yours, and no agent or review makes it ([visual-communication:DEC-070-ship-call-and-one-round] point 1). `pkit visual export <piece>` makes a numbered export in each format the piece declares, and records the version in the piece's `exports.yaml`. Commit `exports.yaml`; the exported files stay local until they are handed out ([Exports](outputs.md#exports)). A published piece's export also writes its current copy, the unnumbered files a page links to. Commit that too ([The current copy](outputs.md#the-current-copy)).
 
 A brand's values reach code the same way: a declaration under the location's `code/` folder names the brand and where the code goes, and `pkit visual write-code <name>` writes it ([Written code](outputs.md#written-code)).
 
@@ -290,7 +323,7 @@ Before you release a library for other projects, sync from a tagged install of t
 
 Stamps a new piece's first files, from what you choose ([A piece](files.md#a-piece)).
 
-- **Takes** a name no piece of the location holds, and the choices of `piece.yaml`: `--top <library>/<component>`, `--brand <library>`, `--language <language>` for each language, the source language first, `--audience <text>` and `--shown <text>`. `--explains` sets `explains: true`. `--export <format>`, `--notation <library>` and `--mode <axis>=<mode>[,<mode>...]` each repeat, and each may be left out.
+- **Takes** a name no piece of the location holds, and the choices of `piece.yaml`: `--top <library>/<component>`, `--brand <library>`, `--language <language>` for each language, the source language first, `--audience <text>` and `--shown <text>`. `--explains` sets `explains: true`. `--medium <medium>`, or `--medium <medium>=<size>[,<size>...]` with the sizes that medium shows, `--export <format>`, `--notation <library>` and `--mode <axis>=<mode>[,<mode>...]` each repeat, and each may be left out. Each `--medium` names its sizes, or none does.
 - **Writes** `pieces/<piece>/` in one change, never over a file:
   - `piece.yaml`, with those choices and `state: draft`, and no lock;
   - a content file for each language, holding each field of the top it can leave empty, empty; a field of another type, such as a number, is left out. A deck's or a site's pages are one page in the top's first layout, each of its slots empty. The top is read from the newest version of its library the location holds that the installed capability reads;
@@ -381,6 +414,7 @@ Draws a piece's pages as images, for a person or an agent to read ([The viewing 
 - **Needs a browser** for the HTML renderer's pages, which no other format needs. The capability installs none ([The HTML renderer's pages](outputs.md#the-html-renderers-pages)).
 - **Draws under forced colours** with `--forced-colours`: each page file of the HTML renderer in the browser's two forced palettes too, in a second start, each palette's images in a folder of their own. It refuses the flag through the SVG renderer ([Under forced colours](outputs.md#under-forced-colours)).
 - **Writes** each image and its frames, and one report, in its renderer's folder, replacing what an earlier run left there. Through the HTML renderer it writes each page file too ([What a run writes](outputs.md#what-a-run-writes)).
+- **Runs the checks** a render runs on a scene, on the scenes it computes, each size of each language it draws. Its report gives each image what they found on it, and the checks that measured it, and lists apart what lies on no image drawn. It keeps no findings record ([What the report says](outputs.md#what-the-report-says)).
 - **Prints** the lock, the renderer and what the report says ([What the report says](outputs.md#what-the-report-says)), then each stand-in an image shows, with why ([The viewing step](outputs.md#the-viewing-step)).
 - **Uses the lock** `piece.yaml` holds, and never moves it.
 - **Refuses** for each reason under [What refuses a run](outputs.md#what-refuses-a-run).
@@ -391,10 +425,35 @@ Draws a piece's pages as images, for a person or an agent to read ([The viewing 
 
 Lists what [`pkit visual look`](#pkit-visual-look-piece) can draw of a piece.
 
-- **Prints** the piece's languages and keys, what it draws by default, and each page by its number and trace id. Then the renderer it reads by default, and each renderer's tool. `--json` prints it as one document.
+- **Prints** the piece's languages and keys, what it draws by default, and each page by its number and trace id. Then the renderer it reads by default, and each renderer's tool. `--json` prints it as one document ([What `pkit visual pages` prints](outputs.md#what-pkit-visual-pages-prints)).
 - **Finds the browser** a run would start, and starts none. It names the program, or where it looked where it found none, and the forced palettes it draws where `look` is asked `--forced-colours`.
 - **Writes** nothing.
 - **Exits** 0 when it listed; 1 when the piece cannot be drawn, such as with no lock yet or a lock that does not hold. It exits 1 too where the configuration's `browser` names no path ([The browser](files.md#the-browser)).
+
+### `pkit visual intent <piece>`
+
+Prints what a piece's brief hands the review first: the intent, without the reasons ([visual-communication:DEC-070-ship-call-and-one-round] point 5).
+
+- **Prints** the goals, relations and takeaways of the piece's part and of each page's part ([The brief](files.md#the-brief)): the pages and the items of each list in the brief's order, and within a part its goals, then its relations, then its takeaway. A relation is printed with the parts of the content it relates. A part that states none is named as stating none.
+- **`--json`** prints the same as one JSON document, under the CLI reference's rule for a document printed for a program ([Machine-readable output](../../cli/README.md#machine-readable-output)). It carries no version. Where the command refuses, it prints none and exits 1.
+  - **`piece`:** the piece's name, as given.
+  - **`intent`:** `null` where the piece keeps no brief, or its brief cannot be read. Otherwise `piece`, the part for the whole piece, and `pages`, the part of each page the brief speaks of, by the page's id.
+  - **A part** holds `goals`, the text of each goal; `relations`, each relation with its `text` and, where it names them, `relates`, the parts of the content it relates; and `takeaway`, its text. Lists keep the brief's order. A part leaves out each of the three it does not state, so a reader reads a missing one as not stated, and a relation without `relates` as one that names no part.
+- **Leaves out** every reason, and each aspect and principle a reason holds ([The brief](files.md#the-brief)).
+- **Reads** the piece's `piece.yaml` and its brief: no lock, no drawing, no content. A piece with no brief, or whose brief cannot be read, is said to keep none.
+- **Writes** nothing.
+- **Exits** 0 when it printed; 1 when the project holds no visual work, the piece is not in the location or its `piece.yaml` cannot be read, or the configuration cannot be read ([Commands](#commands)).
+
+### `pkit visual draft <piece>`
+
+Gives the digest of a draft's text, and says whether a text still matches the digest the piece's brief records ([The makers' record of drafts](files.md#the-makers-record-of-drafts)).
+
+- **Names the draft** by `--kind` (`lead`, `title` or `takeaway`), `--language` and, for a piece whose top holds pages, such as a deck or a site, even of one page, `--page <id>`. It reads the text from the piece, so no one hashes text by hand: a takeaway from the brief's part, and a lead or a title from the content in that language, at the key path `--at` names from the page ([The brief](files.md#the-brief)). With `--from-top`, the key path starts at the content's top instead, for a page's lead or title that the piece's top holds, such as the heading of a hero that a one-page site's shared header holds, which is that page's title (DEC-068 point 4). Its entry lies in that page's part, as one of the page's own content does ([The makers' record of drafts](files.md#the-makers-record-of-drafts)). The command then refuses a key path that leads into the pages, since that names a page's own content. Without `--page`, a draft is the whole piece's, which only a piece whose top is a page alone, such as a figure, has: its entry lies in the brief's part for the whole piece, a takeaway is read from that part, and a lead's or a title's key path from the content's top. On a piece whose top holds pages each draft lies in its page's part ([The brief](files.md#the-brief)). So the command refuses a draft given without `--page` on such a piece, and on a piece whose top it cannot read to tell whether it holds pages. It finds the page, and whether the top holds pages, under the piece's lock, or, before the piece's first render, under the versions that render would lock ([The makers' record of drafts](files.md#the-makers-record-of-drafts)).
+- **Prints** the entry for the part's `drafts`, its digest taken over the text normalised as the record says, for whoever designs the piece to write into the brief ([The makers' record of drafts](files.md#the-makers-record-of-drafts)).
+- **`--check`** says whether the text still matches the entry the brief records for it, and so whose the text is ([The makers' record of drafts](files.md#the-makers-record-of-drafts)).
+- **Writes** nothing, the brief included ([The makers' record of drafts](files.md#the-makers-record-of-drafts)).
+- **Refuses** a piece, its brief, a page, a field or a takeaway it cannot read.
+- **Exits** 0 when it printed the entry, or `--check` found a match; 1 when it refused ([Commands](#commands)); 2 on a usage error; 3 when `--check` found the text the asker's.
 
 ### `pkit visual before-after <piece>`
 
@@ -468,7 +527,7 @@ Writes a brand out as code, as the declaration `code/<name>.yaml` in the locatio
 
 ## The designer
 
-`graphic-designer` turns a piece's brief into a piece ([visual-communication:DEC-030-design-agents] point 2). It names the content's structure, and the order each page explains in, before it chooses a form. It settles where a page's path starts before it ranks what is seen first, takes type, colour and space from the brand's roles, and writes the reason for each choice into the brief. It writes the piece's own file, its content in every language, its brief and its local components. It also builds the project's own libraries, in a version not yet released. It renders, checks and looks only through the commands, as the skill `visual-author` walks them ([Drawing a piece](#drawing-a-piece)). The adapter deploys it as it deploys any agent ([Deploy mechanics](../../agents/README.md#deploy-mechanics)).
+`graphic-designer` turns a piece's brief into a piece ([visual-communication:DEC-030-design-agents] point 2). It names the content's structure, and the order each page explains in, before it chooses a form. It settles where a page's path starts before it ranks the page's head, its focal point and the action it asks above the rest, takes type, colour and space from the brand's roles, and writes the reason for each choice into the brief. It writes the piece's own file, its content in every language, its brief and its local components. It also builds the project's own libraries, in a version not yet released. It renders, checks and looks at a piece only through the commands, as the skill `visual-author` walks them ([Drawing a piece](#drawing-a-piece)). A new presentation, or one redesigned whole, it starts from a sketch, which it reads outside the commands ([The sketch](#the-sketch)). The adapter deploys it as it deploys any agent ([Deploy mechanics](../../agents/README.md#deploy-mechanics)).
 
 **Its grant.** It writes within the location, which the overlay category `visual-communication.work` grants it ([visual-communication:DEC-030-design-agents] point 5):
 
@@ -481,21 +540,35 @@ Where its grant names no location yet, it asks you where the visual work goes, w
 
 To use it:
 
-1. **Ask it for a piece,** saying what it must say, to whom, and where it is shown. It writes the brief's goals and relations from what you say, and shows them to you before it designs against them. Where they give no order in which a page explains, it proposes one from the page's lead or takeaway, and writes it into the brief once you confirm it.
-2. **Let it build.** Where no library draws the design, it extends the project's own library, makes a component for the piece alone, or stops and says what is missing ([visual-communication:DEC-030-design-agents] point 4). It never changes what the piece says to fit what a library draws.
-3. **Read what it hands back.** Before it stops, [the reviewer](#the-reviewer) reads every page in every language, mode and size. Where the designer can start agents, it dispatches the reviewer itself. Otherwise it asks you to, and says the piece is not reviewed. It mends what it judges right, then tells you what it changed and why, with the reviewer's report as written.
+1. **Ask it for a piece,** saying what it must say, to whom, and where it is shown. It writes the brief's goals and relations from what you say, and shows them to you before it designs against them. Where they give no order in which a page explains, it proposes one from the page's lead or takeaway, and writes it into the brief once you confirm it. A new presentation starts with a sketch drawn from your words, unless you have it skip the sketch ([The sketch](#the-sketch)).
+2. **Let it build.** Where no library draws the design, it extends the project's own library, makes a component for the piece alone, or stops and says what is missing ([visual-communication:DEC-030-design-agents] point 4). In a rebuild of a sketch, it draws the nearest that keeps a part's meaning where it would stop, and stops on a part where nothing near keeps it. It never changes what the piece says to fit what a library draws.
+3. **It runs one round.** [The reviewer](#the-reviewer) reads every page in every language, mode and size. The designer mends once each fault, each brief finding, each break the reviewer labels settled, each fact its source contradicts, and each thing the reviewer says a reader cannot make out where the piece is shown. Then the reviewer reads every page again ([visual-communication:DEC-070-ship-call-and-one-round] points 2 and 3). Where the designer can start agents, it dispatches the reviewer itself. Otherwise it asks you to, and says the piece is not reviewed. It runs no further round of its own.
+4. **Read what it hands you.** It hands you the piece, with the reviewer's second report as written, what it changed and why, each finding it left and why, and each question still open. A piece rebuilt from a sketch comes with the sketch beside it ([The sketch](#the-sketch)). A finding it judged wrong it leaves, and says why. Any other finding for a person, a note, and a finding the reviewer marked wait for you. Whether the piece ships is your call: the designer never reports it done ([visual-communication:DEC-070-ship-call-and-one-round] point 1).
+5. **Ask for mends, or ship it.** Where you ask for mends, name them. The designer mends what you name, the reviewer reads every page again, and the piece comes back to you.
 
-In mending, it asks you only where a fix would change what the piece says, needs a write it may not make, such as to a library the capability ships, or two rounds of mending did not clear a finding. You answer, and it makes the change.
+**Whose words it changes.** The brief's goals and relations, each page's lead and title and each takeaway once you have seen them, any word a goal names as yours, and their translations are yours: it changes none of them without your word. It records each lead, title and takeaway it drafts and you have not seen in the brief's record of drafts ([The makers' record of drafts](files.md#the-makers-record-of-drafts)), and changes every other word alone, where each goal and relation still holds ([visual-communication:DEC-070-ship-call-and-one-round] point 4). In mending, it asks you only where a fix would change your words or cut a fact a goal or a relation rests on, or needs a write it may not make, such as to a library the capability ships. You answer, and it makes the change.
+
+### The sketch
+
+A new presentation, or one redesigned whole, starts as a *sketch*: a drawing of every page, made by hand outside the engine ([visual-communication:DEC-071-sketch-and-rebuild] point 1). The designer starts a session of its own for it, `graphic-sketcher`, and hands it only the piece's words, yours or a redesigned piece's content, its takeaways and where it is shown. With no method, no design knowledge, no library and no brand, the session draws every page, in a medium you can open, such as a web page it writes by hand. It is granted only the tools that read and write files, reads only the files it is handed, and writes only the sketch. Where the harness cannot narrow what it reads to those files, its isolation rests on its restraint, and its handoff, which says what it was given and anything else it read, shows a breach. The adapter deploys it as it deploys any agent ([Deploy mechanics](../../agents/README.md#deploy-mechanics)).
+
+- **Which pieces.** A new presentation, and a presentation redesigned whole. A change to some of a piece's pages takes no sketch. A piece of another kind, such as a figure or a poster, starts with one only where you ask for it. You may have the designer skip the sketch on any piece. Both are your word alone: no agent skips a sketch, or asks for one, in your place.
+- **Your words, as given.** The sketch draws the words it is given for the piece, yours or a redesigned piece's content, and changes none of them. The designer puts them into the piece's content from where they came, never from the sketch ([visual-communication:DEC-071-sketch-and-rebuild] point 2).
+- **Where it lies.** In the agent workspace, never committed, and kept at least until your ship call on the piece ([The sketch, in the agent workspace](files.md#the-sketch-in-the-agent-workspace)).
+- **The rebuild.** The designer rebuilds the sketch at once as the piece, by its method, under the piece's brand and with the project's libraries, and writes the brief's reasons. You do not see the sketch first. The rebuild keeps each page's structure, form, hierarchy and arrangement, unless the sketch's form bends the content's meaning, and takes type, colour and space from the brand's roles ([visual-communication:DEC-071-sketch-and-rebuild] point 4).
+- **A stand-in, never a bend.** Where the brand, the engine or a library cannot carry a part, the designer draws the nearest that keeps the part's meaning, and sends the lack to its owner: a request to the owner of a library or a brand it may not write, which it proposes to you as a task, or a need for a tool the engine lacks, which comes to you as a question. The brief's reason for that part names the lack and its owner ([visual-communication:DEC-071-sketch-and-rebuild] point 5).
+- **The round and your call.** The round runs on the rebuilt piece. The reviewer is handed no sketch, and the round mends nothing toward it. With the piece, the designer hands you where the sketch lies, the session's account of what it was given and read, and each stand-in, with what lacks it, its owner and what was drawn in its place. Set the sketch beside the piece: whether the piece keeps what made the sketch good is yours to judge. You may ask for mends toward the sketch, as for any mend, or have the piece start again from a new sketch ([visual-communication:DEC-071-sketch-and-rebuild] point 6).
 
 ## The reviewer
 
-`graphic-design-reviewer` is the capability's reviewer. It looks at a piece's pages as they were drawn, and reports what no check measures, such as a text over a picture. It also judges whether the pages keep the capability's rules, and show what the piece's brief asks. The adapter deploys it as it deploys any agent ([Deploy mechanics](../../agents/README.md#deploy-mechanics)).
+`graphic-design-reviewer` is the capability's reviewer. It looks at a piece's pages as they were drawn, and reports what no check measures, such as a text over a picture. It also judges whether the pages keep the capability's rules, and show what the piece's brief asks. It gives no grade and no verdict: its findings, with their labels, inform your call on whether the piece ships ([Its labels and its report](#its-labels-and-its-report)). The adapter deploys it as it deploys any agent ([Deploy mechanics](../../agents/README.md#deploy-mechanics)).
 
 To use it:
 
 1. **Draw the pages.** Run [`pkit visual look <piece>`](#pkit-visual-look-piece), with the pages, languages, modes and renderer you want read. Draw each size the piece names, a phone's among them: `--every-key` takes them all ([The viewing step](outputs.md#the-viewing-step)). Add `--forced-colours` where it should see what a reader who forces their own colours gets ([Under forced colours](outputs.md#under-forced-colours)). The reviewer runs no command, so it sees only what that run drew.
-2. **Dispatch it,** naming the piece. It reads the images in the folder of the renderer that drew them, with the frames and the report beside them, and the piece and the brand. It also reads the piece's brief, where the piece keeps one, the capability's design knowledge, and the rule sets the capability ships. It does not read the set sessions load, which binds a session's work, not a piece. You may hand it other images of the same pages, from another tool or renderer, and it says which drew each. It changes nothing.
-3. **Read its report.** It opens with the pages, languages and modes it looked at, the bands of each page it read, and the forced palettes it looked at, where the run drew them. It names the brief it read, or that the piece has none, and the rule sets it read. It names what it did not see. What it did not see is not looked at, never clean.
+2. **Print the brief's intent.** Run [`pkit visual intent <piece>`](#pkit-visual-intent-piece). The reviewer judges each page against what it prints ([visual-communication:DEC-070-ship-call-and-one-round] point 5). Where you hand it no intent, it judges without one, and says so in its report, among what it read before writing its findings.
+3. **Dispatch it,** naming the piece, and hand it the intent you printed. It reads the images in the folder of the renderer that drew them, with the frames and the report beside them, and the piece and the brand. It reads what the checks found from that report alone, never from the piece's findings record. It also reads the piece's brief, where the piece keeps one, the capability's design knowledge, and the rule sets the capability ships. It does not read the set sessions load, which binds a session's work, not a piece. You may hand it other images of the same pages, from another tool or renderer, and it says which drew each. It changes nothing.
+4. **Read its report.** It opens with a document of a fixed form ([Its labels and its report](#its-labels-and-its-report)). Then it says which pages, languages and modes it looked at, the bands of each page it read, and the forced palettes it looked at, where the run drew them. It names the brief it read, or that the piece has none, and the rule sets it read. It names what it did not see, each place a check found on no image drawn among it. What it did not see is not looked at, never clean.
 
 Where a run's folder holds a report and no image, the browser stopped. The reviewer says so, and looks at nothing ([When the browser stops](outputs.md#when-the-browser-stops)). It passes on to you the ways on the stop names, in their order.
 
@@ -503,14 +576,26 @@ You may hand it a build pipeline's drawings instead, fetched into a folder of th
 
 Each finding names the page, the element's trace id where the element was drawn ([Trace ids](components.md#trace-ids)), and where its fix belongs. A finding is one of four kinds, kept apart by what it cites:
 
-- **A fault,** which the agent's list names: a part missing or blank, a wrong font, text over text, a text that does not read over a picture, a wrong picture, an overlap, a fault of alignment, or a drawing that disagrees with a passing check.
-- **A rule finding,** which cites a rule by its id. Today it only informs, since no rule binds on a piece's files yet.
+- **A fault,** which the agent's list names: a part missing or blank, a wrong font, text over text, a text that does not read over a picture, a wrong picture, an overlap or a join that misses, a fault of alignment, a drawing that disagrees with a passing check, or a stray text.
+- **A rule finding,** which cites a rule by its id, and carries no grade. Today it only informs, since no rule binds on a piece's files yet.
 - **A brief finding,** which cites the part of the piece's brief that the drawing does not show.
 - **A note,** anything else worth a look. A note of taste names the practice it draws on, from the design knowledge. A note never fails.
 
-One observation makes one finding, of the first kind in this list that applies, and it cites each ground it rests on. A page whose path, traced from where the eye enters, does not follow the order its relations and its lead or takeaway give is such an observation. It may break a rule as well as the brief. Where the piece keeps no brief, it is a rule finding where a rule applies, and otherwise a note.
+One observation makes one finding, of the first kind in this list that applies, and it cites each ground it rests on. A page whose path, traced from where the eye enters, does not follow the order its relations and its lead or takeaway give is such an observation. It may break a rule as well as the brief. Where the piece keeps no brief, or the page's part of it gives no relation and no takeaway, the page's statement gives the order, its lead or its title where it has no lead, and such a path is a rule finding where a rule applies, and otherwise a note.
 
 Its findings are advice. They join no validation and hold no merge.
+
+### Its labels and its report
+
+Beside each finding, the reviewer says what the designer's round and you need to know of it. It alone labels and marks a finding, and the designer takes each as given ([visual-communication:DEC-070-ship-call-and-one-round] point 5).
+
+- **Settled or for a person.** Each rule finding is labelled a *settled* break, where the rule's text settles it with no reading left to choose, or a finding *for a person*, where judging it needs a reading the rule does not settle ([visual-communication:DEC-030-design-agents] point 6). A fault that cites a rule is a break the rule's text settles, and is the one finding of its defect ([visual-communication:DEC-046-faults-lower-grades] point 2). One weakness that fails the words of several rules is one finding that cites each, and labels each.
+- **What a reader cannot make out.** It says of each fault and rule finding whether a reader cannot make it out where the piece is shown, by what that reader loses, such as a difference told by colour alone. A page not taken in at a glance is never such a thing.
+- **Its marks.** A finding only a tool the engine lacks would clear is marked a *need*, and one only your words would clear is marked as the asker's. Each goes to you as a question, and the designer's round mends neither.
+- **Where its fix belongs.** Each finding names the place, and never the fix: the piece, a local component, a library, the brand, the asker's words or a tool the engine lacks ([visual-communication:DEC-070-ship-call-and-one-round] point 6).
+- **What it reads, in order.** It reads the brief's file only once its findings are written. On the round's second reading, it reads its first report, as it wrote it, only then too, and says of each finding of it whether the page still shows it ([visual-communication:DEC-070-ship-call-and-one-round] point 5).
+- **Its report** opens with a document of a fixed form, held by the schema [`review.schema.json`](schemas/review.schema.json). It holds the findings with their labels and marks, what the reviewer read before writing them, and the full name of the model it ran on, with its effort where the harness has one ([visual-communication:DEC-070-ship-call-and-one-round] point 5).
+- **Kept whole.** Whoever dispatched the reviewer keeps each report as it was written, and the round hands you the second ([Where the review's reports are kept](outputs.md#where-the-reviews-reports-are-kept)).
 
 It needs a harness that reads images. Where the harness reads none, it stops and says so, and reports nothing as looked at.
 

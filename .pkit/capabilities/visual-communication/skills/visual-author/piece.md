@@ -2,6 +2,11 @@
 
 A piece is a folder under the location's `pieces/`. It holds `piece.yaml`, which says what the piece is, and a content file for each language, which says what it shows ([A piece](../../files.md#a-piece)). It may keep a brief too, which says what the piece must show and why its design is as it is ([The brief](../../files.md#the-brief)). You bring its libraries first, stamp its files with `pkit visual new`, fill them, and let the first render write the lock.
 
+**A piece rebuilt from a sketch** starts by these steps too, once `graphic-sketcher` has drawn the sketch ([The sketch](../../README.md#the-sketch)):
+- **Its words** come from the asker's text, or from the content of a piece redesigned whole, and never from the sketch. They go into the content in step 5, then into every language.
+- **Its form is the sketch's.** The designer keeps each page's structure, its form and the visual variables that carry it, its hierarchy and its arrangement, unless the sketch's form bends the content's meaning. It takes type, colour and space from the brand's roles that do the sketch's choices' job where the piece is shown, and writes no raw value.
+- **A stand-in.** Where the brand, the engine or a library cannot draw a part as the sketch does, the designer draws the nearest that keeps the part's meaning, and sends the lack to its owner as a request or a need. The brief's reason for that part names the lack and its owner, in step 4.
+
 ## 1. Bring the libraries
 
 `pkit visual add <library>` copies a library the capability ships into the location's library folder, and lists it in `libraries/libraries.yaml`. A piece reads a library from that folder alone, so bring each one it needs.
@@ -38,6 +43,7 @@ Then choose each field of `piece.yaml`. Each is a flag of `pkit visual new` in s
 | `languages` | The first is the source language, such as `[en]`. Each language needs its content file. |
 | `audience` | Who the piece is for, in one sentence. Name the reader and what they already know, since the build loop reads the pages as that reader does. |
 | `shown` | Where the piece is shown, in words: the place and the medium. |
+| `media` | The media it is shown in, beside `shown`, from three words: `screen`, a screen at hand; `room`, a screen read from across a room; `paper`, a printed page. A check fails a text smaller than its top allows in a medium that shows it, and states as a fact where it measured none, such as for a piece that names no medium. Name them alone, such as `[room]`, where each medium shows every size the piece is drawn at. Or name the sizes each shows, such as `{screen: [desktop], room: [projector]}` for a deck read on a laptop and projected, so each size is held to the medium it is shown in ([`piece.yaml`](../../files.md#pieceyaml)). Keep it in agreement with `shown`. |
 | `explains` | `true` where the piece explains, rather than only shows. A figure of how parts relate explains. A title page only shows. |
 | `exports` | The formats an export makes. `pdf` makes one file for each language and combination of modes, which suits a presentation. `svg` makes one file for each page, which suits a figure. `html` makes a page file a browser opens, which suits a web page. `[]` makes none yet. |
 | `state` | `draft`. A draft's lock moves at each render. |
@@ -52,7 +58,7 @@ The command writes `state: draft`, and no `lock`: the first render writes it. Ad
 `pkit visual new <piece>` writes the piece's folder, `pieces/<piece>/`, from your choices. For the piece `first-talk`:
 
 ```
-pkit visual new first-talk --top foundations/deck --brand neutral --language en --audience "New members of the team, who have not seen the project yet." --shown "On a screen, at the team's weekly meeting." --explains --export pdf --mode colour-scheme=light,dark
+pkit visual new first-talk --top foundations/deck --brand neutral --language en --audience "New members of the team, who have not seen the project yet." --shown "On a screen seen from across the room, at the team's weekly meeting." --medium room --explains --export pdf --mode colour-scheme=light,dark
 ```
 
 | Field | Flag |
@@ -61,6 +67,7 @@ pkit visual new first-talk --top foundations/deck --brand neutral --language en 
 | `notations` | `--notation <library>`, once for each |
 | `languages` | `--language <language>`, once for each, the source language first |
 | `audience`, `shown` | `--audience <text>`, `--shown <text>` |
+| `media` | `--medium <medium>`, once for each; or `--medium <medium>=<size>,<size>`, once for each, to name the sizes each shows |
 | `explains` | `--explains` for `true`. Leave it out for `false`. |
 | `exports` | `--export <format>`, once for each. Leave it out for `[]`. |
 | `modes` | `--mode <axis>=<mode>,<mode>`, once for each axis |
@@ -76,7 +83,8 @@ top: foundations/deck
 brand: neutral
 languages: [en]
 audience: "New members of the team, who have not seen the project yet."
-shown: "On a screen, at the team's weekly meeting."
+shown: "On a screen seen from across the room, at the team's weekly meeting."
+media: [room]
 explains: true
 exports: [pdf]
 state: draft
@@ -104,7 +112,7 @@ The brief, `pieces/<piece>/brief.yaml`, is written for whoever makes or reviews 
 - **The intent first, from whoever asks.** Before you design, write the `goals` and the `relations` from what whoever asked for the piece says, and show them to that person. A relation says in words what a picture must make visible between its parts, such as levels that each rest on the one below. A goal says what the audience must be able to do after the piece. Where the relations give no order in which a page explains, you may propose one from the page's lead or its takeaway, and write it as a relation once whoever asked confirms it.
 - **A part for each page.** `piece` holds what concerns the whole piece, and `pages` a part for each page, keyed by the page's id in the content. A page's part names a page the content holds. Until you start a page in step 5, write its intent under `piece`, and move it under `pages` once the page has its id. A figure keeps all of its brief under `piece`.
 - **A takeaway only where the page has no lead.** Where the page's content states its point, such as a slide's `lead`, that is its takeaway, and the brief does not repeat it. A cover often has none.
-- **The reasons as you design.** Write each reason as you make the choice it explains, in step 5 and in the build loop. List them in the order the choices are made: `structure`, `form`, `hierarchy`, `type`, `colour`, `space`. Each names the principle it rests on, by its name and its source. A reason with no principle is taste, which nobody can judge.
+- **The reasons as you design.** Write each reason as you make the choice it explains, in step 5 and in the build loop. List them in the order the choices are made: `structure`, `form`, `hierarchy`, `type`, `colour`, `space`. Each names the principle it rests on, by its name and its source. A reason with no principle is taste, which nobody can judge. In a piece rebuilt from a sketch, the reasons cover the choices kept from the sketch too, and the reason for a part drawn as a stand-in names besides what lacks it and that lack's owner.
 - **Words, ids and key paths alone.** A key path names a part of the content as a tie's end does, by the keys and ids that lead to it, each item of a list by its id: from the page in a page's part, as `lead`, and from the content's top in the piece's part, as `slides[parts].visual.items[brand]`. Write no value, no layout and no text the content shows. A brand's values and a component's look are theirs, and a requirement for more than this piece is a rule.
 - **Its binding,** `pkit_schema: visual-communication:brief` and `schema_version: 1`, opens it, as every file of the capability's format.
 

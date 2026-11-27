@@ -5,14 +5,22 @@ status: experimental
 about: >-
   A line from where a tie starts to where it ends, in its colour family's text, straight
   or with rounded corners, and an arrowhead at its end, at its start, at both or at
-  neither. Where its concept has a sign, the sign stands on the line, halfway along it. It
-  takes the two ends a pattern's list of ties gives it, and routes around nothing.
+  neither. It is thick, as a link between two items is drawn, or thin, as a leader from a
+  note to what the note explains. Where its concept has a sign, the sign stands on the
+  line, halfway along the stretch its tie alone runs: halfway along the whole line, unless
+  the tie shares a trunk with others. It takes the two ends a pattern's list of ties gives
+  it, and routes around nothing.
 
 options:
   # The connector tool's route between the two ends.
   route: [straight, corners]
   # Where an arrowhead points away from the line.
   arrow: [end, start, both, none]
+  # How heavy the line is: as heavy as a line drawn on its own, for a link between two
+  # items, or as light as an edge, for a leader from a note to what it explains, so a
+  # page's notes stand behind the links of what they explain. A line's weight tells the
+  # kind of relation it draws (Colin Ware).
+  weight: [thick, thin]
 
 colour: neutral
 
@@ -26,18 +34,20 @@ parts:
   line:
     line:
       stroke: ":colour.text"
-      stroke-width: "=@starter.connector"
+      stroke-width: {by: weight, thick: "=@starter.connector", thin: "=@starter.leader"}
       rx: "=@starter.turn"
       marker-start: {by: arrow, end: none, start: arrow, both: arrow, none: none}
       marker-end: {by: arrow, end: arrow, start: none, both: arrow, none: none}
     connect: {by: route, straight: straight, corners: corners}
-  # The concept's sign, centred on the middle of the line's frame, which lies on the line
-  # halfway along it, with corners or without. It takes the line's paint, so it reaches
-  # what the line reaches against what it lies on. A tie whose family comes from no
-  # concept with a sign draws none.
+  # The concept's sign, centred halfway along the stretch of the line that its tie alone
+  # runs, which the engine keeps clear where ties share a trunk, so the sign says nothing
+  # of another tie (DEC-043 point 6). On a tie that shares no trunk, that is the middle of
+  # the line's frame, on the line halfway along it, with corners or without. It takes the
+  # line's paint, so it reaches what the line reaches against what it lies on. A tie whose
+  # family comes from no concept with a sign draws none.
   sign:
     sign: {fill: ":colour.text"}
-    x: "=line.x + (line.width - sign.width) / 2"
-    y: "=line.y + (line.height - sign.height) / 2"
+    x: "=line.own-center - sign.width / 2"
+    y: "=line.own-middle - sign.height / 2"
     width: "=@starter.sign"
     height: "=@starter.sign"

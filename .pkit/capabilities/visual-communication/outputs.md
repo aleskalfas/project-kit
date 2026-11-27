@@ -6,6 +6,8 @@ pkit:
     anchors:
       path:
         - .pkit/capabilities/visual-communication/package.yaml
+        - .pkit/capabilities/visual-communication/agents/graphic-design-reviewer.md
+        - .pkit/capabilities/visual-communication/agents/graphic-designer.md
         - .pkit/capabilities/visual-communication/scripts/add.py
         - .pkit/capabilities/visual-communication/scripts/render.py
         - .pkit/capabilities/visual-communication/scripts/export.py
@@ -56,7 +58,11 @@ pkit:
         - .pkit/capabilities/visual-communication/schemas/code-record.schema.json
         - .pkit/capabilities/visual-communication/schemas/values.schema.json
         - .pkit/capabilities/visual-communication/schemas/values-2.schema.json
+        - .pkit/capabilities/visual-communication/schemas/review.schema.json
+        - .pkit/capabilities/visual-communication/schemas/look-report.schema.json
+        - .pkit/capabilities/visual-communication/scripts/_lib/reading.py
         - tests/fixtures/visual-communication/libraries/tests/1.0.0/components/stamp.yaml
+        - .pkit/capabilities/visual-communication/scripts/_lib/scene_checks.py
       record:
         - visual-communication:DEC-001#2
         - visual-communication:DEC-002#1
@@ -157,6 +163,15 @@ pkit:
         - visual-communication:DEC-039#5
         - visual-communication:DEC-045#1
         - visual-communication:DEC-045#2
+        - visual-communication:DEC-030#2
+        - visual-communication:DEC-030#5
+        - visual-communication:DEC-062#1
+        - visual-communication:DEC-062#2
+        - visual-communication:DEC-063#1
+        - visual-communication:DEC-066#2
+        - visual-communication:DEC-070#2
+        - visual-communication:DEC-070#5
+        - ADR-097
       artefact:
         - .pkit/capabilities/visual-communication/components.md#exposes
         - .pkit/capabilities/visual-communication/components.md#options
@@ -174,16 +189,20 @@ pkit:
         - .pkit/capabilities/visual-communication/files.md#pieceyaml
         - .pkit/capabilities/visual-communication/files.md#rolesyaml
         - .pkit/capabilities/visual-communication/files.md#shapes
+        - .pkit/capabilities/visual-communication/files.md#the-binding
         - .pkit/capabilities/visual-communication/files.md#the-clones-local-folder
         - .pkit/capabilities/visual-communication/files.md#the-lock
         - .pkit/capabilities/visual-communication/files.md#the-browser
+        - .pkit/cli/README.md#validate
+        - .pkit/cli/README.md#machine-readable-output
       source:
         - html-page-print-runs
+        - html-page-firefox-print-runs
 ---
 
 # What is made from a piece
 
-Plugins make what the capability gives out. A renderer draws a piece's scenes as previews and exports. A producer makes a picture a piece shows. A code writer writes a brand out as code. What each command reads, writes and refuses as a whole is under *Commands* in the README.
+Plugins make what the capability gives out. A renderer draws a piece's scenes as previews and exports. A producer makes a picture a piece shows. A code writer writes a brand out as code. What each command reads, writes and refuses as a whole is under *Commands* in the README. This page also holds the document `pkit visual pages` prints for a program ([What `pkit visual pages` prints](#what-pkit-visual-pages-prints)).
 
 ## Contents
 
@@ -210,7 +229,7 @@ Every plugin is the capability's, and a project adds none (DEC-005 point 12): no
 
 - the `svg` renderer, at version 1.5.0, which draws the formats `svg` and `svg-modes`
 - the `pdf` renderer, at version 1.6.0
-- the `html` renderer, at version 1.9.0
+- the `html` renderer, at version 1.10.0
 - the `css` code writer, at version 1.0.0
 - the `json` code writer, at version 1.0.0
 
@@ -237,6 +256,8 @@ Each plugin also declares what it needs beyond the project's files: the outside 
 - **What rose with round turns.** A connector came to hold `rx`, the radius its turns are drawn round at, and a line that ends in an arrowhead came to stop at the head's base ([Ties and connectors](components.md#ties-and-connectors), [Primitives](components.md#primitives)). A renderer that does not declare `rx` is reported as leaving it out before it runs ([The loss report](#the-loss-report)), so the seam stayed at 8. The SVG renderer rose to 1.4.0, the PDF renderer to 1.6.0 and the HTML renderer to 1.7.0, since each draws round turns, and a line with an arrowhead shorter by the head. A line with no arrowhead and no `rx` draws as before. The code writers read no scene, so their versions stay.
 - **What rose with an order's steps.** A paint came to name a step of an order, whose value no document of values holds, and which a renderer takes from the colours it is handed with the scene. A renderer that wrote a paint's name where a step's name cannot go would draw nothing there, with no error, so the seam rose to 9, and every plugin's declaration names it (DEC-032 point 5). The SVG renderer rose to 1.5.0, since a switching file gives the arrowhead of a step an id of its own, and the HTML renderer to 1.8.0, since it paints each step with a custom property of its own. The PDF renderer paints a step as any colour it is handed, so its version stays at 1.6.0. A scene with no step draws as before. The code writers read no scene, so their versions stay.
 - **What rose with a line's ground.** Under forced colours, each line of a text came to lie on a ground the file draws, and an opaque fill's edge to lie inside the fill ([Modes](#modes), DEC-039). The HTML renderer rose to 1.9.0, since its file holds each line's ground, a box's or an ellipse's inset shape, and a path's or a sign's clip. Outside forced colours it draws as before. It reads a ground's height from the faces it embeds, as the engine does, and nothing new from the scene, so the seam stayed at 9, and no other plugin's version rose.
+- **What rose with a run's ground beneath its lines.** Outside forced colours, a run's ground came to lie beneath all the lines of its text (*Text* in [The HTML renderer](#the-html-renderer), DEC-039 point 3). The HTML renderer rose to 1.10.0, since its file draws another output for the same scene. It reads nothing new from the scene, so the seam stayed at 9, and no other plugin's version rose.
+- **What came with Firefox's print.** The HTML renderer's version 1.10.0, the one a run's ground beneath its lines raised it to, also came with the change for Firefox's print (*Firefox and a page at another width* in [Printing](#printing)). Each length comes to the same on the page as before. It reads nothing new from the scene, so the seam stayed at 9, and no other plugin's version rose.
 - **The document of values** that producers and code writers read has its own version, 2 ([The hand-over](#the-hand-over)). Version 2 holds the file a brand gives each picture role, and version 1 held none.
 - **What rose with picture roles.** The document rose to 2, and the seam stayed at 5. A brand with no picture role gets the same code, so the code writers' versions stay. Each renderer draws a picture role's file as it draws any picture it is handed, so the renderers' versions stay too.
 - **A code writer's spelling** has versions of its own, called *forms*. A declaration of written code names its form, and a writer keeps writing every form it shipped (DEC-005 point 8). The CSS writer writes form 1. The JSON writer writes forms 1 and 2, each that version of the document of values ([The JSON code writer](#the-json-code-writer)).
@@ -366,8 +387,8 @@ The `html` renderer draws a scene as one *page file*: the scene's pages in one w
 
 - **A page** is real text over shapes. Each text of the scene is HTML text. Boxes, ellipses, lines, paths and pictures lie in SVG *layers*, each written as the SVG renderer writes it ([The SVG renderer](#the-svg-renderer)).
 - **The draw order.** The file keeps the scene's order. Each run of shapes between two texts is one layer, the size of the page, so a later shape lies over an earlier text. A layer takes no pointer, so the text under it can still be selected.
-- **Text.** A text is one element at its frame: its left, top and width. Each line is a child of it, placed alone at the baseline the engine gave it, and never wraps. A line's alignment in the frame is the text's anchor. Each run on a line is a span in its own font, size and paint. Spans follow each other at the browser's own widths. A run's ground is its span's background in its role, with the room the engine gave it as padding where it starts and ends, and its corners rounded there. Its height is the browser's: the span's font's ascent and descent. A run's sign is an inline SVG at the start of its span, as wide as the run's font size, raised as the engine placed it, with the gap as its margin, in the run's paint. So both keep to their run at the browser's widths. A reader's tools pass over a sign (DEC-036 point 5).
-- **Size.** Every length on a page is a share of the page's width, written in `cqw`, so a page scales with no script. In a narrower window a page shrinks and keeps its proportions. In a wider one it keeps its own size, and no rule of the file clips a text.
+- **Text.** A text is one element at its frame: its left, top and width. Each line is a child of it, placed alone at the baseline the engine gave it, and never wraps. A line's alignment in the frame is the text's anchor. Each run on a line is a span in its own font, size and paint. Spans follow each other at the browser's own widths. A run's ground is drawn by its span's `::before`, over the span's box in its role, with the room the engine gave it as padding where it starts and ends, and its corners rounded there. Each text is a stacking context of its own and each run's ground lies beneath all the lines of its text, so a ground on a later line covers no line above it, at any line step (DEC-039 point 3). Its height is the browser's: the span's font's ascent and descent. A run's sign is an inline SVG at the start of its span, as wide as the run's font size, raised as the engine placed it, with the gap as its margin, in the run's paint. So both keep to their run at the browser's widths. A reader's tools pass over a sign (DEC-036 point 5).
+- **Size.** Every length on a page is a share of the page's width, so a page scales with no script. They are written in `cqw`, save the few that *Firefox and a page at another width*, in [Printing](#printing), names. In a narrower window a page shrinks and keeps its proportions. In a wider one it keeps its own size, and no rule of the file clips a text.
 - **Pages** follow each other down the document in the scene's order, each in the middle of the window, 24 px apart. Each keeps its own size. The file sets no colour value around them. It holds no rule on a window's width. A deck's slides lie inside a keyline, on a backdrop ([Fixed pages](#fixed-pages)). In print the pages follow each other down the sheets ([Printing](#printing)).
 - **A physical size.** A page file is read in a window, and prints on the sheets its reader picks, since it holds no page rule (DEC-026 point 4). So its format has no physical page of its own, and it draws a top with a physical size as any other, losing nothing (DEC-034 point 3). The PDF export draws each page at that size.
 - **The head** declares the file's encoding, UTF-8, its language and its viewport.
@@ -422,8 +443,9 @@ The renderer prints a page file as DEC-026 decides: its pages follow one another
 - **The keyline on a white sheet.** The keyline's share, 48 ([What the HTML renderer declares](#what-the-html-renderer-declares)), keeps at least 3 to 1 against a white sheet, in light and in dark (DEC-026 point 3). Under more contrast a dark page's keyline is white on the white sheet, and the page's own ground marks its edge there. In a dark mode, the page's dark ground, printed in its own colours, also sets it apart from the white sheet (DEC-026 point 5).
 - **Each page in its own colours.** Each page lies on the browser's ground colour, and the file asks the browser to print the page, and what it holds, in their own colours, by CSS's `print-color-adjust: exact`. The document around the pages takes neither, so the sheet around them prints as the reader's setting for backgrounds says. No mode is picked for print: the reader's signals pick it, as the browser sets them when it prints (DEC-026 point 5).
 - **The sheet is the reader's.** The file holds no page rule, so the reader's print dialog sets the sheet's size, its margins and its orientation, with its header, its footer and its scale (DEC-026 point 4).
-- **Where a page that runs on breaks** is the browser's pick, until a record of its own decides it (DEC-026 point 1). A page that runs on breaks where the sheet ends. The renderer places each line alone, so a break may cut a line of text or move it off its place, and cut or lose a shape. In the print runs, Chrome cut each shape the sheet's end crossed, a part on each sheet, and kept each text on its shapes. Firefox printed a page's shapes on its first sheet alone, and lost the line the first sheet's end crossed ([the print runs](https://github.com/aleskalfas/project-kit/issues/3010)). WebKit printed nothing under the tool the runs used, so Safari's only check is a person's print (DEC-026 point 7).
-- **Firefox and a page narrower than the area.** In Firefox, the text of a page narrower than the sheet's area prints at a larger scale than its shapes, near the area's width over the page's, so its lines drift off their boxes. A page the area shrinks, such as a deck's slide, keeps its text on its shapes there ([the print runs](https://github.com/aleskalfas/project-kit/issues/3010)).
+- **Where a page that runs on breaks** is the browser's pick, until a record of its own decides it (DEC-026 point 1). A page that runs on breaks where the sheet ends. The renderer places each line alone, so a break may cut a line of text or move it off its place, and cut or lose a shape. In the print runs, Chrome cut each shape the sheet's end crossed, a part on each sheet, and kept each text on its shapes, and Firefox lost the line the first sheet's end crossed ([the print runs](https://github.com/aleskalfas/project-kit/issues/3010)). At html 1.10.0, the runs found that on a page that ran over three sheets, Firefox showed no shape on the second, and set the lines on the third off the shapes there, by up to 409 px of the page ([the Firefox print runs](https://github.com/aleskalfas/project-kit/issues/3012#issuecomment-6895134208)). WebKit printed nothing under the tool the runs used, so Safari's only check is a person's print (DEC-026 point 7).
+- **Firefox and a page at another width.** In Firefox's print, a length in `cqw` takes the width the printer's paper area gives at a scale of 1, whatever width the page prints at. So the file writes a text's frame, a line's ground and the strut that places a line's baseline, where the line has a width, as percentages of the box each lies in, the page or the line, which CSS takes of that box's width. On a page that fits its sheets, in Firefox each line of a page's text starts on its shapes, as near as in Chrome's print. That holds on a page narrower than the area, on a slide the area shrinks, at another scale of the print dialog, and under the page rules the runs tried ([the Firefox print runs](https://github.com/aleskalfas/project-kit/issues/3012#issuecomment-6895134208)).
+- **Firefox and a run's size.** A run's font size stays in `cqw`, since no other unit of CSS takes a font's size from a box's width, and so does its sign's size, which keeps to the run's. So in Firefox a run is laid out at the size the paper area gives, and painted at the page's. Where a page prints at another width than that, a line's later runs start off their place: after a gap where the page prints narrower, and over the run before where it prints wider, where a line is also cut at its end. A slide printed on A4 upright at a scale of 1 keeps its runs in place ([the Firefox print runs](https://github.com/aleskalfas/project-kit/issues/3012#issuecomment-6895134208)).
 
 ### What the HTML renderer declares
 
@@ -834,7 +856,8 @@ The check reads this code as it reads any written code (*Written code* in *What 
 
 The *viewing step* draws a piece's pages as images, for a person or an agent to read (DEC-015 point 1). `pkit visual look <piece>` runs it, and `pkit visual pages <piece>` lists what it can draw.
 
-- **No render, and no export.** It moves no lock and keeps no findings. It uses up no version number, writes no `exports.yaml` and records no location.
+- **No render, and no export.** It moves no lock and keeps no findings record. It uses up no version number, writes no `exports.yaml` and records no location.
+- **What the checks found.** It runs the checks a render runs on a scene, by the same code, on the scenes it computes ([Scenes](checks.md#scenes) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->): each key over the size axes of each language it draws, whichever keys it draws, and of each language a check compares. Its report gives each image the findings that hold on it, and lists apart those on no image drawn, such as at a key the run did not draw. It never reads a piece's findings record, which holds what the last render found, on scenes that may differ (DEC-062 point 1).
 - **An export's facts** show as in a [preview](#previews): a number shown is the next export's, which the run leaves for it. Where an image shows a stand-in, the command says so, and why, after what the report says ([The facts of an export](components.md#the-facts-of-an-export)).
 - **Under the lock.** It reads the lock `piece.yaml` holds, and computes the piece's scenes under it (DEC-015 point 4).
 - **It runs no helper or producer.** A produced picture is drawn as it stands, stale or not. One with no variant for the key is left out, as a loss. So is a picture file that is missing or cannot be read.
@@ -885,12 +908,13 @@ Some readers have their browser replace a page's colours with a few of their own
 
 ### When the browser stops
 
-A run stops where no browser runs, where one stops part way, or where its first read fails (DEC-020 point 8). This holds of the start under forced colours too.
+A run stops where no browser runs, where one stops part way, or where its first read fails (DEC-020 point 8). It stops too where it cannot tell a text's ink, in its first read or in a page file, since the browser's pictures of the band around that text do not hold still. This holds of the start under forced colours too.
 
 - **What it writes.** The page files and `report.json`, in the HTML renderer's folder, and no image ([What a run writes](#what-a-run-writes)).
-- **What the report says.** What stopped it, and under which lock. It names what is missing: where the step looked for a browser, or the program it started and what that said.
+- **What the report says.** What stopped it, and under which lock. It names what is missing: where the step looked for a browser, or the program it started and what that said. Where it cannot tell a text's ink, it names the text, the program it started and what that said.
 - **A sandbox.** Where the browser's words show a sandbox, the run says that a sandbox stopped the browser. Otherwise it names what the browser said.
 - **A browser run as root.** Chrome run as root, as a container may run it, refuses to start with its own sandbox on. The run says so, apart from a sandbox, and never turns that sandbox off.
+- **A text's ink that cannot be told.** In each of 3 tries, the browser gave two pictures of the band around a text that differ, though the page stood the same for both. The run stops, rather than guess which picture shows the text's ink. The same look, run again, starts the browser afresh, and its pictures may agree. Of the ways on below, a pipeline's drawings come from a run of their own, and way 3 serves as it does for any stop. Way 2, a person's run, is such a run again.
 - **How to go on.** The command exits 3, and names three ways on, in this order (DEC-024 point 4), and a fourth after a stop under forced colours (DEC-027 point 4):
   1. a build pipeline's drawings of the piece's pages, where the project has its pipeline draw them ([A pipeline's drawings](#a-pipelines-drawings)). They show a pushed commit, not your working tree.
   2. the same look, run once by a person outside any sandbox, such as in their own terminal. This line is addressed to a person. It runs the clone's scripts as they stand, with that person's rights.
@@ -920,23 +944,37 @@ A run replaces what an earlier run left in its own folder, so a folder never mix
 
 `report.json` says what the images cannot show as the renderer set it, and the command prints the same (DEC-015 point 3). It holds the piece, the lock, the renderer with its version, the tool, and the lists below. Each entry but an image's names the language, key and page it lies on.
 
+The schema [`look-report.schema.json`](schemas/look-report.schema.json) fixes the report's form through either renderer: every key below, and its type. The report names no schema of its own, and no check reads it.
+
 - **`images`:** each image, with its frames' file and its pixels. Through the SVG renderer, `on-white` is true where the page draws no ground of its own. Through the HTML renderer, `on-browser-ground` is true there instead. That image lies on the browser's own ground in the mode drawn, not on white, or under a forced palette on that palette's ground.
   - **`band`:** on each band of a page, its `number` from 1, how many the page has, `of`, and its `top` and `height` in the page's px. A page's bands follow one another in order.
   - **`too-wide`:** true on each image of a page too wide for its smallest text to read. Another image holds no such key.
 - **`dropped`:** each text or run the page does not show, with its element and its characters. Each page is read whole, once, so a text in two bands is listed once.
   - **Through the SVG renderer,** each text or run the tool drew nothing of, and each span it drew in part, in one entry for each cause, which its `why` names (DEC-045 point 2). `no ink` and `off the page` are for a text or run the tool drew nothing of, and the entry also holds `whole`, true for a whole text and false for a run lost from a line. A span whose ink lies wholly past an edge, its strong ink where it holds any and else its counted ink (below), is `off the page` and never `cut`, and so is a text whose line lies wholly past a side, further than the room the tool draws past it. A text whose runs left for two causes gives an entry for each run. `cut` and `covered` are for a span drawn in part, with `share` and `island` (below). A span both cut and covered gives two entries. The tool draws the span alone in its counting draw (below), on a swath of image pixels with room past the page, and the page whole twice, the span's letters black and then white. Counted ink past the page's edge is cut, and counted ink on the page that the two whole draws show alike is covered. resvg draws nothing past the page, so a cut text is gone from the image for every reader, and only this read finds it. A page whose group does more than move what it holds fails the look, naming the group: the reads follow a move alone (DEC-045 point 1).
   - **Through the HTML renderer,** each span the page does not show in full, in one entry for each cause, which its `why` names: `no ink`, `off the page`, `cut` or `covered`. A span's ink is its letters alone, in its own paint: the read hides its sign and its ground. A span wholly off its page is named off the page alone. A span is `cut` where part of its strong ink lies past its page's edge, and `covered` where the page drawn whole hides part of its strong ink on the page, under a part drawn after it: a shape, a line, a text, or under forced colours a text's ground. A span both cut and covered gives two entries (DEC-037 points 1 and 2).
-  - **`share` and `island`.** Through either renderer, `share` on a `cut` or `covered` entry is the share of the span's strong ink the cause loses, from 0 to 1 (DEC-037 point 2). Through the SVG renderer, where the span holds no strong ink, it is the share of its counted ink, so a faint full stop hidden whole gives 1. `island` is true on an entry whose cause takes an island of the span's counted ink, such as a dot, whatever its share. Another entry holds no such key (DEC-045 point 2).
+  - **`share` and `island`.** Through either renderer, `share` on a `cut` or `covered` entry is the share of the span's strong ink the cause loses, from 0 to 1 (DEC-037 point 2). Through the SVG renderer, where the span holds no strong ink, it is the share of its counted ink, so a faint full stop hidden whole gives 1. Through the SVG renderer, `island` is true on an entry whose cause takes an island of the span's counted ink, such as a dot, whatever its share. Another entry holds no such key (DEC-045 point 2).
   - **Strong ink.** Through the HTML renderer, a span's strong ink is measured where its letters alone are drawn, in the browser's text colour on its ground colour, `CanvasText` on `Canvas`. A pixel is strong where the letters change it by more than half the difference of those two colours, so a letter's strength is its shape's, whatever its paint's alpha. What the page shows of it is what changes in the page drawn whole as its letters alone change between those two colours (DEC-037 point 3). Through the SVG renderer, a span's counting draw is its letters alone, drawn opaque black on white. A pixel there is ink at a level where its darkest sample is that level or darker, of 255: strong ink at 127, and two lighter levels at 159 and 191. A span's counted ink is its pixels at 191 or darker, strong ink among them (DEC-045 point 1).
-  - **What is too small to name.** Each cause is judged alone, through either renderer: the pixels the page's edge cuts and those a part covers are never added together. Through the HTML renderer, a loss smaller than 0.01 of the span's em squared, both in device pixels, is a sliver and names no entry. The first read's edge control holds that a graze of its last device row stays under the sliver, and its háček plant that a lost háček passes it ([The HTML renderer's pages](#the-html-renderers-pages)). Through the SVG renderer a cause names an entry where it hides at least the threshold, or takes an island (below). The threshold is the whole pixels that 0.01 of the span's em squared holds of its strong ink, both in image pixels, the product rounded to six decimal places before it is rounded down, and at least one pixel. So a loss of fewer pixels names none by its size, and a loss of exactly that many names one. The threshold is 1 pixel up to an em of about 14.1, 4 at 20 and 16 at 40. A box whose edge only touches the foot of a text, a graze, hides a row of ink whose pixels turn on where the edge falls among them, so whether it is named cannot be told from the text's size: in DEC-045's probes it was named at most draws below an em of 25, and at seven in ten or more from 25 to 40. The cure is the layout's, the box moved clear of the letters (DEC-045 point 1).
-  - **An island of ink.** Through the SVG renderer, an island of a span's counted ink is a set of its pixels at one of the three levels or darker, each meeting another by a side or a corner, and meeting no other such pixel of the span. A cause takes an island where it hides some pixel of it wholly and leaves none of it showing at its level: a pixel shows at a level where the page drawn whole still shows enough of its ink for it to be that dark. Past the page's edge, where a pixel is cut or shows, a cause takes an island only by cutting all of it. A cause that takes an island at any of the three levels is named, whatever the threshold holds. So a dot, a háček or a full stop that stands apart from its letter and is hidden whole is named, and a graze, which takes part of a stroke, only where it holds the threshold. In Source Sans Pro Regular and Semibold, and Source Code Pro Regular, at every tenth of an em from 10 to 40 and at 48, 64, 80 and 96, DEC-045's probes found every háček and dot a box hid whole named, and every such mark past the page's edge, but the fused dot listed below. On the graze they drew, across the foot of "Typography gypsy", the measure named no step that the threshold leaves unnamed, and under a translucent box alone it named no island. The threshold's share and rounding, the three levels and the joining are set here, and change here with no new record (DEC-045 point 1).
-  - **What the read can leave unnamed.** DEC-045 point 1 gives four losses of a mark the read can pass over: the dot of ż in Source Sans Pro Regular at ems 10.1 and 10.2, which that face draws fused to the z; a mark joined to its letter below the baseline, where a graze lies, such as the ogonek of ą or ę in Source Code Pro at its smallest ems; a mark split between the page's edge and a part; and a small dot that a box's edge fades to a faint line without hiding any of it wholly, which DEC-045's probes found below an em of 20. Read the images for these.
+  - **What is too small to name.** Each cause is judged alone, through either renderer: the pixels the page's edge cuts and those a part covers are never added together. Through the HTML renderer, a loss smaller than 0.01 of the span's em squared, both in device pixels, is a sliver and names no entry. The first read's edge control holds that a graze of its last device row stays under the sliver, and its háček plant that a lost háček passes it ([The HTML renderer's pages](#the-html-renderers-pages)). Through the SVG renderer a cause names an entry where it hides at least the threshold, or takes an island (below). The threshold is the whole pixels that 0.01 of the span's em squared holds of its strong ink, both in image pixels, the product rounded to six decimal places before it is rounded down, and at least one pixel. So a loss of fewer pixels names none by its size, and a loss of exactly that many names one. The threshold is 1 pixel up to an em of about 14.1, 4 at 20 and 16 at 40. A box whose edge only touches the foot of a text, a graze, hides a row of ink whose pixels turn on where the edge falls among them, so whether it is named cannot be told from the text's size. It is often named, but not always, so a `dropped` list that names none is no sign that no box touches a text's foot. The cure is the layout's, the box moved clear of the letters (DEC-045 point 1).
+  - **An island of ink.** Through the SVG renderer, an island of a span's counted ink is a set of its pixels at one of the three levels or darker, each meeting another by a side or a corner, and meeting no other such pixel of the span. A cause takes an island where it hides some pixel of it wholly and leaves none of it showing at its level: a pixel shows at a level where the page drawn whole still shows enough of its ink for it to be that dark. Past the page's edge, where a pixel is cut or shows, a cause takes an island only by cutting all of it. A cause that takes an island at any of the three levels is named, whatever the threshold holds. So a dot, a háček or a full stop that stands apart from its letter and is hidden whole is named, and a graze, which takes part of a stroke, only where it holds the threshold. The threshold's share and rounding, the three levels and the joining are set here, and change here with no new record (DEC-045 point 1).
+  - **What the read can leave unnamed.** DEC-045 point 1 gives four losses of a mark the read can pass over: a dot a face draws fused to its letter at its smallest sizes, such as the dot of ż; a mark joined to its letter below the baseline, where a graze lies, such as the ogonek of ą or ę; a mark split between the page's edge and a part; and a small dot that a box's edge fades to a faint line without hiding any of it wholly. Read the images for these.
   - **What it leaves to you.** A text in the colour of what lies under it, or one that reads poorly through a translucent fill, shows, so it is not here: judge it in the images.
 - **`losses`:** each [loss](#the-loss-report) the renderer reports. A loss that names a key is listed under that key alone. `accepted` is true for one the piece [accepts](#accepting-a-loss), which the report names all the same.
 - **`drawn-otherwise`:** each run measured in more than one family, with its element, its characters and the families. resvg may set the whole run on a line in one of them, where a browser sets only the characters the first family lacks. Through the HTML renderer, an entry is a span with `why`:
   - `no face`: the file holds no face of its family at its weight, with that family and weight;
   - `font of the machine`: the browser drew it, even in part, in a font of the machine, with each such font.
 - **`profiles`:** through the SVG renderer, each picture a page shows that carries a colour profile, with its element and its file's name. resvg may draw it without its profile, where a browser draws it by it (DEC-025 point 5).
+
+What the checks found on the scenes the run computed (DEC-062 points 1 and 2), through either renderer:
+
+- **`findings`,** on each image: each finding that holds on it. A finding gives its `check`, the id of the check that found it where that check states a [reach](checks.md#scenes) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->, else `null`; its `label`, `level`, `location` and `message`, as validation reads them where the finding lies, save that every overlap is `box-overlap`, with nothing in its message of a part's `lies-over`, whatever names the pair ([parts](components.md#parts), DEC-066 point 2); and its `language`, `key` and `page`, each `null` where it holds in every language, at every key or on no page. Its key is a whole key for a finding of a check of colour that names a combination, as `contrast-drawn` does, once for each it names, and a key over the size axes for any other, which holds alike in every combination its scene serves.
+  - **Which image takes it.** Each image of its language and key, those for every language or every key among them, on its page or on no page. A band takes its page's. A finding the checks give once for several places, as for a concept told by its colour alone, is given to each image that shows one of them.
+  - **A forced image** takes the findings of its language, its key over the size axes and its page, and none of a check of colour that names a combination: its colours are the browser's palette's, which no check measures (DEC-027 point 6).
+  - **Given once.** A loss the report lists under `losses` for the image is not given again.
+- **`measured-by`,** on each image: the id of each check that measured it. A check measured an image where it states a reach and ran on the image's scene, and the checks' code stopped neither on that scene nor, for a check that compares scenes, on one it compares. A check of colour measures no forced image. A check that states no reach measured no image, though its findings are given.
+- **`not-measured`,** on each image: each check that states a reach and did not measure it, its `check` and `why`. Where the checks' code stops on a scene, the run still draws its images, and says here why no check measured them. A scene the run computes only for its findings stops no image it draws.
+- **`on-no-image`:** each finding the run gives to no image drawn, as above, for each key it holds for. Draw its language, key or page to see it.
+- **`reaches`:** the reach of each check that states one, by its id, as the code that ran states it: its `labels`, the axes it `compares` across, whether it is a check of `colour`, the kinds of place it `measures` and `leaves-out`, and what it `states` as a fact where it could measure nothing, with each such statement's label, `statements`.
+- **`capability`:** the capability's `name` and the `version` that ran the checks.
 
 Through the HTML renderer the report holds these too:
 
@@ -964,6 +1002,23 @@ A refused run leaves its renderer's folder as it was. The fonts it held in a tem
 
 A version not yet released under a final or a published piece's lock refuses no run: the lock holds, and the piece draws.
 
+### What `pkit visual pages` prints
+
+`pkit visual pages <piece> --json` lists what a look can draw, as one JSON document. It keeps to the rule the CLI reference states for a document a command prints for a program ([Machine-readable output](../../cli/README.md#machine-readable-output)): a key, or a value of a set, may be added, one goes only as a breaking change of the capability, and none comes to mean anything else. The document carries no version. Where the command refuses, it prints none and exits 1.
+
+- **`piece`:** the piece's name, as given.
+- **`languages`:** the piece's languages, its source language first.
+- **`keys`:** the key of each of its combinations ([Keys of combinations](files.md#keys-of-combinations)).
+- **`drawn-by-default`:** what a look draws where no flag picks: `language`, the source language, and `key`, the first key in key order.
+- **`pages`:** for each language, by its name, the trace id of each page at the key drawn by default, in page order, so a page's number is its place from 1.
+- **`renderer`:** the renderer a look reads the piece through by default: `html` where the piece declares `html`, and `svg` otherwise ([named no reading](../../cli/README.md#machine-readable-output)).
+- **`tools.svg`:** the SVG renderer's tool, with its `name`, `resvg`, its `version`, and `wheel`, the version of the resvg-py wheel that holds it.
+- **`tools.html`:** the browser a look through the HTML renderer would start, which the command finds and never starts ([The browser](files.md#the-browser)):
+  - `program`: its path, or `null` where it finds none, so a look through the HTML renderer stops.
+  - `named`: whether the configuration names it.
+  - `looked`: each place it looked where it found none, and empty where it found one.
+  - `forced-palettes`: the palettes a look draws with `--forced-colours`, `light` and `dark` ([named no reading](../../cli/README.md#machine-readable-output); [Under forced colours](#under-forced-colours)).
+
 ### A pipeline's drawings
 
 A project's build pipeline may draw each piece's HTML pages on every change it checks, such as a pull request (DEC-024 point 5). An agent whose session cannot run the browser then reads those. Whether the pipeline does so is the project's choice. No setting of the capability's says so, and the capability ships no pipeline file.
@@ -979,3 +1034,13 @@ A project's build pipeline may draw each piece's HTML pages on every change it c
 - **A folder of its own.** Never fetch them into `look/`, where a look replaces its renderer's folder ([What a run writes](#what-a-run-writes)). Read the fetched folder as a look's folder, `report.json` first.
 - **The hosts it reaches.** In a session's sandbox, each host the fetch needs is the project's own allowance to add. The capability declares none.
 - **A run the permission model confines,** such as a builder's, reaches no such host. Only the SVG renderer's pages remain in it.
+
+### Where the review's reports are kept
+
+[The reviewer](README.md#the-reviewer) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle --> writes a report for each reading of a piece. It writes no file: it replies with the report, and whoever dispatched it keeps the report whole, as it was written, and commits none of it.
+
+- **A person, or a session,** keeps it in `.pkit/capabilities/visual-communication/project/local/reviews/<piece>/reading-<n>.md`, `<n>` counting the piece's readings from 1. That folder lies in the clone's local folder, as the look's images do ([The clone's local folder](files.md#the-clones-local-folder); DEC-015 point 4). A look replaces its own folder, and leaves this one.
+- **The designer** keeps the reports of its round in a file of its own in the agent workspace, since its grant names nothing inside the methodology's folder ([visual-communication:DEC-030-design-agents] point 5).
+- **The second reading of a round** is told the file that keeps the first's report, and reads it only once its own findings are written. It then says of each finding of the first whether the page still shows it ([visual-communication:DEC-070-ship-call-and-one-round] point 5).
+- **Kept as written.** Nobody summarises, filters or answers a report before it is kept, or before the second reading reads it. The round hands the person the second report as the reviewer wrote it (DEC-070 point 2).
+- **Not validated.** `pkit validate` checks no kept report, though the document it opens with names its schema ([The binding](files.md#the-binding)).

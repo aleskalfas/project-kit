@@ -149,6 +149,7 @@ indeterminate  Every session holds every layer's loaded rules from its start to 
 indeterminate  A session's agent withheld named tools has none of them and keeps the rest
 indeterminate  A helper withheld named tools has none of them
 indeterminate  An ask the harness puts to a person reaches a person who can answer it
+indeterminate  A session reads its own messaging address, which its messages carry and no other session holds
 ```
 
 - **A result of `indeterminate`** is never counted as met (COR-047).

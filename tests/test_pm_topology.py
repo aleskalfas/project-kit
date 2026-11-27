@@ -253,6 +253,91 @@ def test_stranded_names_a_pool_no_seat_serves_and_a_builder_that_names_no_pool()
     assert tp.stranded(tp.parse(_doc(PLANNER, WORKER))) == []
 
 
+# ---- a worker's directing seat (DEC-081 point 3) -----------------------------------------
+
+
+LEAD = {"name": "lead", "role": "lead", "state_issue": 15}
+
+
+def test_a_workers_seat_names_the_planners_or_the_leads_seat_that_directs_it() -> None:
+    data = _doc(
+        PLANNER,
+        {**WORKER, "directed_by": "planner"},
+        LEAD,
+        {**TESTER, "directed_by": "lead"},
+        {"name": "solo", "role": "worker", "state_issue": 16},
+    )
+    topology = tp.parse(data)
+    assert topology.problems == ()
+    assert _schema_errors(data) == []
+    worker, tester, solo = (topology.seat(n) for n in ("worker-1", "tester", "solo"))
+    planner, lead = topology.seat("planner"), topology.seat("lead")
+    assert worker is not None and tester is not None and solo is not None
+    assert planner is not None and lead is not None
+    assert worker.directed_by == "planner" and solo.directed_by is None
+    assert topology.directing(worker) == planner
+    assert topology.directing(tester) == lead
+    assert topology.directing(solo) is None
+    assert topology.directed(planner) == (worker,)
+    assert topology.directed(lead) == (tester,)
+
+
+@pytest.mark.parametrize(
+    ("seats", "code", "said"),
+    [
+        (
+            (PLANNER, {**WORKER, "directed_by": "nobody"}),
+            tp.UNKNOWN_DIRECTOR,
+            "names the seat 'nobody' to direct it, which the topology does not hold",
+        ),
+        (
+            (PLANNER, {**LEAD, "retired": True}, {**WORKER, "directed_by": "lead"}),
+            tp.RETIRED_DIRECTOR,
+            "names the seat lead to direct it, which is retired",
+        ),
+        (
+            (PLANNER, {**WORKER, "directed_by": "worker-1"}),
+            tp.SELF_DIRECTED,
+            "names itself to direct it",
+        ),
+        (
+            (PLANNER, WORKER, {**TESTER, "directed_by": "worker-1"}),
+            tp.WORKER_DIRECTOR,
+            "a worker's, to direct it",
+        ),
+        (
+            ({**PLANNER, "directed_by": "lead"}, LEAD, WORKER),
+            tp.DIRECTED_DIRECTOR,
+            "is a planner's and names the seat 'lead' to direct it",
+        ),
+        (
+            (PLANNER, {**LEAD, "directed_by": "planner"}, WORKER),
+            tp.DIRECTED_DIRECTOR,
+            "is a lead's and names the seat 'planner' to direct it",
+        ),
+    ],
+)
+def test_the_check_refuses_each_directing_seat_the_topology_does_not_allow(
+    seats: tuple[dict[str, Any], ...], code: str, said: str
+) -> None:
+    topology = tp.parse(_doc(*seats))
+    assert _codes(topology.problems) == [code]
+    assert said in topology.problems[0].message
+    assert topology.not_understood == ()
+    assert _codes(_check(topology)) == [code]
+    worker = next(s for s in topology.seats if s.directed_by is not None)
+    assert topology.directing(worker) is None
+
+
+def test_a_directing_seat_that_is_no_name_is_marked_and_read_as_none() -> None:
+    data = _doc(PLANNER, {**WORKER, "directed_by": ["planner"]})
+    topology = tp.parse(data)
+    assert any("`directed_by: ['planner']`" in item for item in topology.not_understood)
+    assert _schema_errors(data)
+    worker = topology.seat("worker-1")
+    assert worker is not None and worker.directed_by is None
+
+
 # ---- what this code cannot read (DEC-061 point 9, ADR-072 point 5) ---------------------
 
 
@@ -398,6 +483,7 @@ class _Backbone:
                 "source": "default",
                 "ref": "origin/main" if self.tip else None,
                 "commit": self.tip,
+                "resolved": "remote" if self.tip else None,
                 "problem": self.problem,
                 "unborn": self.unborn,
             },
@@ -405,6 +491,7 @@ class _Backbone:
                 "ref": named or "origin/main",
                 "tip": self.tip,
                 "fork": self.tip,
+                "resolved": "remote" if self.tip else None,
                 "problem": self.problem,
             },
         }

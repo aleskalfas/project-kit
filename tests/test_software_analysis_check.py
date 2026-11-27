@@ -406,14 +406,14 @@ def test_a_backbone_without_anchors_in_its_document_is_unreadable(seeded: Adopte
     assert document["summary"] == ["the analysis could not be read; nothing checked."]
     ((location, message),) = errors(document)
     assert location == "."
-    assert message.startswith("the places could not be read: `pkit friction artefacts` gave ")
-    assert message.endswith(
-        "without the `anchors` key this capability reads each artefact's anchors from: the "
-        "installed backbone predates it — upgrade it (`pkit upgrade`)"
+    assert message.startswith(
+        "the places could not be read: `pkit friction artefacts --json` answered a document "
+        "this capability cannot read: `artefacts["
     )
+    assert message.endswith("].anchors` is missing")
     refused = run_in_process(seeded, NEW, "use-case", "more", "--actor", "ACT-tester", pkit=older)
     assert refused.returncode == 1
-    assert "without the `anchors` key" in refused.stderr
+    assert ".anchors` is missing" in refused.stderr
 
 
 def test_a_placeholder_is_a_text_the_templates_shipped_never_a_shape(
@@ -1342,7 +1342,8 @@ def test_the_files_outside_the_kinds_are_read_from_the_location_s_unplaced_files
     the location's path read in its normal form, and says it has no answer when the
     backbone's reading gives none for the location (#1724)."""
     (model,) = load_lib("model")
-    document: dict[str, Any] = {"schema_version": 1}
+    document: dict[str, Any] = {"schema_version": 1, "places": [], "files": [], "artefacts": []}
+    document |= {"held": [], "held_files": []}
     if unplaced is not None:
         document["unplaced"] = unplaced
     assert model.analysis_of(document).outside_kinds == read

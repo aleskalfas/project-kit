@@ -1,0 +1,5 @@
+component: project-management
+kind: patch
+body: >
+  DEC-055 point 3 and DEC-056's "Or the delegate decides" have the delegate
+  decide an answer only where COR-072 hands it the answer (#2801).

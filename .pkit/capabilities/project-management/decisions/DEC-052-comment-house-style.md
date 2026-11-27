@@ -6,6 +6,8 @@ date: 2026-09-12
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
+> **Partially superseded by [project-management:DEC-078-one-actor-per-act].** The authoriser the commands know is the account that posts the comment, so an override comment names none beside it. Overturned: the Implications' parenthetical that keeps the authoriser on the bot-authored path. The rest stands.
+
 > This record fixes one **content + house-style model** for every comment the capability
 > *posts* on a GitHub issue or PR — such as filing, override/audit, move, and review
 > verdict, which pkit **authors**, plus freeform notes and adopter hook messages, which it
@@ -146,6 +148,7 @@ here):
 | claim · handoff · abandon · release | the **instance** that claims, hands over, abandons or releases an issue of work, with its name where it has one, and for a handoff the **instance it goes to**. In a project with a topology it also names the **seat, the seat's number and the clone's key**, a handoff those of its target (refinement per [project-management:DEC-059-topology-of-seats]) |
 | state-marker | the **marker** that makes the issue a state issue, naming the **kind of state and its key**. GitHub records its author, which decides whether a read accepts the issue (refinement per [project-management:DEC-058-state-issues]) |
 | state-claim · state-release · state-force-release | the state's **key**, the **clone's key** and **where the clone lies**. A release by force also carries its **reason** (refinement per [project-management:DEC-058-state-issues]) |
+| state-session | the state's **key**, the **clone's key** and the **session** that runs the seat's loop: its name and machine, and, where they can be read, its **messaging address** and its **process**, by the name the backbone gives it (refinement per [project-management:DEC-081-delegation-between-seats] and [project-management:DEC-084-seat-session-address]) |
 
 **Composition — one mutation, one comment.** When a single mutation is both a move and an
 override (a gated transition that required a bypass), it is **one** comment, honouring

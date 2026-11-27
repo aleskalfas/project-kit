@@ -69,6 +69,7 @@ from tests.visual_communication_project import (
     copy_library,
     importable,
     project,
+    reports_held,
     write,
     yaml_text,
 )
@@ -485,6 +486,14 @@ def plugins(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     producer.register(seam)
     yield
     seam.unregister(producer.NAME)
+
+
+@pytest.fixture(autouse=True)
+def reports_hold_their_schema(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+    """Each report a look of the test writes holds to the report's schema."""
+    refused = reports_held(monkeypatch, viewing)
+    yield
+    assert refused == []
 
 
 def project_of(root: Path) -> Any:

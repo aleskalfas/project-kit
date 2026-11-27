@@ -25,19 +25,38 @@ values:
   margin: "=@space.4 * 2"
 
 # The types of what a page says first, so a brand can size them for where the deck is
-# shown, such as larger on a projector, apart from the type of the rest of its text. Each
-# defaults to the shared type the deck drew it in before, so a brand that gives neither
-# draws the deck as it did.
+# shown, such as larger on a projector, apart from the type of the rest of its text. The
+# title defaults to the shared type the deck drew it in before, and the lead to the shared
+# type of running text read before the body, itself the body by default (DEC-072 point 3).
+# So a brand that gives none of them draws the deck as it did.
 tokens:
   # A page's title: the cover's and each slide's.
   title: {type: typography, default: '{type.heading}'}
-  # The line under a title: a slide's lead and the cover's subtitle.
-  lead: {type: typography, default: '{type.body}'}
+  # The line under a title: a slide's lead and the cover's subtitle, which takes its look
+  # alone, and still ranks as a heading under the cover's title.
+  lead: {type: typography, default: '{type.lead}'}
 
 # Every page is as large as the deck asks to be.
 preferred:
   width: "=@size.slide"
   height: "=@size.slide * 9 / 16"
+
+# The smallest text size of each medium the deck's pages are made for (DEC-055 points 2,
+# 3 and 8).
+# The deck is made for a screen at hand and for a room. On a screen at hand a slide is
+# shown at about its own size, so that value is a fixed length.
+#
+# The screen at hand, 11 px: Apple's Human Interface Guidelines, "Typography", give a
+# minimum font size of 11 pt on iOS and iPadOS and of 10 pt on macOS. A point is the unit
+# those platforms lay out in, which a browser on them takes as one CSS px. One value holds
+# for every screen at hand, so the larger is taken.
+#
+# A room, none: its value waits until the display image size standard (ANSI/INFOCOMM
+# V202.01) is read, since its publisher's page alone does not define the viewing ratio its
+# least shares are given for (DEC-055 point 8). So a deck shown in a room is stated as
+# unmeasured there, and assumes no viewing ratio.
+smallest-text:
+  screen: 11
 
 # The forms a page takes. Each layout declares the slots a page in it fills, and holds the
 # deck's own drawing of it, the layout's default. Each part that places a slot is named
@@ -116,6 +135,17 @@ layouts:
         type: string
         description: A line at the foot, such as where the slide's claim can be seen.
         x-pkit-prose: true
+      # A path names a file of the repository from its root, and the check fails one that
+      # names no file version control lists (DEC-056 points 2 and 3). The slide shows each
+      # as it is written, with no label: a label is no word a component holds.
+      documents:
+        type: array
+        minItems: 1
+        items: {type: string}
+        description: >-
+          The documents the slide's claim rests on, each by its path from the repository's
+          root, in order.
+        x-pkit-paths: true
     required: [title]
     parts:
       background:
@@ -135,18 +165,19 @@ layouts:
         x: "=margin"
         y: "=title.bottom + @space.2"
         width: "=:width - 2 * margin"
-      # The visual takes the height between the lead and the limit, or the footer, so a
-      # visual that asks for more is reported. A large space stands above the limit and
-      # above the footer only where each is drawn: a part drawn holds a line of text,
-      # taller than the smallest space, and one not drawn has no height. So the visual
-      # reaches down to the limit, the footer or the margin, one large space above it.
+      # The visual takes the height between the lead and the limit, or the foot, the footer
+      # and the documents, so a visual that asks for more is reported. A large space stands
+      # above the limit and above the foot only where each is drawn: a part drawn holds a
+      # line of text, taller than the smallest space, and one not drawn has no height. So
+      # the visual reaches down to the limit, the foot or the margin, one large space above
+      # it.
       visual:
         slot: visual
         x: "=margin"
         y: "=lead.bottom + @space.4"
         width: "=:width - 2 * margin"
         height: "=limit.y - min(limit.height, @space.1) / @space.1 * @space.4 - visual.y"
-      # The limit stands above the footer, a bar of the accent at its side.
+      # The limit stands above the foot, a bar of the accent at its side.
       limit-bar:
         when: limit
         box: {fill: accent}
@@ -158,11 +189,21 @@ layouts:
         when: limit
         text: {content: limit, style: type.body, fill: text-primary}
         x: "=margin + @space.1 + @space.3"
-        y: "=footer.y - min(footer.height, @space.1) / @space.1 * @space.4 - limit.height"
+        y: "=footer.y - min(footer.height + documents.height, @space.1) / @space.1 * @space.4 - limit.height"
         width: "=:width - 2 * margin - @space.1 - @space.3"
+      # The foot closes the slide: the footer, and under it the documents, a small space
+      # between the two where both are drawn.
       footer:
         when: footer
         text: {content: footer, style: type.body, fill: text-secondary}
         x: "=margin"
-        y: "=:height - margin - footer.height"
+        y: "=documents.y - min(footer.height, documents.height, @space.1) / @space.1 * @space.2 - footer.height"
+        width: "=:width - 2 * margin"
+      # The documents the slide's claim rests on, a path to a line, set apart from the
+      # slide's words in the type of code. Drawn last, they read last.
+      documents:
+        when: documents
+        text: {content: documents, style: type.code, fill: text-secondary}
+        x: "=margin"
+        y: "=:height - margin - documents.height"
         width: "=:width - 2 * margin"

@@ -366,7 +366,7 @@
     }
   },
   "type": {
-    "$description": "The types at a desktop: a body of 16 px, a head that differs from it by size and weight, a strong run the body's size in the semibold, and code a step under the body, since a monospace face sets wider. Few sizes, each clearly apart (Robert Bringhurst, a scale).",
+    "$description": "The types at a desktop: a body of 16 px, a lead a step over it at 20, a head that differs from the body by size and weight, a strong run the body's size in the semibold, code a step under the body, since a monospace face sets wider, and a page's title at 36, the next step over the head. Few sizes, each clearly apart (Robert Bringhurst, a scale).",
     "$type": "typography",
     "body": {
       "$value": {
@@ -429,18 +429,47 @@
         },
         "lineHeight": 1.5
       }
+    },
+    "title": {
+      "$description": "A page's title, which names the whole page: the head's semibold, half again its size, so a page's head stands apart from the heads of its parts.",
+      "$value": {
+        "fontFamily": "{font.heading}",
+        "fontSize": {
+          "value": 36,
+          "unit": "px"
+        },
+        "fontWeight": 600,
+        "letterSpacing": {
+          "value": 0,
+          "unit": "px"
+        },
+        "lineHeight": 1.2
+      }
+    },
+    "lead": {
+      "$description": "Running text read before the body, such as a page's lead under its title: the body's family and weight, a 1.25 step over its size, so it stands out from the body and still reads as running text.",
+      "$value": {
+        "fontFamily": "{font.body}",
+        "fontSize": {
+          "value": 20,
+          "unit": "px"
+        },
+        "fontWeight": 400,
+        "letterSpacing": {
+          "value": 0,
+          "unit": "px"
+        },
+        "lineHeight": 1.3
+      }
     }
   },
   "component": {
-    "$description": "The tokens of the components of the libraries the brand names: at a desktop, the deck's title and lead take the shared types it drew them in before.",
+    "$description": "The tokens of the components of the libraries the brand names: at a desktop, the deck's title takes the shared type it drew it in before. The brand gives the deck's lead no value, so it takes the lead type, as its default does.",
     "foundations": {
       "deck": {
         "$type": "typography",
         "title": {
           "$value": "{type.heading}"
-        },
-        "lead": {
-          "$value": "{type.body}"
         }
       }
     }

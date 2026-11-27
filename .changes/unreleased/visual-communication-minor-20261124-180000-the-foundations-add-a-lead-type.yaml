@@ -1,0 +1,15 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Added
+body: >
+  The foundations' version being built, 1.2.0, adds the shared role `type.lead`,
+  the type of running text read before the body, such as a page's opening
+  paragraph or the line under a slide's title, which any component may name, a
+  piece's own included (DEC-072, #3497). It defaults to `type.body`, so no brand
+  owes it a value and none breaks. The deck's lead token, which sets a slide's
+  lead and the cover's subtitle, comes to default to it rather than to the body.
+  The starter's version being built, 1.1.0, gains `starter.type.lead`, defaulting
+  to it, and its `title` sets the lead under a page's title in it. Under a brand
+  that gives neither the lead type nor the deck's token, every one of these
+  texts is drawn as before, in the body. The released versions are unchanged.

@@ -18,6 +18,12 @@ never stored with it. A finding the project corrects whether the version is
 released or not names no version, so it keeps its level: a version that needs a
 newer release of the capability is one (DEC-014 point 5).
 
+An overlap of two parts that the part on top names under `lies-over` carries the version
+that holds that word (`lies_over_in`), and no mark of whether it is released: the label it
+takes in validation is worked out where it is read too (`checks.Reading`, DEC-066 point 2).
+Letters that touch across a text's lines carry, in the same field, the version that holds
+the `tight-lines` of the role their step comes from, where it counts (DEC-053 point 4).
+
 The validator document maps the levels onto the backbone's severities:
 fails -> `error`, attention -> `warning`, fact -> `info`.
 
@@ -69,6 +75,12 @@ class Finding:
     - `library`: `<name>@<version>` when it lies in a library version, else "".
     - `who`: who is expected to act, for a finding that asks for attention, or for a
       failing one whose file lies in a library version but that the project corrects.
+    - `lies_over_in`: for an overlap of two parts whose part on top names the other under
+      `lies-over`, `<name>@<version>` of the library version that holds that part (DEC-066
+      point 2); for letters that touch across a text's lines, of the brand version that
+      holds the word of the role their step comes from, where it counts (DEC-053 point 4);
+      else "". Not where the finding lies: it settles the finding's label in validation
+      alone.
     """
 
     code: str
@@ -79,6 +91,7 @@ class Finding:
     fix: str = ""
     library: str = ""
     who: str = ""
+    lies_over_in: str = ""
     extra: dict = field(default_factory=dict, compare=False)
 
     def __post_init__(self) -> None:

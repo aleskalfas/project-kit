@@ -319,8 +319,76 @@ def test_a_resolved_point_with_an_inert_filler_is_partly_checked(uc: ModuleType)
         ids=frozenset({"UC-001"}),
         source=f"settled on the default branch (read at origin/main {SHA[:12]})",
         fetch=True,
-        missing=(f"{FILLER_FILE} (its value does not fit the point)",),
+        doubts=(f"{FILLER_FILE} gave no answer (its value does not fit the point)",),
     )
+
+
+def test_a_filler_passed_over_leaves_the_point_wholly_answered(uc: ModuleType) -> None:
+    passed_over = {
+        **SETTLED_FILLER,
+        "name": "other",
+        "state": "passed over",
+        "reason": f"'{KEEPER}' answers first",
+    }
+    reading = uc.reading_of(
+        _document("resolved", value=[ACTIVE], fillers=(SETTLED_FILLER, passed_over), origin=KEEPER)
+    )
+    assert isinstance(reading, uc.Held) and reading.doubts == ()
+
+
+#: A filler in a state a later backbone might add, beside the keeper that answered.
+LATER = {**SETTLED_FILLER, "name": "other", "state": "deferred", "reason": "it answers later"}
+LATER_STATE = _document("resolved", value=[ACTIVE], fillers=(LATER, SETTLED_FILLER), origin=KEEPER)
+
+#: A resolved document from a backbone that leaves its fillers out.
+NO_FILLERS = {k: v for k, v in HAS_ENTRIES.items() if k != "fillers"}
+
+#: Why the set may be incomplete where the document lists no fillers.
+UNLISTED = "the backbone's document does not list the point's fillers"
+
+
+def test_a_filler_in_a_state_this_reading_does_not_know_is_no_answer(uc: ModuleType) -> None:
+    """A state the backbone adds is read as could not tell what that filler gave,
+    never as `taken` or `passed over` (ADR-097 point 3): the point is partly checked."""
+    reading = uc.reading_of(LATER_STATE)
+    assert isinstance(reading, uc.Held) and reading.ids == frozenset({"UC-001"})
+    assert reading.doubts == (
+        "other is in the state 'deferred', which this reading does not know (it answers later)",
+    )
+
+
+def test_a_resolved_document_without_fillers_is_partly_checked(uc: ModuleType) -> None:
+    """A missing `fillers` is never read as an empty list (ADR-097 point 3)."""
+    assert uc.reading_of(NO_FILLERS) == uc.Held(
+        ids=frozenset({"UC-001", "UC-002"}), source=f"that {KEEPER} gave", doubts=(UNLISTED,)
+    )
+
+
+@pytest.mark.parametrize(
+    ("fillers", "doubts"),
+    [
+        (None, (UNLISTED,)),
+        ({"keeper": SETTLED_FILLER}, (UNLISTED,)),
+        ([SETTLED_FILLER, "other"], ("a filler gives no state this reading can read",)),
+        (
+            [SETTLED_FILLER, {**SETTLED_FILLER, "name": "other", "state": None}],
+            ("other gives no state this reading can read",),
+        ),
+        (
+            [SETTLED_FILLER, {**SETTLED_FILLER, "name": "other", "state": ["taken"]}],
+            ("other gives no state this reading can read",),
+        ),
+        (
+            [SETTLED_FILLER, {**SETTLED_FILLER, "name": "other", "state": {}}],
+            ("other gives no state this reading can read",),
+        ),
+    ],
+)
+def test_fillers_this_reading_cannot_read_make_the_point_partly_checked(
+    uc: ModuleType, fillers: Any, doubts: tuple[str, ...]
+) -> None:
+    reading = uc.reading_of({**HAS_ENTRIES, "fillers": fillers})
+    assert isinstance(reading, uc.Held) and reading.doubts == doubts
 
 
 def test_what_the_set_was_read_against(uc: ModuleType) -> None:
@@ -412,6 +480,42 @@ def test_no_document_or_one_it_does_not_know_is_could_not_check_never_off(
     anything less is one notice that the citations were not checked."""
     reading = uc.read_point(run)
     assert isinstance(reading, uc.NotChecked) and reading.why
+    [(severity, label, _detail)] = uc.findings(
+        _body("UC-042"), "task", BODY_FORMAT, lambda: reading
+    )
+    assert (severity, label) == ("warning", UNCHECKED)
+
+
+#: Why the point could not be checked where its document's `outcome` is not text.
+UNREADABLE_OUTCOME = "the backbone's document gives the point no outcome this reading can read"
+
+
+@pytest.mark.parametrize(
+    "outcome",
+    [pytest.param(["unfilled"], id="list"), pytest.param({"outcome": "unfilled"}, id="mapping")],
+)
+def test_an_outcome_this_reading_cannot_read_is_could_not_check(
+    uc: ModuleType, outcome: Any
+) -> None:
+    """An `outcome` that is not text is no outcome this reading can read (ADR-097
+    point 3): one notice that the citations were not checked, never a crash, and
+    never off for the `unfilled` it holds."""
+    reading = uc.read_point(_answering({**HAS_ENTRIES, "outcome": outcome}, code=1))
+    assert reading == uc.NotChecked(UNREADABLE_OUTCOME)
+    [(severity, label, detail)] = uc.findings(_body("UC-042"), "task", BODY_FORMAT, lambda: reading)
+    assert (severity, label) == ("warning", UNCHECKED)
+    assert UNREADABLE_OUTCOME in detail
+
+
+@pytest.mark.parametrize("version", [True, False, 1.0])
+def test_a_version_that_is_no_whole_number_is_could_not_check(uc: ModuleType, version: Any) -> None:
+    """`true` and `1.0` equal 1 to Python, yet neither is a version this reading knows
+    (ADR-097 point 3): one notice that the citations were not checked, never the set
+    the document holds."""
+    reading = uc.read_point(_answering({**HAS_ENTRIES, "schema_version": version}))
+    assert reading == uc.NotChecked(
+        f"the backbone answered a document at version {version!r}; this reading understands 1"
+    )
     [(severity, label, _detail)] = uc.findings(
         _body("UC-042"), "task", BODY_FORMAT, lambda: reading
     )
@@ -588,8 +692,37 @@ def test_partly_checked_names_what_it_lacks_in_one_notice(uc: ModuleType) -> Non
         (
             "warning",
             UNCHECKED,
-            "UC-042 and UC-043 not checked: the use-case point answered without other (it "
-            "exited 1), so the set it holds may be incomplete.",
+            "UC-042 and UC-043 not checked: the use-case point answered, but other gave no "
+            "answer (it exited 1), so the set it holds may be incomplete.",
+        )
+    ]
+
+
+def test_a_filler_in_an_unknown_state_names_what_it_lacks_as_not_checked(
+    uc: ModuleType,
+) -> None:
+    assert _judged(uc, _body("UC-001"), LATER_STATE) == []
+    assert _judged(uc, _body("UC-001", "UC-042"), LATER_STATE) == [
+        (
+            "warning",
+            UNCHECKED,
+            "UC-042 not checked: the use-case point answered, but other is in the state "
+            "'deferred', which this reading does not know (it answers later), so the set "
+            "it holds may be incomplete.",
+        )
+    ]
+
+
+def test_a_document_without_fillers_names_what_it_lacks_as_not_checked(
+    uc: ModuleType,
+) -> None:
+    assert _judged(uc, _body("UC-001", "UC-002"), NO_FILLERS) == []
+    assert _judged(uc, _body("UC-042"), NO_FILLERS) == [
+        (
+            "warning",
+            UNCHECKED,
+            f"UC-042 not checked: the use-case point answered, but {UNLISTED}, so the set "
+            "it holds may be incomplete.",
         )
     ]
 
@@ -686,7 +819,7 @@ def test_empty_is_a_set_that_holds_nothing(project: AdopterRepo, uc: ModuleType)
     _keeper(project, _printing())
     project.commit("initial")
     reading = uc.read_point()
-    assert isinstance(reading, uc.Held) and reading.ids == frozenset() and not reading.missing
+    assert isinstance(reading, uc.Held) and reading.ids == frozenset() and not reading.doubts
 
 
 def test_could_not_check_when_the_default_branch_cannot_be_read(
@@ -714,8 +847,8 @@ def test_partly_checked_when_a_filler_meant_to_answer_did_not(
     project.commit("initial")
     reading = uc.read_point()
     assert isinstance(reading, uc.Held) and reading.ids == frozenset({"UC-001"})
-    (missing,) = reading.missing
-    assert missing.startswith(f"{FILLER_FILE} (")
+    (doubt,) = reading.doubts
+    assert doubt.startswith(f"{FILLER_FILE} gave no answer (")
 
 
 def test_the_project_s_filler_file_replaces_the_keeper_s_answer_whole(

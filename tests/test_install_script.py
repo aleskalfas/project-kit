@@ -402,7 +402,7 @@ def test_it_fails_and_leaves_the_pkit_where_the_router_falls_back(clone: Clone) 
     assert run.installs == []
     assert f"{other}, runs pkit 2.0.0, not 1.2.3" in run.err
     assert "The installed pkit was left as it is." in run.err
-    assert f"uvx --from {router.DISTRIBUTION_GIT_URL}@v1.2.3 project-kit <command>" in run.err
+    assert f"uvx --from {router.DISTRIBUTION_GIT_URL}@v1.2.3 pkit <command>" in run.err
     assert f"uv tool install --force {router.DISTRIBUTION_GIT_URL}@v1.2.3" in run.err
 
 

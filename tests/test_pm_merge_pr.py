@@ -214,23 +214,19 @@ def test_a_rollup_the_answer_does_not_carry_names_why(mp, pr) -> None:
     assert (reading.checks, reading.problem) == ((), "gh's answer carries no statusCheckRollup")
 
 
-def _identity(mp):
-    return mp.Identity(github_login="octocat", email="octo@example.com")
-
-
 def test_ci_bypass_audit_body_follows_schema_template(mp) -> None:
-    """Audit body matches validation-severity.yaml's `Bypassed by <name> <<email>>: <reason>`."""
+    """Audit body matches validation-severity.yaml's `Bypassed: <reason>`, and
+    names no authoriser beside its poster, and no email (DEC-078 point 2)."""
     key = mp._ci_bypass_audit_key("advisory changeset guard", "sha1")
     body = mp._ci_bypass_audit_body(
-        _identity(mp),
         "advisory changeset guard on a decision-only PR",
         ("changeset-guard (FAILURE)",),
         key,
     )
     assert body.startswith(mp.CI_BYPASS_AUDIT_MARKER)
     assert body.splitlines()[-1] == key
-    assert "Bypassed by octocat <octo@example.com>: " in body
-    assert "advisory changeset guard on a decision-only PR" in body
+    assert "Bypassed: advisory changeset guard on a decision-only PR" in body
+    assert "octocat" not in body and "@" not in body
     assert "changeset-guard (FAILURE)" in body
 
 
@@ -256,7 +252,6 @@ def test_post_ci_bypass_audit_posts_comment(mp, monkeypatch) -> None:
     ok = mp._post_ci_bypass_audit(
         496,
         "deliberate override",
-        _identity(mp),
         ("x (FAILURE)",),
         {},
     )
@@ -265,7 +260,7 @@ def test_post_ci_bypass_audit_posts_comment(mp, monkeypatch) -> None:
     assert comment_calls, "expected a `gh pr comment` call posting the audit"
     argv = comment_calls[0]
     body_idx = argv.index("--body")
-    assert "Bypassed by octocat" in argv[body_idx + 1]
+    assert "Bypassed: deliberate override" in argv[body_idx + 1]
 
 
 def test_post_ci_bypass_audit_idempotent_skip(mp, monkeypatch) -> None:
@@ -277,7 +272,6 @@ def test_post_ci_bypass_audit_idempotent_skip(mp, monkeypatch) -> None:
     captured: list[list[str]] = []
     key = mp._ci_bypass_audit_key("override", "sha1")
     prior = mp._ci_bypass_audit_body(
-        _identity(mp),
         "override",
         ("x (FAILURE)",),
         key,
@@ -310,7 +304,6 @@ def test_post_ci_bypass_audit_idempotent_skip(mp, monkeypatch) -> None:
     ok = mp._post_ci_bypass_audit(
         496,
         "override",
-        _identity(mp),
         ("x (FAILURE)",),
         {},
         head="sha1",
@@ -344,7 +337,6 @@ def test_post_ci_bypass_audit_reports_gh_failure(mp, monkeypatch) -> None:
     ok = mp._post_ci_bypass_audit(
         496,
         "override",
-        _identity(mp),
         ("x (FAILURE)",),
         {},
     )
@@ -395,7 +387,9 @@ def _wire_merge_seams(
     monkeypatch.setattr(
         mp,
         "resolve_invoker_identity",
-        lambda config=None: mp.Identity(github_login="octocat", email="o@e.com"),
+        lambda config=None: sys.modules["_lib.membership"].Identity(
+            github_login="octocat", email="o@e.com"
+        ),
     )
     monkeypatch.setattr(
         mp,
@@ -407,6 +401,9 @@ def _wire_merge_seams(
         )(),
     )
     monkeypatch.setattr(mp.session_guard, "enforce", lambda **kw: True)
+    # The hold on a change that turns on the sync's switch reads the host; this
+    # wiring's change turns nothing on (its hold: `tests/test_pm_sync_switch.py`).
+    monkeypatch.setattr(mp, "_switch_hold", lambda *a, **kw: mp.sync_switch.NOT_HELD)
     # This file targets merge-pr's CI / checkbox gates, not the #747 prerequisite gate (covered in
     # test_pm_bootstrap_gate*.py); the fake capability root above has no tree
     # to stamp, so neutralise the gate here.
@@ -445,7 +442,7 @@ def _wire_merge_seams(
         lambda pr_number, pr_body, closing, config: {},
     )
 
-    def _stub_ci_audit(pr_number, reason, invoker, checks, config, *, head=""):
+    def _stub_ci_audit(pr_number, reason, checks, config, *, head=""):
         calls["ci_audit"] = True
         calls["ci_audit_head"] = head
         calls["ci_audit_checks"] = checks
@@ -844,6 +841,39 @@ def test_yes_off_a_terminal_merges(mp, monkeypatch):
     monkeypatch.setattr(sys.stdin, "isatty", lambda: False, raising=False)
     assert _run_merge_main(mp, monkeypatch, ["99", "--yes"]) == 0
     assert calls["merged"] is True
+
+
+@pytest.mark.parametrize("terminal", [False, True], ids=["off-a-terminal", "at-a-terminal"])
+def test_yes_does_not_merge_a_change_that_turns_on_the_syncs_switch(
+    mp, monkeypatch, capsys, terminal
+):
+    """An authorisation given up front does not cover a change that turns on the
+    sync's switch: the merge waits for the person, who is told what turning it on
+    means (DEC-072 point 3)."""
+    calls = _wire_merge_seams(mp, monkeypatch, rollup=_MP_GREEN)
+    monkeypatch.setattr(mp, "_switch_hold", lambda *a, **kw: mp.sync_switch.Hold(turns_on=True))
+    monkeypatch.setattr(sys.stdin, "isatty", lambda: terminal, raising=False)
+
+    assert _run_merge_main(mp, monkeypatch, ["99", "--yes"]) == 2
+
+    assert calls["merged"] is False
+    err = capsys.readouterr().err
+    assert "This change turns on `sync_board.adds_with_no_terminal`." in err
+    assert "runs `pkit pm merge-pr 99` at a terminal" in err
+
+
+def test_the_persons_yes_at_a_terminal_merges_a_change_that_turns_on_the_switch(
+    mp, monkeypatch, capsys
+):
+    calls = _wire_merge_seams(mp, monkeypatch, rollup=_MP_GREEN)
+    monkeypatch.setattr(mp, "_switch_hold", lambda *a, **kw: mp.sync_switch.Hold(turns_on=True))
+    monkeypatch.setattr(sys.stdin, "isatty", lambda: True, raising=False)
+    monkeypatch.setattr("builtins.input", lambda prompt="": "y")
+
+    assert _run_merge_main(mp, monkeypatch, ["99"]) == 0
+
+    assert calls["merged"] is True
+    assert "lets `pkit pm sync-board` add the missing cards" in capsys.readouterr().out
 
 
 def test_fork_pr_merge_passes_cross_repository_to_cleanup(mp, monkeypatch):

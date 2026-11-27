@@ -1,0 +1,20 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Changed
+body: >
+  `graphic-designer` runs one round, and the person makes the call on whether a
+  piece ships (visual-communication DEC-070, #3477). `graphic-design-reviewer`
+  reads every page, the designer mends once each fault, each brief finding, each
+  break the reviewer labels settled, each fact its source contradicts and each
+  thing a reader cannot make out where the piece is shown, and the reviewer reads
+  every page again. Then the designer hands you the piece, with the second report
+  as written, what it changed and why, each finding it left and why, and each
+  question still open. It runs no polish, and never reports a piece done. It
+  changes alone every word that is not the asker's, and asks only where a fix
+  would change the asker's words or cut a fact a goal or relation rests on, or
+  needs a write it may not make. The reviewer gives no grade and no verdict: it
+  labels each rule a rule finding cites a settled break or one for a person,
+  says of each fault and rule finding whether a reader cannot make it out, and
+  marks a finding that only a tool the engine lacks, or only the asker's words,
+  would clear. The designer takes each label and mark as the reviewer gives it.

@@ -361,6 +361,22 @@
         },
         "lineHeight": 1.5
       }
+    },
+    "title": {
+      "$description": "A page's title: the heading's semibold, half again its size.",
+      "$value": {
+        "fontFamily": "{font.heading}",
+        "fontSize": {
+          "value": 36,
+          "unit": "px"
+        },
+        "fontWeight": 600,
+        "letterSpacing": {
+          "value": 0,
+          "unit": "px"
+        },
+        "lineHeight": 1.2
+      }
     }
   }
 }

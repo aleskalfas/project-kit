@@ -1,0 +1,148 @@
+---
+id: DEC-056
+title: Content may name a repository file by its path, which the check finds; a deck's slide names the documents behind it
+status: accepted
+date: 2026-11-24
+author: Aleš Kalfas <kalfas.ales@gmail.com>
+---
+
+**In plain terms:** a component may mark one of its fields as holding the path of a file in the repository, or a list of such paths, and the check fails a path given there that names no file the repository holds. The first such field is a deck slide's `documents`, the documents the slide's claim rests on, which the deck's own drawing shows on the slide, with no label before them. So a record renamed later no longer leaves a slide pointing at nothing, silently. A path is a citation readers see, not an anchor: the check finds a file gone, never a file changed. The check finds the field by its mark, never by the deck's name, and reads the mark from the deck under every brand. For example, a slide that gives `documents: [.pkit/decisions/core/COR-017-capability-pattern.md]` shows that path, and fails validation once the record is renamed, until the path follows it.
+
+## Context
+
+The deck the foundations ship gives a slide a title, a lead, a visual, a limit and a footer. A slide that names the document behind it can do so only in its footer, a line of the content's own words. The capabilities deck does so, writing "Source:" and a path in its English content and "Zdroj:" and the same path in its Czech ([project-kit#3195](https://github.com/aleskalfas/project-kit/issues/3195)). Nothing reads the path, so a record renamed later leaves the slide pointing at no file, and nothing says so ([project-kit#3208](https://github.com/aleskalfas/project-kit/issues/3208)).
+
+The accepted records bound the answer:
+- **No component by name.** The engine knows no component by name ([visual-communication:DEC-001-visual-communication-discipline] point 4). So the check finds a field by what its component declares of it: a field of runs, by a mark the component puts on the field ([visual-communication:DEC-012-text-runs] point 1).
+- **No words in a component.** A text part shows a field of the content or a fact of its export, and nothing else, so a drawing cannot write a word such as "Source:" in each language.
+- **What draws an item may differ.** Content gives a list as items, unless it is a list of runs (DEC-001 point 3), each a mapping its item component draws, and an item may name its own component by `use` (DEC-001 point 6, [visual-communication:DEC-002-files-and-validation] point 4). A brand's drawing takes a top's slots and draws them with parts of its own ([visual-communication:DEC-034-brand-drawings] point 1).
+- **Content is checked against the top,** whichever drawing draws it ([visual-communication:DEC-009-layout-defaults] point 5). A top's field takes the top's mark of its text alone, whatever block draws it, and a list's mark was kept off the `repeat` part that draws it, since switching the brand could change what is a list ([visual-communication:DEC-033-structure-for-readers] point 4, and Alternatives considered).
+- **A text part already draws a list as one text:** a field of runs may hold a list of runs, and a line feed in a run parts its paragraphs (DEC-012 point 1).
+- **A link takes an absolute address.** An address relative to the repository was refused for a run's link, since an exported file travels alone (DEC-033 point 3).
+- **A file found as a picture is.** The check finds a picture by its exact name among the files version control lists, never by asking the file system ([visual-communication:DEC-025-picture-files] point 2).
+- **Never into what a piece handed out.** Should content come to name a file by its path, a path into the folders that hold a piece's version handed out and a published piece's copy is refused ([visual-communication:DEC-016-what-an-export-reads] point 3).
+- **An anchor is the methodology's, and content is no artefact yet.** An artefact declares its anchors, what makes it true, and the methodology reports friction when what one stands on changes. A path anchor names a file or a glob, relative to the repository's root (COR-050 points 1 and 2). Whether a content file is an artefact, with anchors on its parts, is left to a later refinement of the core, which would also let a capability declare places within its working folder (DEC-001 and DEC-002, Implications).
+
+Terms:
+- A *document behind a page* is a file of the repository that the page's claim rests on, such as the record that decides what the page says.
+- A *path* names such a file from the repository's root (point 2).
+
+## Decision
+
+**A component may mark a field as holding a path, or a list of paths, and the check fails a path that names no file the repository holds. A path is a citation readers see, not an anchor. The deck's slide takes a list of paths, `documents`, which the deck marks, and the deck's own drawing shows them, with no label.**
+
+### 1. A field may be marked as holding a path, or a list of paths
+
+- **The mark.** A component marks a field whose value is a path, or a list of paths, with a key that format 1's schema of a component does not know. The change that builds it spells the key, beside the capability's other marks on a field.
+- **Where it lies.** Directly on one of the component's fields, or on a slot a layout declares, never on a schema within one, such as a list's items, as the mark of a field of runs lies (DEC-012 point 1).
+- **A text, or a list of texts.** The marked field's type is text alone, with no `enum`, `const` or `$ref`, and it takes no runs. Or it is a list whose items are such text. Each text is one path.
+- **Any component.** Neither the engine nor the check knows the component that holds the mark by name (DEC-001 point 4), so a figure, a site or a library's own component may take it with no change of this record.
+- **Only where the content writes it.** A value is a path only where the content writes it in a field so marked, in the schema the content is checked against, which no drawing changes (DEC-009 point 5). A part that passes a value on makes no path of it, and no drawing marks one, so the check finds the same paths under every drawing.
+- **Shown by a text part.** A text part shows a path as any text. One that shows a list of paths draws them as one text, a path to a paragraph in the content's order, as a line feed parts a text's paragraphs (DEC-012 point 1). The list fills its field, for a part's condition, where it holds a path.
+- **Paths, not items.** A list of paths holds texts, not items, and carries no ids, as a list of runs holds runs (DEC-012 point 1). So no `repeat` part repeats over it, and no path names a component. No part passes a list of paths on to a component it places, for now, as none passes a field of runs on (DEC-012 point 2).
+- **On the reader's side,** a list of paths reads as the text that shows it, a path to a paragraph, and not as a list, since its paths are no items a `repeat` part draws (DEC-033 point 4).
+- **No look of its own.** The mark says what the check reads. How a path looks is its component's, as for any text.
+
+### 2. A path names one file, from the repository's root
+
+- **Its form.** A path takes the form of a path anchor's value, narrowed to one file (COR-050 point 2): the names of folders and a file, joined by `/`, from the repository's root. It starts with no `/`, and holds no empty name, no `.` or `..`, no `\`, no control character, and no `*`, `?` or `[`, so it is no glob. An example is `.pkit/decisions/core/COR-017-capability-pattern.md`.
+- **Which root.** A path starts at the root the methodology resolves for the project. This record takes that root to be the repository's top level, as the record of the capability's files does (DEC-002 point 1).
+- **A citation, not an anchor.** A path is a citation that readers see, and no anchor (COR-050 point 2). The check finds whether its file is there, never whether it changed, so nothing reports a slide whose document changed under it.
+- **Found in version control's list.** A path names a file where it is, letter for letter, a path version control lists: one its index holds, or one not yet tracked and not ignored. The file system is never asked, as for a picture (DEC-025 point 2). A picture's bytes are read, but a document need only be listed, so a file that a sparse checkout leaves out of the working tree counts as well. So every clone gives one answer for a committed file, whatever its file system does with case. A file the clone ignores, and a folder, name no document.
+- **Never into what a piece handed out.** A path into the folder that holds a piece's version handed out, or into the one that holds a published piece's copy, is refused, as the record of what an export reads refuses it wherever content names a file by its path (DEC-016 point 3). Such a file is an output, and what it was made from lies in its piece's folder, where a path may name it.
+- **Into a tree the project receives by sync,** such as the core's records, a path is checked as any other, and no migration rewrites it when sync renames its file, since no migration rewrites what people wrote ([visual-communication:DEC-003-change-over-time] point 3): the check's failure is the signal, and its message names the content file and the path.
+- **The whole file.** A place within it, such as a point of a record, is left to a later change, which may name one as an anchor names a part (COR-050 point 2).
+- **Shown as text, never as a link.** A page shows the path as it is written. A link takes an absolute address that a reader may follow (DEC-033 point 3), and a piece names no address of its repository.
+- **In each language its own.** A path is part of the value of its field, which the content of each language gives (DEC-001 point 3), so a language may name a document written in it. Whether the check holds the paths equal across languages is translation's to decide, as for a run's link (DEC-033 point 3).
+
+### 3. The deck's slide takes the documents behind it, in the slot `documents`
+
+- **The slot.** The deck's layout of a slide declares an optional slot, `documents`: a list of one path or more, marked as point 1 says, each naming one document behind the slide, in the order the content gives them.
+- **The deck's mark, under every drawing.** The slot is the deck's, so the check reads its mark from the deck, whichever drawing draws the slide and however it draws the paths (DEC-009 point 5), as a top's field takes the top's mark of its text alone (DEC-033 point 4).
+- **No entry escapes it.** A path is text, so no entry names a component of its own, as an item may (DEC-002 point 4), and none fills another component's fields.
+- **The slide only.** A cover says what the whole deck is about, and its link already says where to find more. A cover's documents, a figure's or a site page's are each an optional slot or field that a later change adds where it needs one (DEC-009 point 7).
+- **The footer stays** a line of the content's own words, such as where the slide's claim can be seen. A path goes in `documents`, never in the footer.
+
+### 4. The deck's own drawing shows the documents, with no label
+
+- **Shown, never silent.** The deck's own drawing of a slide shows the slot wherever a slide gives it, with one text part named after the slot (DEC-034 point 5), a path to a paragraph (point 1). So no slide names documents that its reader does not see.
+- **Where and how, the deck's.** Where on the slide that part stands, and in which typography role and paint, is the deck's design, released in its library, as how any text looks is its component's (point 1).
+- **No word before them.** A component holds no words, so the drawing writes no label such as "Source:". A label given in the content of each language is left to a later change.
+- **A slide that gives none** is drawn as before, with no part and no space for them.
+- **Alike on every slide and in every medium.** One drawing draws each slide (DEC-009 point 6), and every renderer only projects the scene, adding nothing of its own (DEC-001 point 2). So every slide that names documents draws them in one place and one look, in every renderer.
+- **Under a brand's drawing.** A brand that draws the slide may draw the documents its own way, and the check reads them from the deck's slot all the same (point 3). A drawing that does not take the slot does not fit a slide that gives it, which the top's own drawing then draws (DEC-009 point 6).
+- **On the reader's side.** The documents read as the slide's last text in draw order (DEC-033 point 6), a path to a paragraph (point 1).
+
+### 5. What the checks report, and how severely
+
+Each finding below that fails validation does so where it lies in a file the project can correct. Elsewhere, as in a released library version, it asks for attention and names who can correct it (DEC-002 point 7).
+
+- **Where each lies.** A finding on a mark, a field or a part lies in the component's version. A finding on a path lies in the content file, at the path.
+- **Fails validation:**
+  - in a component: the mark anywhere but directly on one of its fields or on a slot; on a field that is neither such a text nor a list of such texts as point 1 says; or on a field of runs
+  - in a component: a `repeat` part over a list of paths, or a part that passes one on to a component it places
+  - in content: a path not of point 2's form, one that names no file version control lists, or one into the folder of a piece's version handed out or of a published piece's copy (point 2). The message names a file whose path differs only in case, and a file the clone ignores, where one does.
+- **Asks for attention, and never fails:** in a component, a field or a slot whose schema admits a list of entries that are not mappings, and that carries neither the mark of runs nor the mark of paths. Such a list holds no items, runs or paths, and content that gives one is read against the field's schema alone (DEC-001 point 3, DEC-012 point 1), so nothing the format gives a list, such as an item's id or a path's check, reaches what it holds. A refusal would refuse a component that format 1 accepted (DEC-003 point 3).
+- **Looked up on every run.** Whether a path names a file depends on no file a scene is computed from. So the record of findings a render keeps never holds the finding, since its key would not change when a document is renamed elsewhere in the repository ([visual-communication:DEC-005-engine-and-plugins] point 13).
+- **A final piece's paths are not judged,** as its content is not (DEC-002 point 7). Its exports were handed out with the paths they show.
+- **No export refuses a path.** An export draws a path as it draws any text. It reads neither the file the path names nor whether that file is there, since no export reads the repository's other files (DEC-016 point 1).
+
+### 6. What this adds to format 1, and what breaks
+
+- **Added, each optional:** the mark, a text part that shows a list of paths, and the slide's slot. No field becomes required, and no value accepted before is refused. So the format number stays 1 (DEC-003 point 3), and no file that format 1 accepted fails a new finding: a component whose unmarked field admits a list of texts takes one that only asks for attention (point 5).
+- **No new shape in the scene.** A list of paths is drawn as one text of paragraphs, a shape the scene already holds, so the seam's version stays as it is (DEC-005 point 8).
+- **Not breaking:** the new slot (DEC-009 point 7), and a mark taken off a field, which refuses no content.
+- **Breaking:** a mark put on a field that a released version left unmarked, since content written for it may then fail; and renaming the slot (DEC-003 point 6). The deck is experimental, so its library may change it in any release (DEC-003 point 7).
+
+## Rationale
+
+**Point 1, a mark, read where the content writes it.** The check must find every path, and it knows no component by name. A mark on a field is how it already finds a field of runs, so the same reading finds a path in any component, and a figure or a site gains the check when it takes such a field. Content is checked against the schema it is written against, whichever drawing draws it (DEC-009 point 5), so a mark read there finds the same paths under every brand. A mark that passed on through a part would let a drawing's parts decide what is a path, and switching the brand could change what the check reads, the reason a list's mark was kept off a `repeat` part (DEC-033, Alternatives considered). A path is one name in one look, so the mark takes no field of runs, whose spans each take a look of their own. A text part already draws a list of runs as one text, so a list of paths asks for no new kind of part.
+
+**Point 2, a path from the repository's root, a citation found in version control's list.** The documents a page rests on lie in the project's repository, under one root in every clone. A path from the piece's folder would break whenever the piece moved, though no document did. A path takes the form a path anchor takes for one file, so the project writes a file's path one way wherever it names one. It is a citation and no anchor, since content is no artefact yet, and whether it becomes one is the core's to refine (DEC-002, Implications). Until then the check can say that a file is gone, the case a rename leaves, and not that it changed. Version control's list gives one answer on a file system that ignores case and on one that does not, and leaves out what one clone ignores, as the record of pictures found (DEC-025 point 2). Nothing reads a document's bytes, so it need only be listed, and a sparse checkout answers as a full one does. A folder holds many files, so it would not say which one the claim rests on. A reader of a handed-out file still sees which document is behind a page, and finds it in the repository, so the path needs no address. It is the address a link needs that a piece cannot give (DEC-033 point 3). A path into what a piece handed out is refused, as the record of what an export reads already decides (DEC-016 point 3): a file there is an output, and the path can name what it was made from instead.
+
+**Point 3, a list of paths in a slot of the slide.** A slide's claim may rest on more than one document: the capabilities deck's brief traces each of two limits to two documents. The slot is the deck's, so its mark reaches every path under every drawing, as a top's mark of its text does (DEC-033 point 4). A path is text, so no entry can name a component whose fields hold no mark. One text part draws the list, so the deck needs no block to draw an entry. The cost lies on the reader's side: the paths read as paragraphs of one text, not as a list, since a list's entries are items a `repeat` part draws (DEC-033 point 4). A reader who does not see the slide still hears each path apart, last on the slide. The name `documents` says what the entries are. "Source" already names several things in the capability, such as where a value of the scene comes from, a piece's first language, and where a library comes from.
+
+**Point 4, shown by the deck, read last, with no label.** A path is a citation readers see, so the deck's own drawing shows every slide's documents. Where it puts them and how they look are its design, as for any text, so this record fixes neither. A reference closes a page and competes with nothing on it, so the documents read last. A label would take a field in each language's content, since a component holds no words, and the deck can set the paths apart from the slide's other text by how it draws them. If readers miss a label, a later field adds one.
+
+**Point 5, a finding that fails.** A path that names no file breaks an invariant this record owns, in content the project corrects (DEC-002 point 7), as a brief's name that names nothing in the content fails ([visual-communication:DEC-029-piece-brief] point 5). A rename elsewhere in the repository is the very case the field is for, so a kept result that it does not reach would hide it. An export judges what it draws, and a path that names no file is still drawn right. A list that holds no items is one a mark names and a record decides, since a schema alone cannot say what a list of texts is (Alternatives considered), so a component whose unmarked field admits one is told so. That finding asks for attention alone, since within format 1 no value accepted before is refused (DEC-003 point 3): content that gives such a list is read against the field's schema, as a field with no mark is (DEC-012 point 1).
+
+### Alternatives considered
+
+- **The check reads a path in the footer:** the footer holds the content's own words, with a label in each language, and a check that parses prose guesses.
+- **The check knows the deck's slot by name:** it would give one component a privilege the engine refuses every component (DEC-001 point 4).
+- **One path to a slide, in a field of text:** it needs no list, but a slide that rests on two documents could name only one, and widening a field of text to a list later changes its shape.
+- **Entries drawn by a block whose field `path` takes the mark, `documents: [{path: …}]`:** which values are paths would hang on what draws an entry. A brand's drawing may draw the entries with a block of its own (DEC-034 point 1), and an entry may name its own component (DEC-002 point 4), so either could leave a path unchecked, though content is checked against the top whichever drawing draws it (DEC-009 point 5).
+- **The mark among the fields the top declares for the slot's list,** which every drawing takes (DEC-034 point 1): only the pattern reads such a field, and nothing draws one as text ([visual-communication:DEC-010-list-item-fields] point 2), so a path there could not be shown.
+- **The schema, not the mark, licenses a list of texts:** a field whose schema admits a list of texts would hold one with no mark. The model of an item carries its id, the trace an edit taken back follows, translation's comparison of ids, and a concept and a state on each item, and a list of items reads as a list on the reader's side (DEC-001 point 3, DEC-002 point 4, DEC-033 point 4). A general list of texts would answer to none of them, so each list that holds no items is one a mark names and a record decides.
+- **A value passed on to a marked field counts as a path,** as a text's mark passes on (DEC-033 point 4): the parts that pass it would decide what is a path, and a drawing's parts change with the brand.
+- **Entries as mappings whose keys the format fixes, `{path: …}`, as a run's are:** they would leave room for a place within the file, which no entry needs yet, and a later change can name one as an anchor names a part (COR-050 point 2).
+- **Entries as anchor values:** a record's id, resolved through `pkit refs lookup` as living-docs resolves the records a page mentions ([living-docs:DEC-001-living-docs-discipline] point 6), a path, or an artefact with a section (COR-050 point 2). An entry would then follow a record that moves, and could name one of its points. It is a larger choice, for a record of its own, alongside the one that makes content an artefact (DEC-002, Implications).
+- **A `repeat` part over the paths, so they read as a list:** a path is no item, so the engine would need a way to hand a text to the component that draws it, and a list inside one text would be a new shape in the scene, for one field.
+- **A slot that places a component the content chooses,** as a site's footer does: each piece would draw its documents its own way, and the check would still need the mark.
+- **The field named `sources`:** the word's other meanings above.
+- **A slot the check reads and no drawing shows:** a slide would name documents its reader never sees, though a path is a citation readers see (point 2).
+- **A label the deck draws, such as "Source:":** a component holds no words, and a word fixed in a library goes untranslated.
+- **A path from the piece's folder:** moving or copying a piece would break every path.
+- **A file found by asking the file system:** two clones would answer differently on a name's case, a sparse checkout would miss a committed file, and an ignored file would pass in one clone alone.
+- **The refusal of a path into what a piece handed out narrowed to a file a scene reads** (DEC-016 point 3): a slide could then name a version handed out, but a claim rests on what the project writes, which the piece's folder holds, and lifting the refusal later breaks nothing.
+- **A link to the document on the repository's web site:** a piece names neither the repository's address nor the revision a reader should see.
+- **An export that refuses a path naming no file:** the export would read the repository beyond the piece's inputs, and the check already holds the change back.
+
+## Implications
+
+- **Edits to accepted records,** made in this change once this record is accepted, each with a refinement pointer to it. Accepting this record accepts them (COR-066 point 5).
+  - DEC-001 point 3, "Content", comes to say that a list in content holds items unless a mark on its field says it holds runs or paths, and that a list of entries that are not mappings, such as texts, which a field with neither mark admits, holds no items either: content that gives one is read against the field's schema alone, and the check asks the component's owner for attention (point 5). A bullet after "Runs" adds that a field its component marks as holding paths may hold a list of paths, which holds texts, not items, and carries no ids, and whose paths are the field's value, so they may differ between languages, as its text does (points 1 and 2).
+  - DEC-002 point 4, its opening, comes to add that a list of paths, in a field its component marks as holding paths, holds texts, not items, so no id is unique in it or the same in every language (point 1), and that a list of entries that are not mappings, in a field with neither the mark of runs nor that of paths, holds no items either (point 5).
+  - DEC-012 point 1, "The mark", comes to add, after its sentence that a field it does not mark takes what its schema says, that where that schema admits a list of entries that are not mappings, and the field carries no mark of paths either, the list holds no items, runs or paths: content that gives one is still read against the schema, and the check asks the component's owner for attention (point 5).
+  - DEC-033 point 4, "A list field reads as a list", comes to add that a list of paths reads as the text that shows it, a path to a paragraph, as a list of ties and a top's pages read as no list (point 1).
+- **Read against this record, and left as they stand:** DEC-001 points 2, 4, 5 and 6; DEC-002 points 1, 3, 6 and 7; DEC-003 points 3, 6 and 7; DEC-005 points 8 and 13; DEC-009 points 5, 6 and 7; DEC-010 point 2; DEC-012 point 2; DEC-016 points 1 and 3; DEC-025 point 2; DEC-029 point 5; DEC-033 points 3 and 6; DEC-034 points 1 and 5; [visual-communication:DEC-068-focal-point-in-the-content] point 4. Among them:
+  - DEC-002 point 3's strict reading stands, since a path holds no key, and a field marked as holding paths takes no runs (point 1), so its sentence on a list of runs does not reach a list of paths.
+  - DEC-016 point 3 stands, since point 2 refuses the paths it refuses.
+  - DEC-068 point 4 stands, since the slot `documents` (point 3), like a slide's footer slot, is filled by each slide's own content: the documents are content, never frame, and rank among the rest of the slide, below its head, its focal point and its action.
+- **#3208 builds it,** once this record is accepted:
+  - the mark, a text part that shows a list of paths, and the slot with the deck's own drawing of it, in the foundations' version being built, with the deck's own description of its new slot and of how it draws it, and the check's findings (points 1 to 5)
+  - the capability's pages: `components.md`, the deck's slide with its new slot, the mark among a field's keys, and a text part that shows a list of paths; `checks.md`, the new findings' rows, and a list of paths among the lists no rule of ids reaches; `files.md`, a path's form among a content file's values, and a list of paths, which holds texts and no ids
+- **#3514 builds it in the capabilities deck,** once #3206 has landed: the deck names each slide's document in `documents`, in both languages, in place of its footer's line, and its brief comes to say so.
+- **The changeset** declares the change as the capability's page on the libraries it ships asks of a change to one of them, and of a change that adds a field ([visual-communication:DEC-013-shipped-library-releases] point 4, [visual-communication:DEC-014-own-library-needed-release] point 2).
+- **Left to later changes:** a label before the documents; a cover's, a figure's or a site page's documents; a place within a file, named as an anchor names a part (COR-050 point 2); which root a path in shared content names, decided with that content's format; a list of paths that reads as a list on the reader's side; a link to the document; whether the check holds the documents equal across languages; how the agent that translates carries a path.
+- **Revisit this record** if readers of a handed-out deck do not take the paths on a slide for the documents behind it, which asks for a label; if readers who do not see a slide miss that its paths are a list; if a project keeps the documents its pages rest on outside its repository; or once a content file becomes an artefact (DEC-002, Implications), to decide whether a slide's `documents` are read as its anchors.

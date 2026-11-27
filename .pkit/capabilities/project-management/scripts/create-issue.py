@@ -36,8 +36,45 @@ could not be checked. Neither refuses the filing nor changes the exit code.
 For board-substrate adopters (per DEC-019 +
 `schemas/mandatory-issue-state.yaml`), the new issue is also added to
 the configured Projects v2 board as the final step of filing. The
-default assignee is the resolved invoker identity per DEC-019's
-default_at_filing: filer.
+default assignee is the filer per DEC-019's default_at_filing: the user's
+account GitHub answers the credential acts as, or, under a credential that
+names no user's account, the person the agent works for, `PM_INVOKER_LOGIN`
+(DEC-076 point 3). Where neither names a person, a filing that names no
+`--assignee` refuses, saying why and how the session names one.
+
+`--board` is refused unless it names the configured board's own number, the
+two read as numbers, in every project (DEC-070, DEC-071): every issue belongs
+on the configured board, which every command but filing reads and writes
+alone. So it is refused where it names another board, and wherever no board is
+configured. One naming a number below 1, which no board has, is refused first,
+with a message of its own. Each refusal exits 2, before anything is written or
+asked and before any board is read, `--dry-run` included. One naming the
+configured board's own number goes on.
+
+Where the configuration declares a board and gives no number of 1 or more for
+the board, read as a number, such as a missing number, `null`, `0` or `""`, the
+filing has no board to add the issue to, so it is refused at the same point,
+exit 2, `--dry-run` included, naming `projects_v2_board_id` as the key to set
+(DEC-019).
+
+An issue owes its card from its filing, so before anything is written,
+`--dry-run` included, a filing in a project with a board reads the configured
+board ([pkit:ADR-096] point 4, "Before it"): the board's own read, with its
+Status field, through the board read seam. Where the board did not answer, the
+filing is refused, exit 3, in the seam's words with the way out. Where the map
+binds the state to the board, and the board answered with no single-select
+Status field, or no option for the state the issue is filed into, the filing is
+refused too, exit 1. Where the Status only mirrors the state, a missing field or
+option is one line once the issue is filed. That read is the one the first
+Status is written from, and it gives the `after_create_issue` hooks the board's
+node.
+
+Once the issue is filed, its card counts as added only where the board answers
+with the issue's card ([pkit:ADR-096] point 3). Where the card is not added, or,
+where the map binds the state to the board, its first Status is not written,
+the issue stays filed, the command says so leading with the filed issue, and it
+exits 5: the issue filed, a later step failed. A caller that reads the code,
+such as a loop filing many issues, reads 5 as the issue filed.
 
 With an instance id set (`set-instance`, DEC-035 point 1), the new issue is
 claimed for this clone right after it is filed, so the clone owns the arc it
@@ -47,6 +84,11 @@ claim that fails is a warning, and the issue stays filed. With no id set,
 nothing of this runs. In a project with a topology of seats, a clone in a
 planner's seat files with no owner, so the issue enters the shared pool, and a
 clone in any other seat claims what it files for its seat (DEC-059 point 7). A
+clone in a lead's seat files with no owner, under `--for-workers`, the work it
+leaves to its workers, so the work becomes ready for them, and claims only what
+it files for itself to build ([project-management:DEC-081-delegation-between-seats]
+point 3). A planner's seat files so without it. `--for-workers` from any other
+seat, or from no seat, is refused before anything is written. A
 clone that took a seat confirms it on the seat's state issue before anything is
 written, and the command refuses where it cannot (DEC-059 point 6).
 
@@ -73,16 +115,26 @@ a successfully created issue is also linked into feedback/change-request #N's
 script never reimplements the Tracked-by edit. The backbone verb owns the
 maintainer-side same-repo check; its refusal is surfaced verbatim. A link
 failure after a successful create never rolls the issue back — it warns
-loudly with the exact remediation command and exits 4.
+loudly with the exact remediation command and exits 4, or 5 where a write the
+filing requires failed beside it, naming each.
 
 Exit codes:
   0  issue created
   1  membership refusal, or this clone's seat could not be confirmed, or a
-     Task filed into a pool off a terminal without --yes
-  2  usage error / validation refusal
-  3  gh failure (auth, network, repo not found, ...)
-  4  issue created, but --from-report link failed (issue NOT rolled back;
-     remediation command printed)
+     Task filed into a pool off a terminal without --yes, or the board carries
+     the state and answered with no single-select Status field, or no option
+     for the state the issue is filed into (nothing filed)
+  2  usage error / validation refusal / an assignee refused, as a bot's account
+     or one GitHub did not confirm as a user's (DEC-079 point 1) / --for-workers
+     from a clone that holds neither a lead's nor a planner's seat (nothing filed)
+  3  gh failure (auth, network, repo not found, ...), or the board the filing
+     adds the issue to did not answer (nothing filed)
+  4  issue created, but --from-report link failed, and every write the filing
+     requires was made (issue NOT rolled back; remediation command printed)
+  5  issue created, but a later step its filing requires failed: its card was
+     not added to the board, or, where the board carries the state, its first
+     Status was not written. Taken too where the --from-report link failed
+     beside it, the message naming each (issue NOT rolled back)
 """
 
 from __future__ import annotations
@@ -92,6 +144,7 @@ import json
 import re
 import subprocess
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -101,8 +154,11 @@ from ruamel.yaml.error import YAMLError
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib import (
+    assignees,
     axis_carriage,
     axis_labels,
+    board_answer,
+    board_fields,
     board_status,
     body_parent_ref,
     body_rules,
@@ -111,6 +167,7 @@ from _lib import (
     containment,
     decision_ids,
     instance_claims,
+    missing_card,
     pools,
     provenance,
     session_guard,
@@ -126,7 +183,6 @@ from _lib.hooks import fire_hooks
 from _lib.membership import (
     CAPABILITY_NAME,
     check_membership,
-    format_unresolved,
     resolve_capability_root,
     resolve_invoker_identity,
 )
@@ -211,7 +267,21 @@ def main() -> int:
     parser.add_argument(
         "--assignee",
         default=None,
-        help="Assignee GitHub login. Defaults to the resolved invoker identity.",
+        help=(
+            "Assignee GitHub login. Defaults to the filer: the user's account the "
+            "credential acts as, or, under a credential that names no user's account, "
+            "the person PM_INVOKER_LOGIN names (DEC-076 point 3)."
+        ),
+    )
+    parser.add_argument(
+        "--for-workers",
+        action="store_true",
+        help=(
+            "From a lead's seat, file with no owner the work the lead leaves to its "
+            "workers, so it becomes ready for them; without it, a lead's seat claims "
+            "what it files (DEC-081 point 3). A planner's seat files so without it; "
+            "refused from any other seat."
+        ),
     )
     parser.add_argument(
         "--milestone",
@@ -243,8 +313,12 @@ def main() -> int:
         type=int,
         default=None,
         help=(
-            "Projects v2 board ID. Overrides the adopter's "
-            "`projects_v2_board_id` config for this invocation."
+            "Projects v2 board number, refused unless it names the configured "
+            "board, `projects_v2_board_id`: refused where it names another board "
+            "or a number below 1, and wherever no board is configured, since every "
+            "issue belongs on the configured board, which every command reads and "
+            "writes ([project-management:DEC-071-filing-only-configured-board]). "
+            "Leave it out to file onto the configured board."
         ),
     )
     parser.add_argument(
@@ -308,6 +382,42 @@ def main() -> int:
     if not membership.allowed:
         print(membership.refusal_message, file=sys.stderr)
         return 1
+
+    # The adopter's optional substrate-map (ADR-026 / DEC-036). None ⇒
+    # greenfield. Loaded before anything is asked, since the board a filing
+    # names is judged against it first.
+    substrate_map = axis_labels.load_substrate_map(capability_root)
+
+    # Board MEMBERSHIP, not carriage: every issue belongs on the configured board
+    # (DEC-019), whatever substrate carries its classification axes. This read of
+    # `has_projects_v2_board` is the flag's own job and must NOT be routed through
+    # the carriage accessor — doing so would silently drop the membership
+    # requirement for any board adopter who wrote a single label binding
+    # ([project-management:DEC-051-axis-carriage-activation], "board membership
+    # stays with the flag"). It judges the board option first, and then drives
+    # the add to the configured board below.
+    has_board = bool(config.get("has_projects_v2_board", False))
+
+    # A board option that does not name the configured board, in every project
+    # (DEC-070, DEC-071): refused before anything is written or asked, the
+    # foreign-repo question below included, and before any read of a board. It
+    # needs only the configuration, the map and the option, so `--dry-run` meets
+    # it too.
+    board_refusal = _board_option_refusal(
+        args.board, config, substrate_map, board_configured=has_board
+    )
+    if board_refusal is not None:
+        print(board_refusal, file=sys.stderr)
+        return 2
+
+    # A board declared with no number it can be read by, `0` and `""` among them,
+    # leaves the filing no board to add the issue to, which DEC-019 rejects: so it
+    # is refused at the same point, `--dry-run` too, rather than filed onto no
+    # board. A `--board` in that case met its own refusal above.
+    number_refusal = _board_number_refusal(config, board_configured=has_board)
+    if number_refusal is not None:
+        print(number_refusal, file=sys.stderr)
+        return 2
 
     # Foreign-repo mutation guard (COR-039 / ADR-034). Compares the cwd-derived
     # mutation target against the cd-invariant session anchor (CLAUDE_PROJECT_DIR);
@@ -387,11 +497,8 @@ def main() -> int:
             )
         return 2
 
-    # The adopter's optional substrate-map (ADR-026 / DEC-036). None ⇒
-    # greenfield. Loaded here (not just for label resolution below) because the
-    # hierarchy MODE it declares governs whether the parent-requiredness check
-    # just below gates or merely advises.
-    substrate_map = axis_labels.load_substrate_map(capability_root)
+    # The hierarchy MODE the substrate-map declares (loaded above) governs
+    # whether the parent-requiredness check just below gates or merely advises.
     hierarchy = axis_labels.hierarchy_disposition(substrate_map)
 
     # Validate parent type (if --parent given) / parent-REQUIREDNESS.
@@ -704,15 +811,23 @@ def main() -> int:
     # never refused. The backbone is asked only for a body that cites one.
     _warn_decision_ids(body, body_format)
 
-    # Resolve assignee: the account acting, by default. Where pkit cannot tell
-    # which that is, the refusal says why (#3162).
-    assignee = args.assignee or invoker.github_login
+    # Resolve assignee: the filer, by default, the person whose work this is
+    # (DEC-076 point 3). Where no person is named, the refusal says why, and
+    # how the session names one.
+    assignee = args.assignee or invoker.person
     if not assignee:
         print(
-            "error: could not resolve the default assignee: "
-            f"{format_unresolved(invoker.unresolved_cause)}. Pass --assignee explicitly.",
+            f"error: could not resolve the default assignee: {invoker.no_person()}. "
+            "Or pass --assignee.",
             file=sys.stderr,
         )
+        return 2
+    # An assignee names a person: a bot's account is never one, and a bare login
+    # is one only where GitHub answers that it names a user's account (DEC-079
+    # point 1). A precondition, never a finding, so `--force` does not reach it.
+    refused = assignees.refusal(assignee, invoker, config)
+    if refused:
+        print(f"error: {refused}", file=sys.stderr)
         return 2
 
     # Labels. Axis-labels are RESOLVED through the seam's write-path resolver
@@ -773,28 +888,32 @@ def main() -> int:
             config,
             dry_run=args.dry_run,
             login_cause=invoker.unresolved_cause,
+            credential=instance_claims.credential_of(invoker),
         )
     except instance_claims.Unconfirmed as exc:
         return instance_claims.say_unconfirmed("create-issue", None, exc)
-    if clone is not None:
-        print(f"  ownership:  {instance_claims.claim_plan(clone, assignee, filing=True)}")
+    if args.for_workers:
+        refusal = instance_claims.for_workers_refusal(clone)
+        if refusal is not None:
+            print(f"[refused] create-issue: {refusal}; nothing was filed.", file=sys.stderr)
+            return 2
+    if clone is not None and not clone.quiet:
+        plan = instance_claims.claim_plan(
+            clone, assignee, filing=True, for_workers=args.for_workers
+        )
+        print(f"  ownership:  {plan}")
     if args.from_report is not None:
         print(
             f"  from-report: #{args.from_report}  "
             "(will link the new issue into its Tracked by via `pkit report link`)"
         )
-    # Board MEMBERSHIP, not carriage: every issue belongs on the configured board
-    # (DEC-019), whatever substrate carries its classification axes. This read of
-    # `has_projects_v2_board` is the flag's own job and must NOT be routed through
-    # the carriage accessor — doing so would silently drop the membership
-    # requirement for any board adopter who wrote a single label binding
-    # ([project-management:DEC-051-axis-carriage-activation], "board membership
-    # stays with the flag").
-    has_board = bool(config.get("has_projects_v2_board", False))
-    board_id = args.board if args.board is not None else config.get("projects_v2_board_id")
+    # The board flag read above, for membership. A `--board` still standing
+    # names the configured board, so the filing reads and writes that board
+    # alone (DEC-071).
+    board_id = config.get("projects_v2_board_id")
     if has_board:
         print(f"  board:      v2/{board_id}  (auto-add per DEC-019)")
-        role = board_status.role(dict(config, projects_v2_board_id=board_id), substrate_map)
+        role = board_status.role(config, substrate_map)
         if role == "projection":
             print("  status:     the card's Status set to the issue's state (DEC-006)")
         elif role == "source":
@@ -802,6 +921,25 @@ def main() -> int:
                 "  status:     the card's Status set to the state the issue is filed into, "
                 "the state's source (DEC-062 point 5)"
             )
+
+    # The board the issue is added to, read before anything is written, so a
+    # board that did not answer refuses the filing rather than leave an issue
+    # with no card ([pkit:ADR-096] point 4, "Before it"). A project with no
+    # board makes no call (ADR-053 point 3); one with a board has its number,
+    # since a board with none was refused above.
+    workflow = _read_yaml(capability_root / "schemas" / "workflow.yaml", yaml_loader)
+    board_first: BoardFirst | None = None
+    if has_board:
+        board_first = _read_board_first(
+            config,
+            substrate_map,
+            workflow,
+            milestone_title=milestone_title,
+            labels=labels,
+        )
+        if board_first.refusal is not None:
+            print(f"[refused] nothing was filed: {board_first.refusal}", file=sys.stderr)
+            return board_first.code
 
     if args.dry_run:
         print("\n[dry-run] gh would be invoked; nothing written.")
@@ -872,9 +1010,12 @@ def main() -> int:
                 file=sys.stderr,
             )
         # Claim the filed issue for this clone (DEC-035 point 3). An issue
-        # filed for another person is not this clone's (DEC-035 point 5), and
-        # a planner's seat files with no owner (DEC-059 point 7).
-        if clone is not None and instance_claims.claims_at_filing(clone, assignee):
+        # filed for another person is not this clone's (DEC-035 point 5), a
+        # planner's seat files with no owner (DEC-059 point 7), and so does a
+        # lead's, for its workers (DEC-081 point 3).
+        if clone is not None and instance_claims.claims_at_filing(
+            clone, assignee, for_workers=args.for_workers
+        ):
             instance_claims.say(instance_claims.claim(new_issue_number, clone, config))
     containment = axis_labels.containment_mode(substrate_map)
     if (
@@ -931,44 +1072,36 @@ def main() -> int:
 
     # Auto-add to board for board-substrate adopters (per DEC-019).
     #
-    # Capture the created board-item node id (and resolve the project node id)
-    # so the `after_create_issue` `set-board-field` hook can seed the non-label
-    # field default onto THIS new item (DEC-037 §3 — the non-label per-create
-    # default; the same field write the one-time back-fill drives over the
-    # corpus). Without these two ids the hook skips ("no board-item id in
-    # context"), so the Projects-v2 field default would never seed on create.
-    # The milestone default (`assign-milestone`) needs only the issue number
-    # and seeds regardless.
+    # Capture the created board-item node id so the `after_create_issue`
+    # `set-board-field` hook can seed the non-label field default onto THIS new
+    # item (DEC-037 §3 — the non-label per-create default; the same field write
+    # the one-time back-fill drives over the corpus), with the board's node from
+    # the read made before the filing. Without the two ids the hook skips ("no
+    # board-item id in context"), so the Projects-v2 field default would never
+    # seed on create. The milestone default (`assign-milestone`) needs only the
+    # issue number and seeds regardless.
+    #
+    # The card, and the first Status where the board carries the state, are
+    # writes the filing requires ([pkit:ADR-096] point 4): each one not made is
+    # named, and the command exits 5 below, the issue standing.
+    later_failed: list[str] = []
     board_item_id: str | None = None
-    project_node_id: str | None = None
-    if has_board and board_id:
-        board_item_id = _gh_add_to_board(board_id, issue_url, config)
+    project_node_id = board_first.project_id if board_first is not None else None
+    if board_first is not None:
+        board_item_id, why = _gh_add_to_board(board_id, issue_url, config, owner=board_first.owner)
         if board_item_id is None:
-            print(
-                f"[warn] issue created but failed to add to board v2/{board_id}.",
-                file=sys.stderr,
+            later_failed.append(
+                _add_not_made(
+                    board_first,
+                    why,
+                    number=new_issue_number,
+                    workflow=workflow,
+                )
             )
-            if board_status.role(config, substrate_map) == "source":
-                print(
-                    "  The board carries the state, so the issue's position cannot be read "
-                    "until it has a card and a Status: add it to the board and set its "
-                    "Status (DEC-051 point 6).",
-                    file=sys.stderr,
-                )
-        else:
-            owner = _owner_from_issue_url(issue_url)
-            project_node_id = _resolve_project_node_id(board_id, owner, config)
-            if new_issue_number is not None:
-                _set_first_status(
-                    new_issue_number,
-                    board_item_id,
-                    owner=owner,
-                    board_config=dict(config, projects_v2_board_id=board_id),
-                    substrate_map=substrate_map,
-                    workflow=_read_yaml(capability_root / "schemas" / "workflow.yaml", yaml_loader),
-                    milestone_title=milestone_title,
-                    labels=labels,
-                )
+        elif new_issue_number is not None:
+            failure = _set_first_status(new_issue_number, board_item_id, board_first, workflow)
+            if failure is not None:
+                later_failed.append(failure)
 
     # Fire lifecycle hooks per DEC-024. Report-and-continue contract:
     # hook failures don't propagate to this script's exit code. The board-item
@@ -1009,10 +1142,165 @@ def main() -> int:
     # maintainer-side same-repo gate; its refusal (or any other failure) is
     # surfaced verbatim, with the exact remediation command, and maps to exit
     # 4 — the issue itself is never rolled back.
-    if args.from_report is not None:
-        return _link_from_report(args.from_report, new_issue_number)
+    link_code = (
+        _link_from_report(args.from_report, new_issue_number) if args.from_report is not None else 0
+    )
+    if later_failed:
+        # A write the filing requires was not made: the issue stands, and the
+        # code says so, apart from the link's own (DEC-048 point 4, as
+        # [pkit:ADR-096] point 4 narrows it). Where the link failed beside it,
+        # both are named, and this code is taken.
+        steps = list(later_failed)
+        if link_code:
+            steps.append(f"its link into report #{args.from_report}'s Tracked by failed (above)")
+        print(
+            f"\n[failed] {issue_url} is filed, and a later step its filing requires "
+            f"failed: {'; '.join(steps)}. The issue stands: finish the step named, and do "
+            "not file it again.",
+            file=sys.stderr,
+        )
+        return 5
+    return link_code
 
-    return 0
+
+#: The record a refusal of `--board` cites; one that rests on the board holding
+#: the state cites DEC-070 instead.
+_ONLY_CONFIGURED_BOARD = "[project-management:DEC-071-filing-only-configured-board]"
+
+
+def _board_option_refusal(
+    board: int | None,
+    config: dict[str, Any],
+    substrate_map: axis_labels.SubstrateMap | None,
+    *,
+    board_configured: bool,
+) -> str | None:
+    """Why a filing whose `--board` is ``board`` is refused, or None where it
+    goes on (DEC-071).
+
+    Every issue belongs on the configured board, and every command but filing
+    reads and writes that board alone, so ``board`` goes on only where it is the
+    configured board's own number, the two read as numbers. A number below 1,
+    which no board has, is refused first, whatever the project's case, before
+    ``board`` is compared with the configured board. Every other refusal gives
+    the reason of the project's own case: no board configured, where
+    ``board_configured`` is false, a board configured with no number, the board
+    holding the state ([project-management:DEC-070-filing-another-board]), or a
+    board that does not. No I/O.
+    """
+    if board is None:
+        return None
+    if board < 1:
+        return (
+            f"error: --board {board} is refused: no board has the number {board}, since "
+            f"a board's number is 1 or more ({_ONLY_CONFIGURED_BOARD}). Nothing was filed.\n"
+            "  → Leave --board out to file the issue as project/config.yaml has it."
+        )
+    if not board_configured:
+        return (
+            f"error: --board {board} is refused: project/config.yaml configures no board "
+            "(`has_projects_v2_board`), so a filing adds the issue to no board "
+            f"({_ONLY_CONFIGURED_BOARD}). Nothing was filed.\n"
+            "  → To file the issue, leave --board out.\n"
+            f"  → To have it on board {board}, file it, then {_card_added_after(board)}."
+        )
+    configured = _configured_board_number(config)
+    if configured == board:
+        return None
+    holds_state = board_status.role(config, substrate_map) == "source"
+    holds_state_reason = (
+        "the substrate map binds the state to the board, so every command reads an "
+        "open issue's position from its card on the configured board, and an issue "
+        f"filed onto board {board} would have a position no command reads "
+        "([project-management:DEC-070-filing-another-board]). Nothing was filed."
+    )
+    if configured is None:
+        reason = (
+            holds_state_reason
+            if holds_state
+            else (
+                "with no number for the configured board, every board a filing names "
+                f"is another ({_ONLY_CONFIGURED_BOARD}). Nothing was filed."
+            )
+        )
+        return (
+            f"error: --board {board} is refused: {reason}\n"
+            "  project/config.yaml declares a board (`has_projects_v2_board: true`) but "
+            f"{_no_board_number(config)}, so the filing has no board "
+            "to file onto. That is the fault to mend: set the number there; `pkit pm "
+            "pre-check` checks it."
+        )
+    if holds_state:
+        return (
+            f"error: --board {board} names a board other than the configured one, "
+            f"board {configured}, and is refused: {holds_state_reason}\n"
+            f"  → To file the issue onto board {configured}, leave --board out.\n"
+            f"  → To have it on board {board} too, file it, then {_card_added_after(board)}. "
+            "That card carries no position."
+        )
+    return (
+        f"error: --board {board} names a board other than the configured one, "
+        f"board {configured}, and is refused: every issue belongs on the configured "
+        "board, which every command reads and writes, so an issue filed onto board "
+        f"{board} would have no card where every command looks for one "
+        f"({_ONLY_CONFIGURED_BOARD}). Nothing was filed.\n"
+        f"  → To file the issue onto board {configured}, leave --board out.\n"
+        f"  → To have it on board {board} too, file it, then {_card_added_after(board)}. "
+        "That card is the project's own: no command reads or writes it."
+    )
+
+
+def _card_added_after(board: int) -> str:
+    """The way out a refusal names for an issue wanted on ``board``: a card added
+    there after filing, by the host's own means."""
+    return (
+        f"add a card there by GitHub's own means: `gh project item-add {board} "
+        "--owner <owner> --url <the issue's url>`"
+    )
+
+
+def _configured_board_number(config: dict[str, Any]) -> int | None:
+    """The configured board's number, read as a number, so `7` and `'7'` are one
+    board; None where the configuration gives none, or a value that is no board's
+    number, such as `0` or `""`, since a board's number is 1 or more."""
+    number = board_fields.board_number(config)
+    if number is None:
+        return None
+    try:
+        value = int(number)
+    except ValueError:
+        return None
+    return value if value >= 1 else None
+
+
+def _no_board_number(config: dict[str, Any]) -> str:
+    """What project/config.yaml gives for the number of the board it declares,
+    where that is no board's number, as the refusals say it."""
+    value = config.get("projects_v2_board_id")
+    if value is None:
+        return "gives no number for it (`projects_v2_board_id`)"
+    return (
+        f"gives it `projects_v2_board_id: {json.dumps(value, default=str)}`, which is "
+        "no board's number"
+    )
+
+
+def _board_number_refusal(config: dict[str, Any], *, board_configured: bool) -> str | None:
+    """Why a filing is refused where the configuration declares a board and gives
+    no number of 1 or more for the board, read as a number, or None where it gives one,
+    or declares no board. Every issue belongs on the configured board from its
+    filing ([project-management:DEC-019-mandatory-issue-state]), so a filing with
+    no board to add the issue to files nothing. No I/O."""
+    if not board_configured or _configured_board_number(config) is not None:
+        return None
+    return (
+        "error: project/config.yaml declares a board (`has_projects_v2_board: true`) but "
+        f"{_no_board_number(config)}, so the filing has no board to add the issue to, and "
+        "every issue belongs on the configured board from its filing "
+        "([project-management:DEC-019-mandatory-issue-state]). Nothing was filed.\n"
+        "  → Set `projects_v2_board_id: <N>` in project/config.yaml, where <N> is the "
+        "board's number from `gh project list`."
+    )
 
 
 def _link_from_report(report_n: int, new_issue_number: int | None) -> int:
@@ -1587,38 +1875,150 @@ def _gh_create_issue(
 def _owner_from_issue_url(issue_url: str) -> str | None:
     """Extract the `<owner>` segment from a github issue URL, or ``None``.
 
-    Both the board membership write (inside ``_gh_add_to_board``) and the
-    project-node-id resolution (``main`` → ``_resolve_project_node_id``) scope to
-    the issue's owner. They parse it independently at each site from the same
-    source URL, so the two agree by construction (pure regex over one input).
+    The board membership write (``_gh_add_to_board``) falls back to it where the
+    filing's read of the board named no owner.
     """
     m = re.match(r"https?://[^/]+/([^/]+)/", issue_url)
     return m.group(1) if m else None
 
 
-def _gh_add_to_board(board_id: int, issue_url: str, config: dict) -> str | None:
-    """Add an issue to a Projects v2 board via gh project item-add.
+@dataclass(frozen=True)
+class BoardFirst:
+    """What a filing read of the board before it filed ([pkit:ADR-096] point 4,
+    "Before it"): the board it adds to, ``config`` naming it, under ``owner``;
+    what its Status is to the project (``role``); the state its first Status
+    writes and the Status field read for it, carried to that write; and the
+    board's node, which the hooks are given. ``refusal`` is why the filing is
+    refused before anything is written, with its exit ``code``."""
 
-    The owner is derived from the issue URL (github.com/<owner>/<repo>/...).
+    config: dict[str, Any]
+    owner: str | None
+    role: board_status.Role | None
+    state: str | None = None
+    status: board_status.FieldRead | None = None
+    project_id: str | None = None
+    refusal: str | None = None
+    code: int = 0
 
-    Returns the created board *item* node id on success (so the
-    `after_create_issue` `set-board-field` hook can target the new item per
-    DEC-037 §3 — the non-label field default), or ``None`` on any failure.
-    The item id is captured here, at the one moment it is freshly known,
-    rather than re-resolved with a board-wide GraphQL scan (the way the
-    one-time back-fill must, since it has no fresh item to read).
+    @property
+    def board(self) -> str:
+        return board_status.board_name(self.config)
 
-    `gh project item-add --format json` returns the created item as
-    ``{"id": "<item-node-id>", ...}``; we read `.id` off that.
+
+def _first_state(
+    role: board_status.Role,
+    milestone_title: str | None,
+    labels: list[str],
+    substrate_map: axis_labels.SubstrateMap | None,
+) -> str:
+    """The state the new card's first Status writes (DEC-006).
+
+    Where the board's Status is a projection, the state is read as
+    `_lib/lifecycle_inference` reads an open issue's: Todo, or Backlog with a
+    milestone. Where the map binds the state to the board, the Status is its
+    source (DEC-062 point 5), and the issue is filed into Backlog with a
+    milestone, Todo otherwise, as the lifecycle reads a new issue's state with no
+    label: the write puts it there."""
+    milestone = {"title": milestone_title} if milestone_title else None
+    if role == "source":
+        return infer.filing_state(milestone)
+    return infer.infer_current_state(
+        state="open", milestone=milestone, labels=labels, substrate_map=substrate_map
+    )
+
+
+def _read_board_first(
+    board_config: dict,
+    substrate_map: axis_labels.SubstrateMap | None,
+    workflow: dict,
+    *,
+    milestone_title: str | None,
+    labels: list[str],
+) -> BoardFirst:
+    """Read the board the filing adds the issue to, before anything is written
+    ([pkit:ADR-096] point 4, "Before it").
+
+    The board's own read, through the board read seam, under the board's owner
+    (`board_fields.board_owner`), with its Status field where the project writes
+    one. Refuses, with the broken tool's code (3), where the board did not
+    answer. Where the map binds the state to the board, refuses (1) where the
+    board answered with no single-select Status field, or no option for the
+    state the issue is filed into, since its first Status is a write the filing
+    requires. Where the Status only mirrors the state, those go on."""
+    role = board_status.role(board_config, substrate_map)
+    owner = board_fields.board_owner(board_config)
+    board = board_status.board_name(board_config)
+
+    def unanswered(said: str | None) -> BoardFirst:
+        refusal = (
+            f"{board}, which the issue would be added to, did not answer: "
+            f"{said or 'no words given'}. An issue belongs on the board from its filing "
+            "(DEC-019), so it is not filed until the board answers."
+        )
+        return BoardFirst(board_config, owner, role, refusal=refusal, code=3)
+
+    if role is None:
+        fields = board_fields.read_fields(board_config, owner=owner)
+        if not fields.ok or not fields.project_id:
+            return unanswered(fields.error)
+        return BoardFirst(board_config, owner, role, project_id=fields.project_id)
+    read = board_status.read_status_field(board_config, repository_owner=owner)
+    if not read.answered:
+        return unanswered(read.error)
+    state = _first_state(role, milestone_title, labels, substrate_map)
+    if role == "source":
+        lacks = read.error if read.field is None else _lacks_option(read.field, workflow, state)
+        if lacks is not None:
+            refusal = (
+                f"the board carries the state, and {board} answered, but {lacks}, so the "
+                f"issue's first Status, {state!r}, could not be written (DEC-062 point 5). "
+                "Add it on the board, then file the issue."
+            )
+            return BoardFirst(board_config, owner, role, refusal=refusal, code=1)
+    return BoardFirst(
+        board_config, owner, role, state=state, status=read, project_id=read.project_id
+    )
+
+
+def _lacks_option(field: board_status.StatusField, workflow: dict, state: str) -> str | None:
+    """What the Status field lacks for ``state``: its option, or None where it
+    offers one."""
+    name = board_status.option_name(workflow, state)
+    if name is None:
+        return f"the state {state!r} has no Status option"
+    if board_fields.option_id(field.field, name) is None:
+        return f"its Status field has no {name!r} option"
+    return None
+
+
+def _gh_add_to_board(
+    board_id: int, issue_url: str, config: dict, *, owner: str | None = None
+) -> tuple[str | None, str]:
+    """Add an issue to a Projects v2 board via gh project item-add: the card's
+    id, or None and why the add is not made.
+
+    The board is found under ``owner``, the one the filing read it under, else
+    the owner the issue URL names (github.com/<owner>/<repo>/...); `gh.default_owner`
+    wins over either, as the `gh project` constructor splices it.
+
+    The card's id is returned so the `after_create_issue` `set-board-field`
+    hook can target the new item per DEC-037 §3 — the non-label field default.
+    The item id is captured here, at the one moment it is freshly known, rather
+    than re-resolved with a board-wide read (the way the one-time back-fill
+    must, since it has no fresh item to read).
+
+    The add counts as made only where the board answers with the issue's card
+    (`board_answer.added_card`, [pkit:ADR-096] point 3), whatever the tool's
+    exit status.
     """
-    owner = _owner_from_issue_url(issue_url)
+    owner = owner or _owner_from_issue_url(issue_url)
     if owner is None:
-        return None
+        return None, f"no owner was found for the board, from {issue_url} or the configuration"
     # Route through the `gh project` sole-constructor (#453): it threads the
     # configured `GH_HOST` (a raw `subprocess.run` lands on github.com and fails
     # `unknown owner type` on a GHES/org board, skipping the DEC-024 board-field
     # hook) and splices `--owner` — preferring `gh.default_owner`, else the
-    # URL-derived `owner` passed here.
+    # `owner` passed here.
     cmd = [
         "gh",
         "project",
@@ -1632,107 +2032,67 @@ def _gh_add_to_board(board_id: int, issue_url: str, config: dict) -> str | None:
     try:
         proc = gh_project_run(cmd, config, fallback_owner=owner, check=False)
     except FileNotFoundError:
-        return None
+        return None, "`gh` is not on PATH"
     if proc.returncode != 0:
-        return None
-    try:
-        payload = json.loads(proc.stdout)
-    except (json.JSONDecodeError, ValueError):
-        return None
-    item_id = payload.get("id") if isinstance(payload, dict) else None
-    return item_id if isinstance(item_id, str) and item_id else None
+        return None, " ".join((proc.stderr or "no stderr").split())
+    return board_answer.added_card(proc.stdout, issue_url)
+
+
+def _add_not_made(
+    board_first: BoardFirst,
+    why: str,
+    *,
+    number: int | None,
+    workflow: dict,
+) -> str:
+    """What a filing says of a card it could not add to the configured board, the
+    board's words ``why`` among it: the sync, run for the issue, and, where the
+    board holds the state, the Status the filing would have written, the state it
+    filed the issue into, for the person to set on the card
+    ([project-management:DEC-072-sync-gives-missing-cards] point 4). Where the
+    host's answer gave no issue number to run the sync for, it names the sync run
+    for the whole board, which adds this card with every other one missing, and
+    keeps the sync's rules that the host's own add would not: its switch, the
+    Status it writes where the board's Status is the projection, and its
+    read-back."""
+    said = f"its card was not added to {board_first.board}: {why}"
+    if number is None:
+        said += ". The host's answer to the filing gave no number for the issue"
+    holds = board_first.role == "source"
+    said += f". {missing_card.remedy(number, board_holds_state=holds)}"
+    if holds and board_first.state is not None:
+        name = board_status.option_name(workflow, board_first.state) or board_first.state
+        said += f": set it to {name!r}, the state the issue was filed into"
+    return said
 
 
 def _set_first_status(
-    number: int,
-    item_id: str,
-    *,
-    owner: str | None,
-    board_config: dict,
-    substrate_map: axis_labels.SubstrateMap | None,
-    workflow: dict,
-    milestone_title: str | None,
-    labels: list[str],
-) -> None:
-    """Set the new card's Status to the state the issue was filed in (DEC-006).
+    number: int, item_id: str, board_first: BoardFirst, workflow: dict
+) -> str | None:
+    """Set the new card's Status to the state the issue was filed in (DEC-006),
+    from the Status field the filing read before it filed, with no read of its
+    own ([pkit:ADR-096] point 4, "Before it").
 
-    Where the board's Status is a projection this project keeps — a board, and
-    the state carried off it (`_lib/board_status`) — the state is read as
-    `_lib/lifecycle_inference` reads an open issue's: Todo, or Backlog with a
-    milestone. Where the map binds the state to the board, the Status is its
-    source (DEC-062 point 5), and the issue is filed into Backlog with a
-    milestone, Todo otherwise, as the lifecycle reads a new issue's state with no
-    label: the write puts it there. Where a present map leaves the state out,
-    nothing is written. ``board_config`` names the board the card was added to,
-    `--board` included, and ``owner`` is the repository's owner, read from the
-    issue's url, by which the board is found where `gh.default_owner` is unset. A
-    write that fails is one line, and the issue stays filed."""
-    role = board_status.role(board_config, substrate_map)
-    if role is None:
-        return
-    milestone = {"title": milestone_title} if milestone_title else None
-    if role == "source":
-        state = infer.filing_state(milestone)
-    else:
-        state = infer.infer_current_state(
-            state="open", milestone=milestone, labels=labels, substrate_map=substrate_map
-        )
-    status = board_status.StatusBoard(board_config, workflow, repository_owner=owner)
-    written = status.write(number, state, item_id=item_id)
-    if role == "projection" or written.ok:
-        board_status.report(written, stands="the issue is filed")
-        return
-    print(
-        f"{written.line()}; the issue is filed, and the board carries its state, so its "
-        "position cannot be read until its card has a Status: set it on the board "
-        "(DEC-051 point 6)",
-        file=sys.stderr,
+    Where the board's Status is a projection this project keeps, a write that
+    fails is one line, and the issue stays filed: None. Where the map binds the
+    state to the board, the Status is its source, a write the filing requires:
+    a write that fails is returned, said, for the filing to exit with its code
+    for a later step failed. Where a present map leaves the state out, nothing
+    is written."""
+    if board_first.role is None or board_first.state is None:
+        return None
+    status = board_status.StatusBoard(
+        board_first.config, workflow, repository_owner=board_first.owner, field=board_first.status
     )
-
-
-def _resolve_project_node_id(board_id: int, owner: str | None, config: dict) -> str | None:
-    """Resolve the Projects-v2 *project* node id from the board NUMBER.
-
-    The `set-board-field` hook's field-value write needs the project's GraphQL
-    node id, but the adopter only declares the board *number*
-    (`projects_v2_board_id`). This resolves number → node id via `gh project
-    view --format json` (`.id`), the same read `back-fill.py`'s
-    `_resolve_project_node_id` and `pre-check` use — kept here as the per-create
-    half of that one resolution shape. A READ only; returns ``None`` when the
-    board does not resolve (the hook then skips with "no board configured"
-    rather than guessing).
-
-    Cache-first (#310): the board → node-id mapping is invariant, so the resolved
-    id is cached in adopter config as `projects_v2_node_id` at adoption time
-    (bootstrap / adopt-existing). When that cache is present this returns it and
-    SKIPS the per-create `gh project view` round-trip — the whole point of #310.
-    Only on a cache MISS does it live-resolve. Either path yields the SAME node id;
-    the cache just removes a synchronous read from the hot create path. (This
-    read-through does not write the cache back — population is the adoption
-    ceremonies' job, so a cache miss stays a live read without a create-time write.)
-    """
-    cached = config.get("projects_v2_node_id") if isinstance(config, dict) else None
-    if isinstance(cached, str) and cached:
-        return cached
-
-    # Route through the `gh project` sole-constructor (#453): a raw
-    # `subprocess.run` here would land on github.com and fail to resolve an
-    # org-owned board's node id on a GHES host. The constructor threads
-    # `GH_HOST` and splices `--owner` (prefer `gh.default_owner`, else the
-    # caller's URL-derived `owner`).
-    view_args = ["gh", "project", "view", str(board_id), "--format", "json"]
-    try:
-        proc = gh_project_run(view_args, config, fallback_owner=owner, check=False)
-    except FileNotFoundError:
+    written = status.write(number, board_first.state, item_id=item_id)
+    if board_first.role == "projection" or written.ok:
+        board_status.report(written, stands="the issue is filed")
         return None
-    if proc.returncode != 0:
-        return None
-    try:
-        payload = json.loads(proc.stdout)
-    except (json.JSONDecodeError, ValueError):
-        return None
-    node_id = payload.get("id") if isinstance(payload, dict) else None
-    return node_id if isinstance(node_id, str) and node_id else None
+    return (
+        f"its first Status was not set to {written.name!r}: {written.failure}; the board "
+        "carries the state, so its position cannot be read until its card has a Status: "
+        "set it on the board (DEC-051 point 6)"
+    )
 
 
 if __name__ == "__main__":

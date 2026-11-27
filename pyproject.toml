@@ -245,6 +245,9 @@ src = ["src", "tests"]
 # does the reader of an agent's tool access, which the runner loads (ADR-086).
 ".pkit/adapters/claude-code/run-agent.py" = "py39"
 ".pkit/agents/tool_access.py" = "py39"
+# The probe of messaging between sessions is its own hook, so it runs under the
+# same bare `python3` in every session it starts.
+".pkit/adapters/claude-code/probe-messaging.py" = "py39"
 
 [tool.ruff.lint]
 select = [

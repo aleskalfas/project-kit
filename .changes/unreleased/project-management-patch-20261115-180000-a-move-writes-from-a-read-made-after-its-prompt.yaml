@@ -1,0 +1,17 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `move-issue` writes only from where the issue stands when it writes. After
+  its preview and any prompt, and before it writes anything, the audit comment
+  included, it reads the issue again. Where the issue stands where the preview
+  placed it, the move is made as before, with no second prompt, its label edit
+  and journal entry worked out from that read. Where another run or a person
+  moved it in the meantime, nothing is written or journaled, and the move exits
+  1, naming where the issue now stands: run it again to preview the move from
+  there. Before, the move wrote from the read its preview made, which could
+  leave an issue two state labels, set a board's Status from a state the
+  lifecycle declares no such move from, or journal a step from a state the
+  issue had left. Where that later read cannot place the issue, the move is
+  refused as one whose first read could not place it, with the same exit code.

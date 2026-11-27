@@ -1,8 +1,8 @@
 # A piece's own file, `pieces/<piece>/piece.yaml` (visual-communication DEC-001 points 3
 # and 7, DEC-002 point 5, DEC-003 point 8, DEC-004 point 10): what the piece is, its
-# notations, its state, its modes, the pictures produced for it, the losses it accepts,
-# the place of its current copy, and its lock. A person writes it; a render rewrites only
-# `lock`, keeping every other byte.
+# notations, the media it is shown in (DEC-055 point 1), its state, its modes, the
+# pictures produced for it, the losses it accepts, the place of its current copy, and its
+# lock. A person writes it; a render rewrites only `lock`, keeping every other byte.
 #
 # The body below is the reference instance.
 
@@ -20,6 +20,9 @@ languages:
   - cs
 audience: Maintainers who review the capability's design.
 shown: In the capability's README, as a figure.
+media:
+  - screen
+  - paper
 explains: true
 exports:
   - svg

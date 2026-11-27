@@ -4351,9 +4351,11 @@ def _documents_within(folder: str, files: Sequence[str]) -> list[str]:
 
 # --- the reading document: `pkit friction artefacts` ---------------------
 
-#: The version of the document `artefacts_document` returns. A change a reader
-#: could break against — a key removed, renamed or given another meaning —
-#: raises it; a key added does not.
+#: The version of the document `artefacts_document` returns. It rises only when
+#: one of the document's own keys, or a value of one of its sets, goes, a break
+#: the changeset declares at `major`; never for a key or a value added. No key or
+#: value comes to mean anything else, in place or by coming back (ADR-097 points
+#: 4 and 5).
 ARTEFACTS_SCHEMA_VERSION = 1
 
 #: Why a declared place or held folder holds no files: a capability declaration

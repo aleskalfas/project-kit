@@ -29,11 +29,14 @@ view:
   begin: "<!-- pkit:state-view:begin -->"
   end: "<!-- pkit:state-view:end -->"
 
-# The event types a state issue's log holds.
+# The event types a state issue's log holds. A session's event records the
+# session that runs a seat's loop ([project-management:DEC-081-delegation-between-seats]
+# point 4, [project-management:DEC-084-seat-session-address] point 1).
 events:
   - "[audit-log:state-claim]"
   - "[audit-log:state-release]"
   - "[audit-log:state-force-release]"
+  - "[audit-log:state-session]"
 
 # Kinds of state. Lookup by id, the marker's `kind`.
 #

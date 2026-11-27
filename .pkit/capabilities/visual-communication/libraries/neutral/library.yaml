@@ -6,7 +6,7 @@ schema_version: 1
 # and at both contrasts. It gives the four sizes of the size axis `device`, desktop,
 # tablet, phone and projector, each but the desktop from a token file of its own: a site's
 # width on a tablet and a phone, and on a projector the larger type a slide is read in
-# from across a room, the deck's title and lead among it (DEC-021 point 2, DEC-022
+# from across a room, the lead and the deck's title among it (DEC-021 point 2, DEC-022
 # point 3). It names no library but the foundations, so it draws the starter at its
 # defaults (DEC-008, Implications), and it draws no layout, so each top draws its own
 # (DEC-009, Implications). It opens no role: opening one later breaks nothing, closing one

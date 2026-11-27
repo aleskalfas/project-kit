@@ -21,6 +21,12 @@ pages:
     main:
       use: starter/sections
       sections:
+        - id: head
+          use: starter/title
+          title: Rules everyone reads alike
+          lead: >-
+            A project keeps its rules where every person and every agent reads them, so all
+            of them work to the same words.
         - id: written
           head: Every rule in one place
           text: >-
@@ -40,38 +46,53 @@ pages:
   - id: ask
     layout: standard
     main:
-      use: starter/form
-      head: Ask for a review
-      fields:
-        - {id: name, label: Your name, value: Ada Lovelace}
-        - id: mail
-          state: error
-          label: Your e-mail address
-          value: ada.example.org
-          note: An address holds an @, such as ada@example.org.
-        - {id: what, label: What to review, note: "A record, a page or a picture."}
-      buttons:
-        - {id: send, label: Send the request}
-        - {id: draft, state: disabled, label: Save a draft}
+      use: starter/sections
+      sections:
+        - id: head
+          use: starter/title
+          title: Ask for a review
+          lead: Name what to review, and a reviewer reads it on the next working day.
+        - id: request
+          use: starter/form
+          head: Your request
+          fields:
+            - {id: name, label: Your name, value: Ada Lovelace}
+            - id: mail
+              state: error
+              label: Your e-mail address
+              value: ada.example.org
+              note: An address holds an @, such as ada@example.org.
+            - {id: what, label: What to review, note: "A record, a page or a picture."}
+          buttons:
+            - {id: send, label: Send the request}
+            - {id: draft, state: disabled, label: Save a draft}
 
   - id: releases
     layout: standard
     main:
-      use: starter/table
-      head: What each release brought
-      rows:
-        - id: names
-          cells:
-            - {id: version, span: narrow, head: No.}
-            - {id: what, head: What it brought}
-            - {id: who, span: wide, head: Who reads it}
-        - id: first
-          cells:
-            - {id: version, span: narrow, text: "1.0"}
-            - {id: what, text: "The cards, the lists and the arrows of a slide."}
-            - {id: who, span: wide, text: "Whoever draws a deck or a figure."}
-        - id: second
-          cells:
-            - {id: version, span: narrow, text: "1.1"}
-            - {id: what, text: "The parts of a web page, at every size."}
-            - {id: who, span: wide, text: "Whoever draws a site."}
+      use: starter/sections
+      sections:
+        - id: head
+          use: starter/title
+          fill: tint
+          title: Releases
+          lead: Each release adds parts, and every earlier one stays as it was released.
+        - id: brought
+          use: starter/table
+          head: What each release brought
+          rows:
+            - id: names
+              cells:
+                - {id: version, span: narrow, head: No.}
+                - {id: what, head: What it brought}
+                - {id: who, span: wide, head: Who reads it}
+            - id: first
+              cells:
+                - {id: version, span: narrow, text: "1.0"}
+                - {id: what, text: "The cards, the lists and the arrows of a slide."}
+                - {id: who, span: wide, text: "Whoever draws a deck or a figure."}
+            - id: second
+              cells:
+                - {id: version, span: narrow, text: "1.1"}
+                - {id: what, text: "The parts of a web page, at every size."}
+                - {id: who, span: wide, text: "Whoever draws a site."}

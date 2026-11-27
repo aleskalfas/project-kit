@@ -11,7 +11,10 @@
   past its bound and anything that is not a regular file, and skips the temp
   folder; what it refuses is a breach;
 - the marker refuses both forms before anything is read;
-- the run folder is removed on every exit, and a stale one first;
+- the run folder is removed on every exit, and holds the name the backbone gives
+  the run's process; a folder a killed run left is removed first only where the
+  backbone reads its process as ended, and kept where it runs or the backbone
+  cannot tell, one an earlier release wrote among them;
 - the exclusion is passed only where ADR-027's test holds;
 - the run root is refused when it is a link, writable by others, or inside a
   working tree;
@@ -42,10 +45,12 @@ import pytest
 from click.testing import CliRunner
 
 from project_kit import agent_confinement, agent_runs, permissions, provisioning
+from project_kit import recorded_processes as rp
 from project_kit.agent_confinement import names_git
 from project_kit.agent_runs import Request, run_agent
 from project_kit.cli import main
 from tests.adopter_repo import MakeAdopterRepo
+from tests.fake_processes import FakeSystem
 from tests.test_agent_runs import _drop_claude_code_runner, _register
 
 # The shared temp folders as the module finds them; the `project` fixture empties them.
@@ -54,6 +59,9 @@ _TEMP_FOLDERS = agent_confinement.temp_folders
 AGENT = "living-docs"
 RULES_OF = "project-management:fix-drift"
 EXCLUDED = ("pkit", "analysis", "propose")
+
+# The repository a process space is derived for, as its `origin` remote reads.
+REPOSITORY = "github.com/owner/repo"
 
 # A runner that records the request it got, where it ran from and what it is,
 # runs the test's `STUB_DO` with the request in hand, and answers a finished run,
@@ -822,30 +830,133 @@ def test_the_run_folder_is_removed_on_every_exit(
     assert project.run_folders() == []
 
 
-def test_a_stale_run_folder_is_removed_first(project: _Project) -> None:
-    gone = subprocess.run(
-        [sys.executable, "-c", "import os; print(os.getpid())"],
-        capture_output=True,
-        text=True,
-        check=True,
+def _asking(system: FakeSystem, repository: str = REPOSITORY) -> rp.Reader:
+    """The command that asks, in `system`'s process space derived for `repository`."""
+    return rp.Reader(rp.space_of(system.space(), repository), system.platform)
+
+
+def _named(system: FakeSystem, pid: int, asking: rp.Reader | None = None) -> str:
+    """The name the backbone gives the process `pid` in `system`."""
+    named = rp.name(pid, asking or _asking(system), system)
+    assert named.name is not None, named.why
+    return named.name
+
+
+def _left(root: Path, folder: str, name: str | None) -> Path:
+    """A run's folder a killed run left in `root`, its clone sealed as a run that took
+    away the write removing needs leaves it, holding `name` in its process file, and
+    no file where `name` is None."""
+    left = root / folder
+    (left / "clone" / "sealed").mkdir(parents=True)
+    (left / "clone").chmod(0o500)
+    if name is not None:
+        (left / agent_confinement.PROCESS_FILE).write_text(f"{name}\n", encoding="utf-8")
+    return left
+
+
+@pytest.mark.parametrize(
+    ("now", "removed"),
+    [
+        pytest.param({42: rp.Entry(True, "100.0")}, False, id="running"),
+        pytest.param({}, True, id="ended"),
+        pytest.param({42: rp.Entry(True, "200.0")}, True, id="its-id-another-process-took"),
+    ],
+)
+def test_a_left_run_folder_is_removed_only_where_its_process_reads_as_ended(
+    tmp_path: Path, now: dict[int, rp.Entry], removed: bool
+) -> None:
+    system = FakeSystem(entries={42: rp.Entry(True, "100.0")})
+    left = _left(tmp_path, "run-left", _named(system, 42))
+    elsewhere = _left(tmp_path / "elsewhere", "run-linked", _named(system, 42))
+    (tmp_path / "run-link").symlink_to(elsewhere)
+    system.entries = now
+
+    agent_confinement.remove_stale(tmp_path, _asking(system), system)
+
+    assert left.exists() is not removed
+    assert elsewhere.is_dir()  # a link is not followed, whatever its folder names
+
+
+def _in_another_repository(system: FakeSystem) -> rp.Reader:
+    """A command of another repository, whose process spaces are derived for it."""
+    return _asking(system, "github.com/someone/else")
+
+
+def _with_its_own_space_unread(system: FakeSystem) -> rp.Reader:
+    """A command that cannot read its own process space whole, as one inside the
+    macOS sandbox cannot."""
+    unread = rp.RawSpace("machine-1", None, None, False, True, "kern.bootsessionuuid: denied")
+    return rp.Reader(rp.space_of(unread, REPOSITORY), system.platform)
+
+
+@pytest.mark.parametrize(
+    "asking",
+    [
+        pytest.param(_in_another_repository, id="another-repositorys-run"),
+        pytest.param(_with_its_own_space_unread, id="its-own-space-unread"),
+    ],
+)
+def test_a_left_run_folder_is_kept_where_the_backbone_cannot_tell(
+    tmp_path: Path, asking: Callable[[FakeSystem], rp.Reader]
+) -> None:
+    system = FakeSystem(entries={42: rp.Entry(True, "100.0")})
+    name = _named(system, 42)
+    left = _left(tmp_path, "run-left", name)
+    system.entries.clear()  # ended, as a reader that could see it would read it
+    reading = asking(system)
+    assert rp.read([name], reading, system)[0].state == rp.CANNOT_TELL
+
+    agent_confinement.remove_stale(tmp_path, reading, system)
+
+    assert left.is_dir()
+
+
+def test_a_left_run_folder_an_earlier_release_wrote_is_kept(tmp_path: Path) -> None:
+    system = FakeSystem()  # no process holds the id the earlier record names
+    by_pid = _left(tmp_path, "run-43-killed", None)
+    (by_pid / "pid").write_text("43\n", encoding="utf-8")
+    _left(tmp_path, "run-43-unwritten", None)  # killed before its pid file
+    (tmp_path / "notes").mkdir()  # no run's
+    (answer,) = rp.read([None], _asking(system), system)
+    assert answer.state == rp.CANNOT_TELL
+
+    agent_confinement.remove_stale(tmp_path, _asking(system), system)
+
+    assert sorted(entry.name for entry in tmp_path.iterdir()) == [
+        "notes",
+        "run-43-killed",
+        "run-43-unwritten",
+    ]
+
+
+def test_a_confined_run_names_its_process_and_first_removes_a_clone_whose_process_ended(
+    project: _Project, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _git(project.root, "remote", "add", "origin", f"https://{REPOSITORY}")
+    system = FakeSystem(
+        entries={
+            os.getpid(): rp.Entry(True, "500.0"),
+            42: rp.Entry(True, "100.0"),
+            43: rp.Entry(True, "100.0"),
+        }
     )
-    dead = int(gone.stdout)
+    monkeypatch.setattr(rp, "this_system", lambda: system)
+    asking = agent_confinement.reader(project.root, system)
     project.run_root.mkdir(parents=True, mode=0o700)
-    stale = project.run_root / f"run-{dead}-killed"
-    (stale / "clone" / "sealed").mkdir(parents=True)
-    (stale / "pid").write_text(f"{dead}\n", encoding="utf-8")
-    (stale / "clone").chmod(0o500)  # its run took away the write that removing needs
-    unwritten = project.run_root / f"run-{dead}-unwritten"  # killed before its pid file
-    unwritten.mkdir()
-    live = project.run_root / f"run-{os.getppid()}-live"
-    live.mkdir()
-    (live / "pid").write_text(f"{os.getppid()}\n", encoding="utf-8")
-    foreign = project.run_root / "notes"
-    foreign.mkdir()
+    _left(project.run_root, "run-ended", _named(system, 43, asking))
+    _left(project.run_root, "run-running", _named(system, 42, asking))
+    del system.entries[43]
+    seen = project.record.with_name("process")
+    monkeypatch.setenv(
+        "STUB_DO", f"Path({str(seen)!r}).write_text((clone.parent / 'process').read_text())"
+    )
 
-    run_agent(project.root, _confined(project))
+    run = run_agent(project.root, _confined(project))
 
-    assert project.run_folders() == ["notes", f"run-{os.getppid()}-live"]
+    assert (run.ending, run.exit_code) == (agent_runs.FINISHED, 0)
+    recorded = seen.read_text(encoding="utf-8").strip()
+    assert rp.compare(recorded, _named(system, os.getpid(), asking)).answer == rp.ONE
+    assert project.run_folders() == ["run-running"]
 
 
 # --- the run root -----------------------------------------------------------------
