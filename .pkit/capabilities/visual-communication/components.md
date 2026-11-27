@@ -13,6 +13,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/formula.py
         - .pkit/capabilities/visual-communication/scripts/_lib/layout.py
         - .pkit/capabilities/visual-communication/scripts/_lib/scene.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/trunks.py
         - .pkit/capabilities/visual-communication/scripts/_lib/boxes.py
         - .pkit/capabilities/visual-communication/scripts/_lib/canvas.py
         - .pkit/capabilities/visual-communication/scripts/_lib/text.py
@@ -121,6 +122,12 @@ pkit:
         - visual-communication:DEC-038#5
         - visual-communication:DEC-038#6
         - visual-communication:DEC-038#7
+        - visual-communication:DEC-043#1
+        - visual-communication:DEC-043#2
+        - visual-communication:DEC-043#3
+        - visual-communication:DEC-043#4
+        - visual-communication:DEC-043#5
+        - visual-communication:DEC-043#6
         - visual-communication:DEC-046#3
         - visual-communication:DEC-056#1
         - visual-communication:DEC-056#2
@@ -621,7 +628,7 @@ A *formula* is text that starts with `=` and computes one number (DEC-005 point 
 | `:index`, `:count` | an item's place among the items its list draws, from 1, and how many it draws |
 | `:place`, `:places` | in a `cross-size` alone, the place of the item it sizes, from 1, and how many items its list draws ([Repeating over a list](#repeating-over-a-list-row-and-column)) |
 | `<value>` | a value of the component, by its name alone, such as `gap` |
-| `<part>.<exposed>….<measure>` | a measure of a part's frame, or of a part exposed below it |
+| `<part>.<exposed>….<measure>` | a measure of a part's frame, or of a part exposed below it, or of a line's own stretch |
 | `{<option>}.….<measure>` | a measure of the item, or the point, an option gives |
 | `{start}.<measure>`, `{end}.<measure>` | in a component that takes ends, a measure of an end it is given as a tie |
 
@@ -631,9 +638,10 @@ A *formula* is text that starts with `=` and computes one number (DEC-005 point 
 
 ### References
 
-A *path* reads one measure of a frame. A *frame* is an element's place and size.
+A *path* reads one measure of a frame, or of a line's own stretch. A *frame* is an element's place and size, and a line's frame is the least box that holds its route.
 
 - **The measures** are `x`, `y`, `width`, `height`, `right` (x plus width), `bottom` (y plus height), `center` (x plus half the width) and `middle` (y plus half the height). Each is in the frame of the component that reads it.
+- **The measures of a line's own stretch** are `own-center` and `own-middle`: across and down, the point halfway along the stretch of the line's route that it alone runs, measured along the route's points as the scene holds them, a round turn taken sharp (DEC-043 point 6). Only a tie's connector that shares a trunk shares a stretch ([Ties that share a trunk](#ties-that-share-a-trunk)). On every other line, its whole route is its own, so they read what `center` and `middle` read. Of what is no line, they are refused.
 - **The last step is always the measure.** `width.x` reads the `x` of a part named `width`. A name alone, with no measure, reads a value.
 - **The first step** is a part of the component itself. Each step below names a part that the component placed there exposes, one name a step. A component placed by `use` or `slot`, and an item, are read this way.
 - **A step into a list** names the `repeat` part, then the item: `<list>:first`, `<list>:last`, or `<list>[<id>]` by the item's id. `steps:first.x` reads the first item's place. A step below a list names an item first. Without one, `steps.height` reads the whole list's frame.
@@ -655,14 +663,14 @@ Each term is a number with no unit or a length (a power of length). The engine c
 A formula is refused with a message that names it and says why, such as "the formula `=:width - 6` subtracts a number with no unit (`6`) from a length (`:width`)". The engine finds these when it reads the component:
 
 - **It cannot be read:** it does not start with `=`, is empty, ends too early, or holds a sign or a term where none belongs. Or it breaks a rule of the grammar: a binary minus without its spaces, an engine name that does not exist, `min` or `max` with fewer than two arguments, `round` with other than one, or a path that ends in no measure.
-- **It reads what it may not:** a value, a part or an option the component lacks, an option that names an item of a list over which not exactly one part repeats, below where a step may reach, or `:place` or `:places` in any formula but a `cross-size`.
+- **It reads what it may not:** a value, a part or an option the component lacks, an option that names an item of a list over which not exactly one part repeats, below where a step may reach, `:place` or `:places` in any formula but a `cross-size`, or `own-center` or `own-middle` of a part of its own that is no line, of an item or of an end.
 - **It reads the size it gives:** a `cross-size` that reads its part's size across the line where the part gives none, itself or through a named value, as a loop (DEC-038 point 7).
 - **Its dimensions disagree,** or it gives another dimension than its key needs.
 - **It reads a role** that has no value under the brand, a length in a unit other than `px`, or a role that is neither a length nor a number. A role has none where no library the piece locks declares it, or where it is a library's role that neither the brand nor its chain of defaults gives a value ([`roles.yaml`](files.md#rolesyaml)). A part reads no value from a picture role, whether the brand gives it a file or not ([Picture roles](files.md#picture-roles)). A library's role with no value, a component token among them, is found at the piece's lock, not in the component. Where the brand, or a base below it, names the library, the part takes no finding: that brand's `library-role-missing`, or its library's own finding where a default does not hold, reports it.
 
 Beside a formula, it refuses then a `cross-size` on a part whose items are pages, and a `stretch` written beside a `cross-size` that gives a size, as a second writer of the size ([Repeating over a list](#repeating-over-a-list-row-and-column)). It judges that loop and that `stretch` for each set of options, sizes and `:as` that holds together, so a pair only some options would draw is found in the library's own check.
 
-It finds these when it computes the scene: a division by zero, `:index` or `:count` in a component that is no item, a path to an exposed part, a point, an item or an end that is missing, and a loop, but for the loop through a `cross-size`'s own part, which it found when it read the component. A value that cannot be computed is zero. The check reports each problem as a finding (*checks*).
+It finds these when it computes the scene: a division by zero, `:index` or `:count` in a component that is no item, a path to an exposed part, a point, an item or an end that is missing, `own-center` or `own-middle` of an exposed part that is no line, and a loop, but for the loop through a `cross-size`'s own part, which it found when it read the component. A value that cannot be computed is zero. The check reports each problem as a finding (*checks*).
 
 ## Layout operators and drawing primitives
 
@@ -779,9 +787,9 @@ A *tie* is an item that its pattern draws as a connector between two other items
 - **Reading an end.** A formula reads an end as `{start}` or `{end}`, then a measure, in the tie's own frame. Nothing below an end may be read, since an end names no part.
 - **The connector tool** is a `line` part that gives `connect` in place of its ends: `straight`, or `corners`, or a switch. It runs from the start to the end, and never around anything (DEC-005 point 2).
 - **Where it meets an end.** It leaves each end's frame by the side that faces the other end. That is the left or the right side where the two frames lie further apart across than down, else the top or the bottom.
-- **Several ties on one side** of one item spread evenly along it. They are ordered by where the centres of their other ends lie along that side, then as their lists hold them.
+- **Several ties on one side** of one item spread evenly along it. They are ordered by where the centres of their other ends lie along that side, then as their lists hold them. A group of ties that share a trunk counts as one of them ([Ties that share a trunk](#ties-that-share-a-trunk)).
 - **A point.** A tie that names a point ends at that point, which its item's component exposes ([Exposes](#exposes)). One that names a point its item does not expose, as of a picture file, is left out and reported.
-- **With corners,** the connector leaves and meets each end square to its side, and turns twice, halfway between them. Where the two ends lie in one line, it is straight.
+- **With corners,** the connector leaves and meets each end square to its side, and turns twice, halfway between them, unless it branches off a trunk. Where the two ends lie in one line, it is straight.
 - **Round turns.** A connector's `rx`, a length, is the radius its turns are drawn round at. Each turn is an arc of that radius, which leaves one leg and meets the next where it touches them. With no `rx`, or 0, each turn is a sharp corner, as is a turn that goes straight on.
   - **A radius that does not fit** is reduced to fit, and never refused: a turn takes at most half the shorter of its two legs, so two turns on one leg never cross. A leg that ends in an arrowhead counts to the head's base, where the line stops ([Primitives](#primitives)).
   - **Who fits it.** The scene holds `rx` as the part gives it, and a renderer fits each turn to its legs as it draws the line.
@@ -820,6 +828,29 @@ links:
     to:
       item: steps[note]
 ```
+
+#### Ties that share a trunk
+
+The part that draws a list of ties may name one of the list's end fields its *trunk end*, with `trunk` (DEC-043 point 1). The ties of that list that meet one side of an item there, and draw alike, then meet it at one point. One of them, the *trunk*, runs as any connector with corners does, and each other, a *branch*, runs along the trunk's first leg and leaves it with a turn of its own. Without `trunk`, nothing changes. A pattern whose ties share a trunk where they meet the item they point to:
+
+```yaml
+parts:
+  links:
+    repeat: links
+    draw: piece/arrow
+    trunk: to
+```
+
+- **Fixed in the part.** `trunk` names one of the list's two end fields, never a switch. Each drawing declares its own, so a brand's drawing whose part declares none draws its ties spread. Where `trunk` names neither end field, as after a top renamed them, or the part repeats over no list of ties, it is refused, and the ties spread.
+- **A group.** The ties of the list that meet one side of one item at their trunk end form a *group* where all of them draw alike, each draws with corners, and none reads a line's frame or own stretch in its radius, its stroke width or its arrowheads, as its formulas show. They *draw alike* where they take one component, the same options, the same state, the same stroke widths and arrowheads, and the same paints as the scene holds them, a role or a step of an order. Where a component draws several connector parts, the tie draws with corners only where each of them does, and takes their greatest radius and stroke width and the longest arrowhead at each end. A tie whose trunk end names a point joins no group. Where the ties of a side form no group, each meets the side at a point of its own, and the check states why, unless all of them are straight and alike.
+- **One point.** A group counts as one end among the side's ends, placed by the middle of the range its ties' other ends' centres cover along the side, then by its first tie in the ties' order. Two lists may each have a group on one side.
+- **The trunk and its branches.** A tie *reaches* as far as its meeting point with its other end lies from the group's point, along the side. The tie that reaches least far, the first in the ties' order where two reach as far, is the trunk. Each other is a branch: it leaves the trunk's first leg at its *junction*, turns there, runs its middle leg to the level of its meeting point with its other end, and turns once more into its last leg, which meets that end square to its side. The branch that reaches farthest leaves nearest the item.
+- **The lengths.** A group's *least leg* is twice the greatest radius of its ties, and its *least gap* that radius, neither less than twice their stroke width. The junctions lie on the trunk's first leg, from the arrowhead's length at the group's point plus the least leg, to the least gap short of the trunk's first turn, or of its other end where it turns nowhere. Neighbouring junctions lie at least the least gap apart. A branch's junction lies at least the least leg, plus an arrowhead it ends in there, short of its meeting point with its other end, along the first leg. So each leg beside a branch's turns is at least the least leg long, and each turn takes its radius whole.
+- **Where the junctions lie.** The junctions and the end of the trunk's first leg split that leg into equal parts at the junctions' *even places*. Where every even place keeps the lengths above, the junctions take them. Otherwise they take the one set of places that keeps them whose distances from the even places, squared, add up least: neighbours that would fall out of order are pooled at their even places' mean, held within the lengths, until none does. No junction of that set could come nearer its even place without another going farther from its own. Where no places keep the lengths, the group has no room.
+- **Each tie whole.** Each tie stays a line of its own from end to end, with its own trace, paints, arrowheads, state and concept. Its route is in the scene's points, as every connector's is, so a renderer draws the shared stretch once for each tie, and the scene holds nothing new.
+- **A crossing.** Two ties cross where a leg of one passes across a leg of the other, a touch included, or runs side by side with it nearer than the greater of their least gaps, on one line included. A tie's least gap is its radius, none where it turns nowhere, never less than twice its stroke width; a tie whose radius or stroke width reads a line's frame has none. Legs are read from the route's points as the scene holds them, a round turn taken sharp, and lengths are compared within the scene's resolution, 1/100 px. The stretch two ties of a group share, the junction where one leaves the other, and a point where both end are no crossing. Two other ties of one instance that cross with the groups drawn as declared add their crossing where, with every group spread, they cross nowhere, fewer times, or only pass across where the declared routes run them side by side. Each group on a side either of them meets adds it.
+- **What its component draws beside its line.** A tie's *own stretch* runs from its junction to its other end, the trunk's from its group's last junction; a line that shares nothing has its whole length as its own. A part placed by `own-center` and `own-middle`, its frame centred on the point they read, does not fit where any part of its frame lies on the stretch its tie shares, or its centre lies within half a stroke width of another tie of the group. A part whose frame holds its tie's meeting point with an end is left out where each tie of the group draws the same part there. The engine reads a part's frame in a round from the round's routes, and keeps nothing of it. A part placed otherwise that stands so is its component's fault, and is found (*checks*, `trunk-part`).
+- **Drawn clear, or spread, in rounds.** A group cannot be drawn clear where it has no room, where a branch's middle leg is shorter than the least leg, where two of its ties cross, where it adds a crossing, or where a part placed by the measures does not fit. The engine judges every group an instance draws at once. Each round places the meeting points with the groups still drawn as declared, and lays each group. Where a group has no room or a short middle leg, its routes cannot be drawn, so each such group is drawn spread, and the next round begins. Otherwise the round judges the crossings and the parts. Each group that cannot be drawn clear is drawn spread, its ties meeting the side at points of their own, and stated (*checks*, `trunk-spread`), and is judged no more. The next round judges the rest anew, until a round finds none.
 
 ### What an element asks for, and what it gets
 

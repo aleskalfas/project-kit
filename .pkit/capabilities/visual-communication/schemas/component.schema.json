@@ -1818,6 +1818,10 @@
         "column": {
           "$ref": "#/$defs/operator"
         },
+        "trunk": {
+          "description": "Over a list of ties, the end field at which the ties that meet one side of an item, and draw alike, share one meeting point and branch off one trunk (DEC-043 point 1): one of the list's two end fields, never a switch.",
+          "$ref": "defs.schema.json#/$defs/name"
+        },
         "when": {
           "$ref": "#/$defs/when"
         },
