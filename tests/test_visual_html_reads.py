@@ -263,6 +263,18 @@ def test_a_capture_finds_a_tallied_span_by_its_file_its_text_its_line_and_its_pl
     assert capture.files() == [reads.FILE]
 
 
+def test_a_reading_gives_each_span_of_a_text_in_order_and_none_for_one_no_tally_read() -> None:
+    capture = reads.Capture()
+    capture.read(reads.FILE, document())
+    capture.tallied(reads.FILE, CLIP, 2.0, ASKED, COUNTED, INKED)
+    [reading] = capture.of(reads.FILE)
+    [(end, unread), (stop, read)] = reading.spots_of("probe-0/0-0")
+    assert (end.characters, end.at, unread) == ("end", 0, None)
+    assert (stop.characters, stop.at) == (".", 1)
+    assert read is reading.spot("probe-0/0-0", 0, 1)
+    assert reading.spots_of("another") == []
+
+
 def test_a_capture_keeps_a_reading_for_each_emulation_named_by_the_colours_it_read_in() -> None:
     capture = reads.Capture()
     for palette in ("light", "dark"):
@@ -424,6 +436,17 @@ def test_the_deck_names_a_cause_by_the_sliver_or_by_an_island_the_cause_takes() 
     assert entries[1].share == 0.5
     stroke = spot({(5, 5): (255, 0), (5, 6): (255, 255)}, {"strong": 2, "past": 0, "hidden": 1})
     assert reads.entries_of(viewing_tool, viewing_browser, stroke, "l") == []
+
+
+def test_a_span_with_no_strong_ink_takes_the_share_of_its_counted_ink_the_cause_loses() -> None:
+    """A faint dot of 155 hidden whole, a lighter pixel of 225 hidden beside it, which is no
+    counted ink, and a faint pixel apart that shows: the cover takes the dot's island, and its
+    share is one of the span's two counted pixels."""
+    pixels = {(2, 2): (100, 0), (2, 3): (30, 0), (8, 8): (100, 100)}
+    faint = spot(pixels, {"strong": 0, "past": 0, "hidden": 0})
+    [entry] = reads.entries_of(viewing_tool, viewing_browser, faint, "ż")
+    assert (entry.why, entry.sliver, entry.island) == ("covered", False, True)
+    assert entry.share == 0.5
 
 
 def test_the_planted_file_in_a_dark_key_names_the_dark_scheme_alone() -> None:

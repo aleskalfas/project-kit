@@ -66,9 +66,10 @@ The commands:
   least graze, the first step that hides a strong pixel wholly, how often each names it.
 - **planted.** At each scale, the planted file as each start's first read draws it, light and
   in each forced palette, and the same file in a dark key, its scheme dark, drawn as the file a
-  look draws. It prints the edge control and the háček plant in each: the strong ink the box
-  hid against the sliver, the counted ink it hid wholly, and whether DEC-045's threshold and
-  its measure would name it.
+  look draws. It prints each span of the háček plant and of the plants the read leaves
+  unnamed in each (`PLANTED`): the strong ink the page hid against the sliver, the counted ink
+  it hid wholly, and whether DEC-045's threshold and its measure would name it, or that the
+  pre-filter passed over it.
 - **deck.** One look of `PIECE` (the showcase deck, `showcase`, by default) through the HTML
   renderer, in each of its keys and its forced palettes, in its source language or each
   `--language`, the reads as built. For each file and palette it prints the spans the read
@@ -365,6 +366,15 @@ class Reading:
             if (placed.text, placed.line, placed.at) == (text, line, at):
                 return self.spots.get(index)
         return None
+
+    def spots_of(self, text: str) -> list[tuple[Placed, Spot | None]]:
+        """Each span of the text `text`, in the document's order, with the span a tally read of
+        it, or none where no tally read it, as where the pre-filter passed over it."""
+        return [
+            (placed, self.spots.get(index))
+            for index, placed in sorted(self.placed.items())
+            if placed.text == text
+        ]
 
 
 @dataclass
@@ -864,9 +874,18 @@ def palettes_of(every: Sequence[Any]) -> list[str]:
     return list(dict.fromkeys(each.palette for each in every))
 
 
-#: The planted file's plants the summary of each start reads (DEC-037 point 5): the edge
-#: control, which the read leaves unnamed, and the háček plant, which it names.
-PLANTED = ("edge-control", "hacek-under-a-box")
+#: The planted file's plants the summary of each start reads (DEC-037 point 5): those the read
+#: leaves unnamed, the edge control, the text under a translucent fill, the text over another,
+#: the text in the colour of its ground and, in a start that forces its colours, the text left
+#: to forcing; and the háček plant, which it names.
+PLANTED = (
+    "edge-control",
+    "under-a-translucent-fill",
+    "over-another-text",
+    "colour-of-its-ground",
+    "no-paint-forced",
+    "hacek-under-a-box",
+)
 
 #: The file the planted file is written to, in a dark key, by `planted`.
 PLANTED_DARK = "planted.dark.html"
@@ -875,10 +894,12 @@ PLANTED_DARK = "planted.dark.html"
 def planted_lines(
     tool: ModuleType, browser: ModuleType, scale: float, capture: Capture
 ) -> list[str]:
-    """The planted file's edge control and háček plant at `scale`, in each reading of the
-    planted file `capture` holds, and of it in a dark key: the em the read takes, the strong
-    pixels the box hid against the sliver, the counted pixels it hid wholly, and whether
-    DEC-045's threshold and its measure of islands would name each."""
+    """Each span of the planted file's `PLANTED` at `scale`, in each reading of the planted file
+    `capture` holds, and of it in a dark key: the em the read takes, the strong pixels the page
+    hid against the sliver, the counted pixels it hid wholly, and whether DEC-045's threshold
+    and its measure of islands would name each. A span the pre-filter passed over is not
+    tallied, and a plant the file does not hold, as the text left to forcing outside a forced
+    start, has no line."""
     lines = []
     for file in (browser.PLANTED_FILE, browser.PLANTED_FORCED_FILE, PLANTED_DARK):
         for reading in capture.of(file):
@@ -886,11 +907,13 @@ def planted_lines(
                 continue
             where = "in a dark key, as a look's file" if file == PLANTED_DARK else "first read"
             for text in PLANTED:
-                spot = reading.spot(text)
-                if spot is None:
-                    lines.append(f"  {text} at scale {scale:g}, {reading.palette}: not tallied")
-                    continue
-                lines.append(f"  {planted_line(tool, spot, text, scale, reading.palette)}, {where}")
+                for placed, spot in reading.spots_of(text):
+                    plant = f"{text} {placed.characters!r}"
+                    if spot is None:
+                        line = f"{plant} at scale {scale:g}, {reading.palette}: not tallied"
+                    else:
+                        line = f"{planted_line(tool, spot, plant, scale, reading.palette)}, {where}"
+                    lines.append(f"  {line}")
     return lines
 
 
@@ -1248,8 +1271,9 @@ def planted(args: argparse.Namespace) -> int:
 @dataclass(frozen=True)
 class Entry:
     """A cause of a span's loss, as the sliver or the measure names it: the span's characters
-    and its em in device pixels, the cause, the share of its strong ink lost, whether the
-    loss reaches the sliver, and whether the cause takes an island of its ink."""
+    and its em in device pixels, the cause, the share of its strong ink lost, or of its
+    counted ink where it holds no strong ink, whether the loss reaches the sliver, and whether
+    the cause takes an island of its ink."""
 
     text: str
     em: float
@@ -1261,11 +1285,14 @@ class Entry:
 
 def entries_of(tool: ModuleType, browser: ModuleType, spot: Spot, text: str) -> list[Entry]:
     """Each cause, cut then covered, that loses at least the sliver of `spot`'s strong ink, as
-    the read as built names it, or takes an island of its ink, as the measure would."""
+    the read as built names it, or takes an island of its ink, as the measure would. Its share
+    is of the span's strong ink, or of its counted ink where it holds no strong ink, as
+    DEC-045 point 2 gives it through resvg (`viewing_tool._share`)."""
     em = spot.em * spot.scale
     least = browser.SLIVER * em**2
     strong = spot.counted["strong"]
     ink = spot.ink
+    counted = sum(darkness <= tool.FAINT for darkness in ink.values())
     found = []
     causes = (
         (browser.CUT, spot.counted.get("past", 0), spot.beyond, None),
@@ -1275,7 +1302,12 @@ def entries_of(tool: ModuleType, browser: ModuleType, spot: Spot, text: str) -> 
         by_sliver = bool(strong) and lost >= least
         island = tool._takes_an_island(ink, pixels, shows)
         if by_sliver or island:
-            found.append(Entry(text, em, why, lost / strong if strong else 1.0, by_sliver, island))
+            if strong:
+                share = lost / strong
+            else:
+                faint = sum(ink[pixel] <= tool.FAINT for pixel in pixels)
+                share = faint / counted if counted else 0.0
+            found.append(Entry(text, em, why, share, by_sliver, island))
     return found
 
 
