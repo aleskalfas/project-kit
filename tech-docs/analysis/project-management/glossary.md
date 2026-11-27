@@ -244,6 +244,20 @@ TERM-completed-close:
           - COR-009#2
           - COR-009#3
           - COR-009#5
+TERM-directing-seat:
+  name: directing seat
+  noun-forms: [directing seats]
+  status: active
+  definition: "planning agent's or lead agent's place in a topology that a worker agent's place names, whose recorded session alone may direct that worker by message"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - .pkit/capabilities/project-management/scripts/_lib/topology.py
+          - .pkit/capabilities/project-management/schemas/topology.schema.json
+        record:
+          - project-management:DEC-081#3
+          - project-management:DEC-059#2
 TERM-epic:
   name: EPIC
   noun-forms: [EPICs]
@@ -402,6 +416,17 @@ TERM-lifecycle-hook:
           - project-management:DEC-024
           - COR-001
           - COR-010
+TERM-loop:
+  name: loop
+  status: active
+  definition: "series of rounds that a seat's agent runs through the pm skill's procedure for what the seat says the agent does: planning, building or both"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - .pkit/capabilities/project-management/skills/pm/work-loop.md
+        record:
+          - project-management:DEC-059#8
 TERM-merge-gate:
   name: merge gate
   status: active
@@ -420,6 +445,19 @@ TERM-merge-gate:
           - COR-009#2
           - COR-009#3
           - COR-009#5
+TERM-messaging-address:
+  name: messaging address
+  noun-forms: [messaging addresses]
+  status: active
+  definition: "location at which the harness delivers the messages sent to one session it hosts, in the one form the backbone gives, which names no user"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/harness_session.py
+          - .pkit/capabilities/project-management/scripts/_lib/processes.py
+        record:
+          - project-management:DEC-084#1
 TERM-milestone:
   name: Milestone
   noun-forms: [Milestones]
@@ -533,6 +571,21 @@ TERM-ready-task:
           - project-management:DEC-059#7
           - project-management:DEC-059#9
           - project-management:DEC-005
+TERM-recorded-session:
+  name: recorded session
+  noun-forms: [recorded sessions]
+  status: active
+  definition: "AI agent's run in its harness that a seat's state issue names as the one running the seat's loop"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - .pkit/capabilities/project-management/scripts/_lib/seat_sessions.py
+          - .pkit/capabilities/project-management/scripts/take-seat.py
+        record:
+          - project-management:DEC-081#4
+          - project-management:DEC-084#1
+          - project-management:DEC-084#3
 TERM-required-reviewer:
   name: required reviewer
   noun-forms: [required reviewers]
@@ -946,6 +999,15 @@ Explained in [VIEW-issues-and-their-hierarchy](domain-model/010-issues-and-their
 - **A close through a merge:** a [Task](#term-task--task) whose [pull request](../core/glossary.md#term-pull-request--pull-request) merges closes through that merge, and takes no completed close (DEC-006).
 - **Close trigger:** the line on a [Milestone](#term-milestone--milestone) that says when the Milestone closes. A completed close ends a Task, and no Milestone takes one ([DEC-016](../../../.pkit/capabilities/project-management/decisions/DEC-016-time-bound-containers.md)).
 
+## TERM-directing-seat — directing seat
+
+**Example:** the [seat](#term-seat--seat) `api-worker` names `planner` as its directing seat. A message from the [recorded session](#term-recorded-session--recorded-session) of `planner` may then name the [ready Task](#term-ready-task--ready-task) that the worker agent of `api-worker` takes next.
+
+**Distinctions:**
+
+- **Organizer seat:** the one seat whose [clone](#term-clone--clone) may release other seats by force. A directing seat holds no such privilege, and directs only the worker agents whose seats name it ([DEC-081 point 3](../../../.pkit/capabilities/project-management/decisions/DEC-081-delegation-between-seats.md#3-the-topology-names-the-seat-that-directs-each-worker)).
+- **Planning agent's seat:** a directing seat only of the worker agents whose seats name it. It names no directing seat itself, since a person directs its agent, so directing has one level (DEC-081 point 3).
+
 ## TERM-epic — EPIC
 
 Explained in [VIEW-issues-and-their-hierarchy](domain-model/010-issues-and-their-hierarchy.md#epic).
@@ -1065,6 +1127,15 @@ Explained in [VIEW-classification-of-issues](domain-model/020-classification-of-
 - **Permission hook:** the core's word for an [adapter](../core/glossary.md#term-adapter--adapter)'s script that has its [harness](../core/glossary.md#term-harness--harness) ask the permission code before each tool call. It shares only the word.
 - **GitHub Action:** a workflow GitHub runs by itself, later, when something happens in the repository, such as an issue opened. A lifecycle hook runs within the command, before the command ends (DEC-024).
 
+## TERM-loop — loop
+
+**Example:** the agent of the [seat](#term-seat--seat) `api-worker` runs the worker's loop. Each round builds one [Task](#term-task--task) in the seat's [clone](#term-clone--clone) and opens its [pull request](../core/glossary.md#term-pull-request--pull-request), and the next round takes the next [ready Task](#term-ready-task--ready-task).
+
+**Distinctions:**
+
+- **One operation:** what a person asks of a session in the seat's clone, such as a look at something. Such a session takes up the seat, runs no loop and records nothing of itself ([DEC-081 point 4](../../../.pkit/capabilities/project-management/decisions/DEC-081-delegation-between-seats.md#4-each-seats-state-issue-records-the-session-that-runs-the-seats-loop)).
+- **Round:** one pass through a loop, which ends where the next round begins (`work-loop.md`).
+
 ## TERM-merge-gate — merge gate
 
 Explained in [VIEW-reviews-and-the-merge](domain-model/040-reviews-and-the-merge.md#merge-gate).
@@ -1076,6 +1147,15 @@ Explained in [VIEW-reviews-and-the-merge](domain-model/040-reviews-and-the-merge
 - **Branch protection:** GitHub's own protection of a branch, which the hosting service holds. The merge gate is project-management's, and it runs before the merge is asked for ([DEC-003](../../../.pkit/capabilities/project-management/decisions/DEC-003-github-bound-substrate.md) and [DEC-028](../../../.pkit/capabilities/project-management/decisions/DEC-028-agent-as-approver-paths.md)).
 - **Authorisation to merge:** the person's go-ahead for the pull request at its head. A gate that passes gives no [authorisation](#term-authorisation--authorisation), and an authorisation passes no gate ([DEC-055 point 3](../../../.pkit/capabilities/project-management/decisions/DEC-055-pr-lists-answers.md#3-the-review-and-the-authorisation)).
 - **Change check:** the core's comparison of a head with its [base](../core/glossary.md#term-base--base). The landing command runs it to derive a [change](../core/glossary.md#term-change--change)'s answers ([DEC-065 point 2](../../../.pkit/capabilities/project-management/decisions/DEC-065-answers-read-from-check.md#2-the-answers-are-derived-from-the-change-check)), and the merge gate judges none of them (DEC-055 point 3).
+
+## TERM-messaging-address — messaging address
+
+**Example:** the session that runs the [loop](#term-loop--loop) of the [seat](#term-seat--seat) `planner` reads its messaging address, which the [state issue](#term-state-issue--state-issue) of `planner` then records. A worker agent compares the reply address of each message from `planner` with that messaging address.
+
+**Distinctions:**
+
+- **Reply address:** what a message carries as the place to reply to, in the [harness](../core/glossary.md#term-harness--harness)'s own form. The [backbone](../core/glossary.md#term-backbone--backbone) brings it into the form of a messaging address before any comparison ([DEC-084 point 1](../../../.pkit/capabilities/project-management/decisions/DEC-084-seat-session-address.md#1-the-state-issue-records-the-sessions-messaging-address-and-process)).
+- **A session's name:** what the harness shows of a session, which whoever starts the session may give. A messaging address belongs to one running session, while two sessions may share a name ([DEC-084](../../../.pkit/capabilities/project-management/decisions/DEC-084-seat-session-address.md)).
 
 ## TERM-milestone — Milestone
 
@@ -1170,6 +1250,16 @@ Explained in [VIEW-parallel-work](domain-model/060-parallel-work.md#ready-task).
 
 - **A Task in Backlog:** scheduled, yet not ready while an [instance](#term-instance--instance) owns it or its dependencies name an open [issue](#term-issue--issue). A [Task](#term-task--task) in Backlog that a worker's own instance owns comes first for that worker (`next-task.py`).
 - **The shared pool:** the ready Tasks every [seat](#term-seat--seat) shares where the [topology](#term-topology--topology) declares no [pool](#term-pool--pool) ([DEC-059 point 7](../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool)). Where it declares pools, a seat takes only the ready Tasks of its pools ([DEC-061 point 5](../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#5-a-seat-that-builds-chooses-its-work-only-from-its-pools)).
+
+## TERM-recorded-session — recorded session
+
+**Example:** the session that runs the [loop](#term-loop--loop) of the [seat](#term-seat--seat) `api-worker` takes the seat with `--loop`. The [state issue](#term-state-issue--state-issue) of `api-worker` then names that session as the seat's recorded session. The state issue records the session's name, machine and [messaging address](#term-messaging-address--messaging-address), and its operating-system <!-- pkit:not-the-term -->process.
+
+**Distinctions:**
+
+- **A session that runs no loop:** any other session in the seat's [clone](#term-clone--clone), such as one a person opens to look at something. It takes up the seat, records nothing of itself, and messages nobody as the seat ([DEC-081 point 4](../../../.pkit/capabilities/project-management/decisions/DEC-081-delegation-between-seats.md#4-each-seats-state-issue-records-the-session-that-runs-the-seats-loop)).
+- **A loop run unrecorded:** a session may run the seat's loop while the state issue names another session that may still run. The new session records itself only on the person's word, and without that word runs the loop unrecorded ([DEC-084 point 3](../../../.pkit/capabilities/project-management/decisions/DEC-084-seat-session-address.md#3-a-loop-records-itself-without-asking-only-where-no-other-live-session-holds-the-record)).
+- **The seat's holder:** the clone that holds the seat, which the state issue names too. The clone outlives every session in it, and the seat's release clears the recorded session (DEC-081 point 4).
 
 ## TERM-required-reviewer — required reviewer
 

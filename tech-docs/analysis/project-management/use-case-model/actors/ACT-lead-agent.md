@@ -9,6 +9,8 @@ needs:
 pkit:
   friction:
     anchors:
+      path:
+        - .pkit/capabilities/project-management/scripts/create-issue.py
       record:
         - project-management:DEC-029
         - project-management:DEC-035#3
@@ -20,7 +22,7 @@ pkit:
 
 # ACT-lead-agent — Lead agent
 
-An AI agent of a topology that plans and builds the work of the agent's scope, delegating Tasks to helper agents the agent starts. The lead agent files with no [owner](../../glossary.md#term-owner--owner) the work it leaves to worker agents, so that work becomes ready for them ([DEC-081 point 3](../../../../../.pkit/capabilities/project-management/decisions/DEC-081-delegation-between-seats.md#3-the-topology-names-the-seat-that-directs-each-worker)). The lead agent's [instance](../../glossary.md#term-instance--instance) owns only the work the lead agent files to build itself ([DEC-035 point 3](../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#3-a-clone-claims-at-creation-for-the-whole-tree) and DEC-081 point 3).
+An AI agent of a topology that plans and builds the work of the agent's scope, delegating Tasks to helper agents the agent starts. The lead agent files with no [owner](../../glossary.md#term-owner--owner) the work it leaves to worker agents, so that work becomes ready for them ([DEC-081 point 3](../../../../../.pkit/capabilities/project-management/decisions/DEC-081-delegation-between-seats.md#3-the-topology-names-the-seat-that-directs-each-worker)). That filing is `pkit pm create-issue --for-workers`. The lead agent's [instance](../../glossary.md#term-instance--instance) owns only the work the lead agent files to build itself ([DEC-035 point 3](../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#3-a-clone-claims-at-creation-for-the-whole-tree) and DEC-081 point 3).
 
 **Role holders:** an AI agent that plans and builds through the `pm` [skill](../../../core/glossary.md#term-skill--skill), such as the project-manager agent ([DEC-008](../../../../../.pkit/capabilities/project-management/decisions/DEC-008-pm-and-implementer-roles.md) and [DEC-029](../../../../../.pkit/capabilities/project-management/decisions/DEC-029-project-manager-agent-shape.md)).
 
