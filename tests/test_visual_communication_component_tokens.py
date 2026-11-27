@@ -689,6 +689,38 @@ def test_a_value_for_a_token_of_a_brand_along_the_chain_its_base_does_not_open_f
     assert read.resolve(NOTE, {}) == read.resolve("background", {})
 
 
+@pytest.mark.parametrize("opens", ["", NOTE], ids=["closed", "open"])
+def test_an_alias_to_a_token_of_a_brand_along_the_chain_its_base_does_not_export_fails(
+    tmp_path: Path, opens: str
+) -> None:
+    """The base gives the note's token no value, so it does not export it, open or not,
+    and a private token of the edition's that aliases it fails (DEC-044 point 2)."""
+    aliasing = {"mine": {"x": {"$type": "color", "$value": f"{{{NOTE}}}"}}}
+    base, edition = own_chain(tmp_path, opens=opens, given=aliasing)
+    assert NOTE not in tokens.read_brand(base, brands_scope(base)).roles
+    with pytest.raises(tokens.TokenError) as raised:
+        tokens.read_brand(edition, brands_scope(base, edition), locked={"test-brand": base})
+    (finding,) = raised.value.findings
+    assert (finding.code, finding.library, finding.where) == (
+        "alias-private",
+        "test-edition@1.0.0",
+        "mine.x",
+    )
+    assert f"aliases `{NOTE}`, a token of the brand test-brand along its chain" in finding.message
+    assert "that its base does not export" in finding.message
+
+
+def test_an_alias_to_a_token_of_a_brand_along_the_chain_its_base_exports_takes_its_value(
+    tmp_path: Path,
+) -> None:
+    base, edition = own_chain(tmp_path, given=token_given(STAMP, f"{{{NOTE}}}"))
+    add_tokens(base / BASE, token_given(NOTE))
+    read = tokens.read_brand(edition, brands_scope(base, edition), locked={"test-brand": base})
+    assert read.findings == ()
+    assert read.base is not None and NOTE in read.base.roles
+    assert read.resolve(STAMP, {}) == WHITE
+
+
 def test_a_brand_built_on_a_base_opens_its_own_components_tokens_and_no_wider_than_its_base(
     tmp_path: Path,
 ) -> None:

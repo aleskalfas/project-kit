@@ -170,8 +170,9 @@ its major is the one the entry names. In each combination:
   token of its own components, which no base holds, so it gives one a value with no base
   opening it (DEC-044 point 1);
 - *each library's private tokens stay its own:* an alias reaches the exported roles and
-  the tokens of the library that writes it, never a token its base keeps private, which
-  fails. So a base may reshape its private tokens freely;
+  the tokens of the library that writes it, never a token its base keeps private, nor a
+  token of a brand along its chain that its base does not export, open or not, each of
+  which fails (DEC-044 point 2). So a base may reshape its private tokens freely;
 - *the base's axes:* the brand varies values on its base's axes, by their names and modes,
   its base's sizes and its own axes among them. A modifier for another axis, one that
   declares an axis of its own, a context for another mode, or another default fails;
@@ -1341,13 +1342,16 @@ class _View:
     """The tokens of one combination before aliases are resolved (DEC-004 point 6, DEC-008
     point 1): the token that gives each role its value, whichever library of the chain
     writes it or the role's default; `merged`, the same before each own role's default that
-    reaches no value is left out; each library's private tokens, by its label; and the
-    libraries whose roles each brand of the chain reaches, by its label (`Brand.reached`)."""
+    reaches no value is left out; each library's private tokens, by its label; the
+    libraries whose roles each brand of the chain reaches, by its label (`Brand.reached`);
+    and the tokens of the brands along each brand's chain that its base does not export, by
+    its label, which no alias of that brand's reaches (DEC-044 point 2)."""
 
     roles: dict[str, _Token]
     merged: dict[str, _Token]
     private: dict[str, dict[str, _Token]]
     reaches: dict[str, frozenset[str]]
+    unexported: dict[str, frozenset[str]]
 
 
 @dataclass(frozen=True)
@@ -1705,7 +1709,8 @@ class _BrandReader:
     """Reads one brand version; collects what it finds as findings. `chain` names the
     brands built on it that are being read, the last built on it directly. `reached` is the
     libraries whose roles it reaches (`Brand.reached`), the brands along its chain among
-    them once its base is read."""
+    them once its base is read. `unexported` is the tokens of those brands that its base
+    does not export, once its base is read (`_unexported`)."""
 
     def __init__(
         self,
@@ -1726,6 +1731,7 @@ class _BrandReader:
         self.label = f"{library.get('name')}@{library.get('version')}"
         self.named = _named(library.get("builds-on"), scope)
         self.reached = self.named | {self.name}
+        self.unexported: frozenset[str] = frozenset()
         self.shown = shown
         self.fonts_folder = fonts
         self.root = root
@@ -1817,6 +1823,7 @@ class _BrandReader:
         base = self._read_base(library.get("builds-on"))
         if base is not None:
             self.reached |= {base.name, *base.along}
+            self.unexported = self._unexported(base)
         resolver = self._read_resolver(library.get("resolver"), base)
         if self.fatal or resolver is None:
             raise TokenError(self._unique(self.fatal))
@@ -2592,6 +2599,19 @@ class _BrandReader:
             files.extend(contexts.get(mode, ()))
         return files
 
+    def _unexported(self, base: Brand) -> frozenset[str]:
+        """The tokens of the brands along its chain that its base `base` does not export,
+        since neither the base nor a brand below it gives one a value (`Brand.roles`). No
+        alias of the brand's reaches one, open or not, as its aliases reach only what its
+        base exports (DEC-004 point 6, DEC-044 point 2)."""
+        along = {base.name, *base.along}
+        exported = set(base.roles)
+        return frozenset(
+            path
+            for path, library in self.scope.owner.items()
+            if library in along and path not in exported
+        )
+
     def _view(self, sources: list[str], base: Brand | None, key: str) -> _View:
         """The tokens of the combination `key` before aliases are resolved: the base's, or
         the roles' defaults without a base, then the brand's own sources in order, later
@@ -2608,9 +2628,11 @@ class _BrandReader:
             }
             below: dict[str, dict[str, _Token]] = {}
             reaches: dict[str, frozenset[str]] = {}
+            unexported: dict[str, frozenset[str]] = {}
         else:
             under = base._views[key]
-            merged, below, reaches = dict(under.merged), under.private, under.reaches
+            merged, below = dict(under.merged), under.private
+            reaches, unexported = under.reaches, under.unexported
         own: dict[str, _Token] = {}
         for file in sources:
             for path, token in self.flat.get(file, {}).items():
@@ -2645,6 +2667,7 @@ class _BrandReader:
             merged,
             {**below, self.label: own},
             {**reaches, self.label: self.reached},
+            {**unexported, self.label: self.unexported},
         )
 
     def _pruned(self, merged: Mapping[str, _Token]) -> dict[str, _Token]:
@@ -3476,9 +3499,10 @@ def _target_in(
     """Where an alias in `token`, at `where`, leads: a role, or a private token of the
     library that writes `token` (DEC-004 point 6). A brand's token reaches a library's
     role only where that brand reaches the library's roles: names it, is it, or has it
-    along its chain; a default reaches any role (DEC-008 point 4, DEC-044 point 2). Raises
-    _Problem for an alias into another library's private token, or one that leads
-    nowhere."""
+    along its chain, and a token of a brand along its chain only where its base exports
+    it, open or not; a default reaches any role (DEC-008 point 4, DEC-044 point 2). Raises
+    _Problem for an alias into another library's private token, into a token of a brand
+    along the chain that the base does not export, or one that leads nowhere."""
     library = scope.owner.get(target)
     if target in view.private.get(token.owner, {}) and (
         target not in view.roles or (library and library not in view.reaches[token.owner])
@@ -3487,6 +3511,16 @@ def _target_in(
     if target in view.roles and (
         not library or token.owner == "" or library in view.reaches[token.owner]
     ):
+        if token.owner and target in view.unexported[token.owner]:
+            raise _Problem(
+                "alias-private",
+                f"`{where}` aliases `{target}`, a token of the brand {library} along its "
+                f"chain that its base does not export, since neither the base nor a brand "
+                f"below it gives it a value: a brand aliases only the roles its base exports, "
+                f"open or not",
+                token.shown,
+                token.path,
+            )
         return ("", target)
     if library and token.owner:
         declared = scope.libraries.get(library)
