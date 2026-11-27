@@ -1,0 +1,12 @@
+component: claude-code
+kind: none
+body: >
+  Internal. The adapter ships `probe-reviewer-clone.py`, a script a person
+  runs to confirm what a reviewer's run in its own clone rests on, as ADR-102
+  point 6 asks before reviews in a seat's clone rest on it: that under the
+  seat's rules the runner passes, a reviewer in its clone runs the code host's
+  command line, git and the methodology's checks with no prompt, and that a
+  file tool's write into the seat's checkout is refused in a run nobody
+  watches. It makes the clone from the code host, starts one real run and
+  refuses inside an agent's run. Nothing the adapter runs on an adopter's
+  behalf changes.

@@ -94,6 +94,20 @@ Agent invocation:
   configure `local_registered: name: pm-reviewer` to use it, register their
   own agent under `.claude/agents/`, or replace the default entirely.
 
+Where reviewers work:
+  In a seat's clone, each reviewer works in a clone of its own, which the
+  backbone's run command makes from the code host at the default branch's
+  head and removes once the run ends (`_lib.reviewer_clones`, ADR-102). So the
+  seat's working tree stays where the seat left it, and no reviewer works where
+  another does. The brief tells the reviewer that its working tree holds the
+  default branch's head, not the change, and that it reads the change by its
+  diff and by its files at the head's commit. Where the clone cannot be asked
+  for, its reviewers do not run, and the run exits 2. Where the backbone cannot
+  write its folder for the clone, as from inside a sandbox on Linux, each
+  reviewer's line names a review at the person's own terminal as the way out.
+  A seat's clone is one whose runtime folder names a seat, and never a linked
+  worktree; elsewhere, reviewers work in the project's root, as above.
+
 Exit codes:
   0  every required reviewer invoked + comment posted, or skipped as fresh;
      or the PR requires no local reviewer
@@ -130,6 +144,7 @@ from _lib import (
     head_programs,
     issue_branch,
     pr_head,
+    reviewer_clones,
     session_guard,
 )
 from _lib.agent_verdicts import PATH_LOCAL, gate_candidates, stamp_verdict
@@ -674,6 +689,23 @@ def review(
         )
         confined = not decided.may_start
 
+    # In a seat's clone, each reviewer works in a clone of its own (ADR-102): one
+    # the review can have, or none of its reviewers runs.
+    clone: agent_runs.ReviewerClone | None = None
+    if to_run and reviewer_clones.in_seat_clone(capability_root, repo_root):
+        found = reviewer_clones.read_clone(pr_number, reviewed, pr.get("baseRefName"), config)
+        if isinstance(found, str):
+            run.reason = f"no reviewer's clone can be asked for in this seat's clone: {found}"
+            for name in to_run:
+                blocks[name].say(f"  [{name}] not run — {run.reason}.", file=sys.stderr)
+            to_run = []
+        else:
+            clone = found
+            print(
+                f"  working folder: a clone of its own for each reviewer, at "
+                f"{clone.default_branch}'s head {short_sha(clone.commit)} (a seat's clone)"
+            )
+
     def review_one(name: str) -> tuple[str | None, str]:
         """One reviewer's review, its lines held in its block; a failure is
         its own and never stops the others."""
@@ -690,6 +722,8 @@ def review(
                 sha=reviewed,
                 say=blocks[name].say,
                 confined=confined,
+                clone=clone,
+                issue=args.issue_number,
             )
         except Exception as exc:
             blocks[name].say(f"  [{name}] invocation error: {exc}", file=sys.stderr)
@@ -865,6 +899,8 @@ def _invoke_agent(
     sha: str = "",
     say: Callable[..., None] = print,
     confined: bool = False,
+    clone: agent_runs.ReviewerClone | None = None,
+    issue: int | None = None,
 ) -> tuple[str | None, str]:
     """Run a reviewer agent against the PR diff.
 
@@ -894,6 +930,11 @@ def _invoke_agent(
     commit the reviewer is to review, "" when it could not be read. `confined`
     tells the reviewer to start nothing the head holds (`START_NOTHING`).
 
+    `clone`, in a seat's clone, is the clone of its own the reviewer works in,
+    in place of `folder` (ADR-102). Its brief says so, and names the base through
+    the clone's remote. A refusal because the backbone cannot write its folder
+    for the clone names a review at the person's own terminal, for `issue`.
+
     `say` writes each line this reports, as `print` does (its default):
     `review-pr` passes the reviewer's block, so that the lines of reviewers
     run at once do not interleave (#1594). It is called from the thread the
@@ -904,11 +945,24 @@ def _invoke_agent(
     kit-side. A project with another harness answers through its own
     adapter's runner, not by editing this function (ADR-066 point 10).
     """
-    prompt = _review_brief(name, pr_number, base=base, head=head, sha=sha, confined=confined)
+    prompt = _review_brief(
+        name, pr_number, base=base, head=head, sha=sha, confined=confined, clone=clone
+    )
 
-    run = agent_runs.run_agent(name, prompt, folder=folder, limit_seconds=timeout, effort=effort)
+    if clone is None:
+        run = agent_runs.run_agent(
+            name, prompt, folder=folder, limit_seconds=timeout, effort=effort
+        )
+    else:
+        run = agent_runs.run_in_review_clone(
+            name, prompt, clone=clone, limit_seconds=timeout, effort=effort
+        )
     if run.ending == agent_runs.REFUSED:
         say(f"  [{name}] invocation refused: {run.reason}", file=sys.stderr)
+        if clone is not None and run.refusal_cause == agent_runs.RUN_FOLDER:
+            shown = "<N>" if issue is None else str(issue)
+            way_out = reviewer_clones.RUN_FOLDER_WAY_OUT.format(issue=shown)
+            say(f"  [{name}] {way_out}.", file=sys.stderr)
         return None, ""
     if run.ending != agent_runs.FINISHED:
         say(f"  [{name}] invocation error: {run.reason}", file=sys.stderr)
@@ -976,6 +1030,7 @@ def _review_brief(
     head: str,
     sha: str = "",
     confined: bool = False,
+    clone: agent_runs.ReviewerClone | None = None,
 ) -> str:
     """The prompt each reviewer receives: the PR, the head under review, a
     fallback for its diff, the verdict grammar, and the finding tags.
@@ -996,18 +1051,25 @@ def _review_brief(
     For a head from elsewhere nobody named, `confined`, the brief ends by saying
     what such a head may do (`START_NOTHING`, DEC-067 point 5). The contract lives
     here, as a builder's lives in its brief, so no reviewer's definition changes.
+
+    For a reviewer in a clone of its own, `clone` (ADR-102 point 4), the brief says
+    that its working tree holds the default branch's head, not the change, and how
+    it reads the change, and names the base through the clone's remote.
     """
     reviewing = (
         f"You are reviewing its head commit {sha}; your verdict is recorded against that commit. "
         if sha
         else ""
     )
+    remote = "origin" if clone is None else clone.remote
+    in_clone = "" if clone is None else reviewer_clones.brief(clone, sha) + " "
     return (
         f"Review the diff of PR #{pr_number} in this repository. "
         f"{reviewing}"
+        f"{in_clone}"
         f"If `gh pr diff {pr_number}` refuses it as too large (GitHub stops at "
         "300 changed files), read it from this checkout instead: "
-        f"`git diff origin/{base or '<base>'}...{sha or head}`. "
+        f"`git diff {remote}/{base or '<base>'}...{sha or head}`. "
         f"Apply your usual review criteria. Output your verdict on the "
         f"VERY FIRST LINE in one of these exact forms:\n\n"
         f"  Reviewer agent (local, {name}): APPROVED\n"

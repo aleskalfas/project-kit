@@ -155,3 +155,61 @@ confined-run:
     stray-processes:
       layer: out-of-harness
       enforcement: none
+
+# A reviewer's run in a clone of its own (ADR-102): a run the review command
+# starts in a seat's clone, unconfined, in a clone the backbone makes from the
+# code host at the default branch's head. The runner passes the run, with
+# `--settings`, the allow, ask and deny rules of the seat's clone's settings
+# file and nothing else (its README, "The unconfined form"). Like the confined
+# run's block, a session's report does not read this one, and nothing here
+# changes a session: what holds a reviewer's run, and what stays open (COR-028
+# point 3, ADR-102 point 5).
+reviewer-run:
+  dimensions:
+    # The seat's clone's allow, ask and deny rules, read from the file the
+    # harness keeps from sandboxed writes, passed as the run's settings. The
+    # clone's own settings, at the default branch's head, load beside them.
+    command-allow:
+      layer: settings
+      enforcement: native
+      granularity: per-run
+    command-deny:
+      layer: settings
+      enforcement: native
+      granularity: per-run
+      fail_closed: true
+    # The permission hook the clone's own settings register judges each call,
+    # as in the seat's clone; the probe of ADR-102 point 6 confirms the harness
+    # runs it there. No snapshot of a realized model binds a seat's clone while
+    # realizing keeps none (ADR-095 point 3), so the runner registers no hook of
+    # its own naming one.
+    directory-scope:
+      layer: hook
+      enforcement: runtime
+    # The run works in its own clone, which lies where no other session's or
+    # run's sandboxed command writes by default. Where the person's sandbox is
+    # on, the shell writes only that clone and the per-user temp folder.
+    filesystem-confinement:
+      layer: sandbox
+      enforcement: native
+      granularity: session-wide
+    # What stays open. The run is unconfined: it starts in the mode the
+    # settings choose, which may approve calls no rule allows (ADR-066 point
+    # 10), and a sandbox that is off, or a command it exempts, passes the
+    # bounds above (ADR-102 point 5).
+    run-mode:
+      layer: out-of-harness
+      enforcement: none
+    # A reviewer that checks out the change in its clone and runs its code
+    # runs a build's commits with the seat's access (ADR-073 point 10), and
+    # its later commands load their code from the clone it writes.
+    change-code:
+      layer: out-of-harness
+      enforcement: none
+    network-egress:
+      layer: out-of-harness
+      enforcement: none
+    # A process that left the harness's tree may outlive the clone's removal.
+    stray-processes:
+      layer: out-of-harness
+      enforcement: none
