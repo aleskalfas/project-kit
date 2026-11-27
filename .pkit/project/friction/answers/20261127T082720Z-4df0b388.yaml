@@ -1,0 +1,665 @@
+answers:
+  - artefact: tech-docs/analysis/project-management/domain-model/060-parallel-work.md
+    read:
+      - 20261029T002130Z-82af462f.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T220122Z-9823200c.yaml
+      - 20261106T000405Z-f16023ec.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261112T135407Z-115865f2.yaml
+      - 20261112T235648Z-31cd7a21.yaml
+      - 20261118T093416Z-ae3913ed.yaml
+      - 20261119T013318Z-c0734647.yaml
+      - 20261122T001341Z-1f604dc7.yaml
+      - 20261122T230042Z-201d3fa4.yaml
+      - 20261126T215411Z-182da8fc.yaml
+      - 20261126T220343Z-9f22cdc3.yaml
+      - 20261126T220933Z-3e415435.yaml
+    revalidated:
+      at: 2026-11-27T08:27:20Z
+      outcome: updated
+      deferred:
+        - anchor:
+            kind: record
+            value: project-management:DEC-059
+          reason: DEC-082's edits of DEC-059, accepted and not built, keep a seat's pace on its state issue, folded apart from its holder. They have a worker build as many Tasks at once as its pace allows, and rank a seat's ready Tasks nearest the Task whose work freed its slot. The Seat section's attributes and its state issue change with DEC-082's build, project-kit#3462. DEC-081's edit also lets a directing seat's message name the ready Task a worker takes next, which the view gains with the agent's messaging, project-kit#3523.
+  - artefact: tech-docs/analysis/project-management/use-case-model/actors/ACT-lead-agent.md
+    read:
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261112T135407Z-115865f2.yaml
+      - 20261112T235648Z-31cd7a21.yaml
+      - 20261118T093416Z-ae3913ed.yaml
+      - 20261122T001341Z-1f604dc7.yaml
+      - 20261126T215411Z-182da8fc.yaml
+      - 20261126T220933Z-3e415435.yaml
+    revalidated:
+      at: 2026-11-27T08:27:23Z
+      outcome: updated
+      deferred:
+        - anchor:
+            kind: record
+            value: project-management:DEC-059#2
+          reason: DEC-081's refinement of DEC-059 point 2 has a lead's seat direct the workers whose seats name it, by message where the harness carries messages. A message never asks for work the tracker does not hold. The actor's page now has the lead file with no owner the work it leaves to its workers, which is built. The directing by message, which the page does not describe yet, comes with the agent's messaging and its directives, project-kit#3523.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-092-take-seat.md
+    read:
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261107T125436Z-9442a4b6.yaml
+      - 20261108T213649Z-c363a042.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T175333Z-b0d8bc0a.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261112T135407Z-115865f2.yaml
+      - 20261112T235648Z-31cd7a21.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261118T093416Z-ae3913ed.yaml
+      - 20261118T110156Z-9a08eba0.yaml
+      - 20261118T162554Z-507129b2.yaml
+      - 20261118T204901Z-88c68aa2.yaml
+      - 20261119T013318Z-c0734647.yaml
+      - 20261122T001341Z-1f604dc7.yaml
+      - 20261122T230042Z-201d3fa4.yaml
+      - 20261123T192706Z-a190aa12.yaml
+      - 20261123T204526Z-d8337d55.yaml
+      - 20261126T215411Z-182da8fc.yaml
+      - 20261126T220933Z-3e415435.yaml
+      - 20261126T221238Z-1f395312.yaml
+    revalidated:
+      at: 2026-11-27T08:27:27Z
+      outcome: updated
+      deferred:
+        - anchor:
+            kind: record
+            value: ADR-071
+          reason: "ADR-071's refinements for DEC-082, accepted and not built, have the seam fold a seat's pace apart from its holder, and write a setting of it by a person or the directing seat. Those for DEC-081 and DEC-084 are built: the session the holder last recorded, which the release clears, and the session's event, as step 7 and variants 4a and 7a to 7c say. Step 6's read, and what it prints, gain the seat's pace with DEC-082's build, project-kit#3462."
+        - anchor:
+            kind: record
+            value: project-management:DEC-059#3
+          reason: DEC-082's refinement of DEC-059 point 3, accepted and not built, has the seat's state issue keep the seat's pace, folded apart from its holder. DEC-081's, that the state issue also records the session that runs the seat's loop, is built, as step 7 and variants 1b, 4a and 7a to 7c say. Step 6's read, and what it prints, gain the seat's pace with DEC-082's build, project-kit#3462.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-082-set-up-topology.md
+    read:
+      - 20261029T002130Z-82af462f.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T104927Z-f6afe126.yaml
+      - 20261114T135441Z-fd5c2dc0.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T215333Z-1b18b920.yaml
+      - 20261117T010941Z-d7ea213a.yaml
+      - 20261118T093416Z-ae3913ed.yaml
+      - 20261118T110156Z-9a08eba0.yaml
+      - 20261118T162554Z-507129b2.yaml
+      - 20261119T013318Z-c0734647.yaml
+      - 20261122T001341Z-1f604dc7.yaml
+      - 20261122T230042Z-201d3fa4.yaml
+      - 20261123T192706Z-a190aa12.yaml
+      - 20261123T204526Z-d8337d55.yaml
+    revalidated:
+      at: 2026-11-27T08:27:30Z
+      outcome: updated
+  - artefact: .pkit/adapters/README.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183906Z-1bc33a6b.yaml
+      - 20261027T190640Z-271e6d40.yaml
+      - 20261027T192358Z-673a43ca.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T053408Z-3b52273c.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T131741Z-60cab3fb.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T153702Z-907fa2fc.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T214259Z-302a0194.yaml
+      - 20261108T214544Z-1452f2b4.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T221648Z-ac7a1532.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T224418Z-a4df0e26.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261108T231929Z-eb90ad27.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T074250Z-22d93049.yaml
+      - 20261109T074625Z-5e6cbb22.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T095816Z-9e478090.yaml
+      - 20261109T102842Z-19c5fb4f.yaml
+      - 20261109T103219Z-76953beb.yaml
+      - 20261109T111933Z-cf8cf3aa.yaml
+      - 20261109T112020Z-9faec713.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T205239Z-c97bba2e.yaml
+      - 20261111T205252Z-4cfa1660.yaml
+      - 20261111T211406Z-59d1a8df.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261112T091032Z-823069cd.yaml
+      - 20261112T094911Z-6ef4bac4.yaml
+      - 20261112T103254Z-8c80b62f.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261112T134741Z-2c56fd6c.yaml
+      - 20261112T142932Z-280780ce.yaml
+      - 20261112T153532Z-b0471fdf.yaml
+      - 20261112T162755Z-424e83da.yaml
+      - 20261112T163411Z-b652b29d.yaml
+      - 20261112T171918Z-7f8cd174.yaml
+      - 20261113T074852Z-8d5346ed.yaml
+      - 20261113T081544Z-f47f0ca0.yaml
+      - 20261113T101850Z-ab407b6c.yaml
+      - 20261113T105452Z-38d663c9.yaml
+      - 20261113T120150Z-6de35706.yaml
+      - 20261113T134717Z-36e0821f.yaml
+      - 20261113T140535Z-dad8bdc7.yaml
+      - 20261113T155900Z-499e23c9.yaml
+      - 20261113T162107Z-5e55cd43.yaml
+      - 20261113T164650Z-0b1377a1.yaml
+      - 20261113T181005Z-1533807d.yaml
+      - 20261113T194116Z-20533165.yaml
+      - 20261113T194652Z-522f1d81.yaml
+      - 20261113T204916Z-dab01a07.yaml
+      - 20261113T221124Z-bd48f436.yaml
+      - 20261113T221406Z-017933f3.yaml
+      - 20261114T165854Z-0aa5ab74.yaml
+      - 20261115T225309Z-fb593e04.yaml
+      - 20261116T234025Z-ff90f250.yaml
+      - 20261118T110156Z-9a08eba0.yaml
+      - 20261118T191220Z-3b107524.yaml
+      - 20261118T203809Z-2a808b7c.yaml
+      - 20261118T203936Z-9af83f52.yaml
+      - 20261118T215040Z-465f5246.yaml
+      - 20261118T215357Z-e7129e16.yaml
+      - 20261122T001341Z-1f604dc7.yaml
+      - 20261123T001151Z-75d67d5f.yaml
+      - 20261123T005053Z-b5822da6.yaml
+      - 20261123T020719Z-d5ca0ab1.yaml
+      - 20261123T023919Z-16126b2f.yaml
+      - 20261123T204526Z-d8337d55.yaml
+      - 20261124T012529Z-dee71133.yaml
+      - 20261124T024003Z-d84dbce3.yaml
+      - 20261124T114011Z-a4026d2a.yaml
+      - 20261124T131644Z-fa85ef3e.yaml
+      - 20261126T211006Z-b1b06547.yaml
+    revalidated:
+      at: 2026-11-27T08:29:56Z
+      outcome: unchanged
+      unchanged-because: "Its text stands as it was. The page now anchors project-management DEC-084 point 1, which decides that the one form of a messaging address names no user since every reader of the tracker sees it: the reason its item 'No user in an address' gives for the pattern admitting only such a form."
+  - artefact: tech-docs/analysis/project-management/requirements/functional/040-work-in-parallel/REQ-061-one-owner-per-issue.md
+    read:
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261118T093416Z-ae3913ed.yaml
+      - 20261118T204901Z-88c68aa2.yaml
+      - 20261122T001341Z-1f604dc7.yaml
+      - 20261123T204526Z-d8337d55.yaml
+      - 20261126T215411Z-182da8fc.yaml
+    revalidated:
+      at: 2026-11-27T08:28:54Z
+      outcome: unchanged
+      unchanged-because: The worker's page now calls the seat that directs it its directing seat, the glossary's new term for that seat. The lead's page quotes pkit pm create-issue --for-workers for the ownerless filing it already described, and anchors that script. Neither actor's needs change, and no instance working on another's issue rests on either wording.
+  - artefact: tech-docs/analysis/project-management/requirements/functional/040-work-in-parallel/REQ-062-work-found-from-tracker.md
+    read:
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T225009Z-4b2ffcb8.yaml
+      - 20261118T093416Z-ae3913ed.yaml
+      - 20261118T204901Z-88c68aa2.yaml
+      - 20261122T001341Z-1f604dc7.yaml
+      - 20261126T215411Z-182da8fc.yaml
+    revalidated:
+      at: 2026-11-27T08:28:57Z
+      outcome: unchanged
+      unchanged-because: The worker's page now calls the seat that directs it its directing seat, and the lead's page quotes pkit pm create-issue --for-workers for the ownerless filing it already described, anchoring that script. Neither page changes where an instance's work in flight is found, which stays GitHub, the instance's number and the clone key.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-088-delegate-to-agent.md
+    read:
+      - 20261029T002130Z-82af462f.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261107T132338Z-3c4c3246.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261112T135407Z-115865f2.yaml
+      - 20261112T235648Z-31cd7a21.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261116T223146Z-fdad67d7.yaml
+      - 20261116T232343Z-e53423de.yaml
+      - 20261118T093416Z-ae3913ed.yaml
+      - 20261118T204901Z-88c68aa2.yaml
+      - 20261122T001341Z-1f604dc7.yaml
+      - 20261126T215411Z-182da8fc.yaml
+    revalidated:
+      at: 2026-11-27T08:29:00Z
+      outcome: unchanged
+      unchanged-because: The lead's page only quotes pkit pm create-issue --for-workers for the ownerless filing it already described, and anchors that script. The lead's needs and context are as they were, so delegating a Task of its scope to a helper agent reads as before.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-085-leave-task-to-its-owner.md
+    read:
+      - 20261029T002130Z-82af462f.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T021311Z-6bc15d0b.yaml
+      - 20261107T125436Z-9442a4b6.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T132338Z-3c4c3246.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T104927Z-f6afe126.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261114T201720Z-021bd185.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T180458Z-4e13664f.yaml
+      - 20261115T215333Z-1b18b920.yaml
+      - 20261115T223351Z-f0ef2d62.yaml
+      - 20261115T225419Z-956603ce.yaml
+      - 20261116T033725Z-695e2785.yaml
+      - 20261116T095840Z-547638af.yaml
+      - 20261116T112808Z-198ad446.yaml
+      - 20261116T223146Z-fdad67d7.yaml
+      - 20261116T232343Z-e53423de.yaml
+      - 20261117T010941Z-d7ea213a.yaml
+      - 20261117T163349Z-7822125e.yaml
+      - 20261117T173731Z-08ffa252.yaml
+      - 20261118T093416Z-ae3913ed.yaml
+      - 20261118T191220Z-3b107524.yaml
+      - 20261118T204901Z-88c68aa2.yaml
+      - 20261119T013318Z-c0734647.yaml
+      - 20261122T001341Z-1f604dc7.yaml
+      - 20261123T204526Z-d8337d55.yaml
+      - 20261126T215411Z-182da8fc.yaml
+    revalidated:
+      at: 2026-11-27T08:29:03Z
+      outcome: unchanged
+      unchanged-because: The worker's page only calls the seat that directs it its directing seat, the glossary's new term for that seat. Its needs and the rest of its context are as they were, and leaving a Task to its owner rests on neither.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-087-hand-over-to-next-scope.md
+    read:
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261113T104927Z-f6afe126.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T101625Z-39c9fced.yaml
+      - 20261115T202513Z-2d70bae9.yaml
+      - 20261115T224755Z-89ab25f5.yaml
+      - 20261116T223146Z-fdad67d7.yaml
+      - 20261116T232343Z-e53423de.yaml
+      - 20261118T093416Z-ae3913ed.yaml
+      - 20261118T204901Z-88c68aa2.yaml
+      - 20261122T001341Z-1f604dc7.yaml
+      - 20261123T204526Z-d8337d55.yaml
+      - 20261126T215411Z-182da8fc.yaml
+    revalidated:
+      at: 2026-11-27T08:29:06Z
+      outcome: unchanged
+      unchanged-because: The worker's page only calls the seat that directs it its directing seat, the glossary's new term for that seat. Its needs and the rest of its context are as they were, and handing the next piece of the work on rests on neither.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-083-plan-across-scopes.md
+    read:
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261112T135407Z-115865f2.yaml
+      - 20261112T235648Z-31cd7a21.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T104927Z-f6afe126.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261114T135441Z-fd5c2dc0.yaml
+      - 20261114T140804Z-6f794478.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T090812Z-225d76fb.yaml
+      - 20261115T101625Z-39c9fced.yaml
+      - 20261115T162304Z-326cf373.yaml
+      - 20261115T180458Z-4e13664f.yaml
+      - 20261115T202513Z-2d70bae9.yaml
+      - 20261115T215333Z-1b18b920.yaml
+      - 20261115T224755Z-89ab25f5.yaml
+      - 20261116T072033Z-1fa3401d.yaml
+      - 20261116T095840Z-547638af.yaml
+      - 20261116T103723Z-5450c4f7.yaml
+      - 20261117T010941Z-d7ea213a.yaml
+      - 20261118T093416Z-ae3913ed.yaml
+      - 20261118T110156Z-9a08eba0.yaml
+      - 20261118T162554Z-507129b2.yaml
+      - 20261118T204901Z-88c68aa2.yaml
+      - 20261119T000044Z-b8eeff55.yaml
+      - 20261119T013318Z-c0734647.yaml
+      - 20261122T001341Z-1f604dc7.yaml
+      - 20261123T204526Z-d8337d55.yaml
+      - 20261126T220933Z-3e415435.yaml
+      - 20261126T221238Z-1f395312.yaml
+    revalidated:
+      at: 2026-11-27T08:29:10Z
+      outcome: unchanged
+      unchanged-because: The worker's page now calls the seat that directs it its directing seat. The lead's page quotes pkit pm create-issue --for-workers for the ownerless filing that variant 1a here describes, and anchors that script. Neither page changes what a lead or a worker does, so variant 1a and the planning steps still hold.
+      deferred:
+        - anchor:
+            kind: record
+            value: project-management:DEC-059#7
+          reason: DEC-081's refinement of DEC-059 point 7 lets a worker's directing seat name the ready Task the worker takes next. next-task --task, which takes such a Task only where the clone could take it of its own choosing, is built. Step 8, where each seat's agent takes its Tasks as UC-084 describes, gains the directing seat's message once the loop that sends and takes it is built, project-kit#3523.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-086-resume-after-session-died.md
+    read:
+      - 20261029T002130Z-82af462f.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261107T132338Z-3c4c3246.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261116T223146Z-fdad67d7.yaml
+      - 20261116T232343Z-e53423de.yaml
+      - 20261118T093416Z-ae3913ed.yaml
+      - 20261118T110156Z-9a08eba0.yaml
+      - 20261118T162554Z-507129b2.yaml
+      - 20261118T204901Z-88c68aa2.yaml
+      - 20261122T001341Z-1f604dc7.yaml
+      - 20261123T204526Z-d8337d55.yaml
+      - 20261126T215411Z-182da8fc.yaml
+    revalidated:
+      at: 2026-11-27T08:29:13Z
+      outcome: unchanged
+      unchanged-because: The worker's page only calls the seat that directs it its directing seat, the glossary's new term for that seat. Its needs and the rest of its context are as they were, and taking up an instance's work after its session died rests on neither.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-089-land-alongside-others.md
+    read:
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T131440Z-90d45a35.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T220122Z-9823200c.yaml
+      - 20261105T221030Z-aedda51f.yaml
+      - 20261105T225036Z-926c13c5.yaml
+      - 20261106T000405Z-f16023ec.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T123620Z-3d057b1b.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T125436Z-9442a4b6.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261107T163133Z-be7e7e83.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261109T083359Z-579a84ef.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T104927Z-f6afe126.yaml
+      - 20261113T220619Z-6d103fc1.yaml
+      - 20261114T135441Z-fd5c2dc0.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T215333Z-1b18b920.yaml
+      - 20261115T223351Z-f0ef2d62.yaml
+      - 20261116T095840Z-547638af.yaml
+      - 20261116T112808Z-198ad446.yaml
+      - 20261116T223146Z-fdad67d7.yaml
+      - 20261116T232343Z-e53423de.yaml
+      - 20261118T093416Z-ae3913ed.yaml
+      - 20261118T110156Z-9a08eba0.yaml
+      - 20261118T162554Z-507129b2.yaml
+      - 20261118T191220Z-3b107524.yaml
+      - 20261119T013318Z-c0734647.yaml
+      - 20261122T001341Z-1f604dc7.yaml
+      - 20261123T005053Z-b5822da6.yaml
+      - 20261124T012529Z-dee71133.yaml
+      - 20261126T215411Z-182da8fc.yaml
+    revalidated:
+      at: 2026-11-27T08:29:16Z
+      outcome: unchanged
+      unchanged-because: The worker's page only calls the seat that directs it its directing seat, the glossary's new term for that seat. Its needs and the rest of its context are as they were, and landing a Task while other agents land theirs rests on neither.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-084-take-next-task.md
+    read:
+      - 20261029T002130Z-82af462f.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T214054Z-3ec700bc.yaml
+      - 20261105T215849Z-25d2581b.yaml
+      - 20261105T221030Z-aedda51f.yaml
+      - 20261106T000405Z-f16023ec.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261107T123620Z-3d057b1b.yaml
+      - 20261107T125436Z-9442a4b6.yaml
+      - 20261107T132338Z-3c4c3246.yaml
+      - 20261107T144714Z-e8754301.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261112T135407Z-115865f2.yaml
+      - 20261112T235648Z-31cd7a21.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T104927Z-f6afe126.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261114T135441Z-fd5c2dc0.yaml
+      - 20261114T140804Z-6f794478.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T010054Z-99f01df7.yaml
+      - 20261115T112500Z-53d20551.yaml
+      - 20261115T180458Z-4e13664f.yaml
+      - 20261115T202513Z-2d70bae9.yaml
+      - 20261115T224856Z-cb4ecf23.yaml
+      - 20261116T095840Z-547638af.yaml
+      - 20261116T223146Z-fdad67d7.yaml
+      - 20261116T232343Z-e53423de.yaml
+      - 20261117T010941Z-d7ea213a.yaml
+      - 20261117T115722Z-5da8fae5.yaml
+      - 20261117T163349Z-7822125e.yaml
+      - 20261118T093416Z-ae3913ed.yaml
+      - 20261118T110156Z-9a08eba0.yaml
+      - 20261118T162554Z-507129b2.yaml
+      - 20261118T204901Z-88c68aa2.yaml
+      - 20261122T001341Z-1f604dc7.yaml
+      - 20261123T005053Z-b5822da6.yaml
+      - 20261123T204526Z-d8337d55.yaml
+      - 20261126T215411Z-182da8fc.yaml
+    revalidated:
+      at: 2026-11-27T08:29:19Z
+      outcome: unchanged
+      unchanged-because: The worker's page only calls the seat that directs it its directing seat, the glossary's new term for that seat. Its needs and the rest of its context are as they were, so taking the next ready Task and building it up to its merge reads as before.
+  - artefact: tech-docs/analysis/project-management/use-case-model/journeys/JRN-013-build-and-land-next-task.md
+    read:
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T131440Z-90d45a35.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T214054Z-3ec700bc.yaml
+      - 20261105T215849Z-25d2581b.yaml
+      - 20261105T220122Z-9823200c.yaml
+      - 20261105T221030Z-aedda51f.yaml
+      - 20261106T000405Z-f16023ec.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T123620Z-3d057b1b.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T125436Z-9442a4b6.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261107T163133Z-be7e7e83.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T101625Z-39c9fced.yaml
+      - 20261115T175013Z-4c973ec1.yaml
+      - 20261115T202513Z-2d70bae9.yaml
+      - 20261115T223351Z-f0ef2d62.yaml
+      - 20261116T095840Z-547638af.yaml
+      - 20261116T223146Z-fdad67d7.yaml
+      - 20261116T232343Z-e53423de.yaml
+      - 20261118T093416Z-ae3913ed.yaml
+      - 20261118T191220Z-3b107524.yaml
+      - 20261118T204901Z-88c68aa2.yaml
+      - 20261119T013318Z-c0734647.yaml
+      - 20261122T001341Z-1f604dc7.yaml
+      - 20261123T204526Z-d8337d55.yaml
+      - 20261126T215411Z-182da8fc.yaml
+    revalidated:
+      at: 2026-11-27T08:29:23Z
+      outcome: unchanged
+      unchanged-because: The worker's page only calls the seat that directs it its directing seat. UC-092 names its recorded session, messaging address and loop by the glossary's new terms and anchors the code that reads a recorded process, with its title and postcondition's meaning unchanged. Step 1's need from UC-092, a seat held and acted as, still holds.
+  - artefact: tech-docs/analysis/project-management/use-case-model/journeys/JRN-004-set-up-and-adjust-topology.md
+    read:
+      - 20261029T002130Z-82af462f.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T131440Z-90d45a35.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T221030Z-aedda51f.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T144714Z-e8754301.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T101625Z-39c9fced.yaml
+      - 20261115T175013Z-4c973ec1.yaml
+      - 20261115T202513Z-2d70bae9.yaml
+      - 20261115T222227Z-a8c41e80.yaml
+      - 20261116T223146Z-fdad67d7.yaml
+      - 20261116T232343Z-e53423de.yaml
+      - 20261118T093416Z-ae3913ed.yaml
+      - 20261118T110156Z-9a08eba0.yaml
+      - 20261118T162554Z-507129b2.yaml
+      - 20261119T013318Z-c0734647.yaml
+      - 20261122T001341Z-1f604dc7.yaml
+      - 20261123T204526Z-d8337d55.yaml
+      - 20261126T215411Z-182da8fc.yaml
+    revalidated:
+      at: 2026-11-27T08:29:26Z
+      outcome: unchanged
+      unchanged-because: UC-082 now names a worker's directing seat by that term, and UC-092 names its recorded session, messaging address and loop by the glossary's new terms. Both titles stand, and what each makes true means what it did, so the journey's steps and its needs from them still hold.
