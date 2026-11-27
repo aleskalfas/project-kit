@@ -174,6 +174,7 @@ from _lib import (
     location,
     names,
     outlines,
+    paragraph_ends,
     records,
     signs,
     text_size,
@@ -2863,6 +2864,7 @@ SCENE_CHECKS = (
     boxes.NEAR_ALIGNMENT_CHECK,
     boxes.BOX_OVERLAP_CHECK,
     letters.LETTERS_CHECK,
+    paragraph_ends.CHECK,
     text_size.CHECK,
     SIZE_WIDTHS,
     BRAND_FORMS,
@@ -2954,8 +2956,9 @@ def _in_scene(
     engine's own findings, content the scene's size hides, contrast as drawn, colour roles the
     brand lacks, the renderers' unaccepted losses, components' statuses, pages with no ground
     of their own, the checks of boxes, letters that touch across a text's lines, each letter
-    read from `faces`, and texts smaller than their medium allows, which the check gives each
-    with the scene it holds for (`text_size.found`)."""
+    read from `faces`, paragraphs that a line feed ends on a word kept off a line's end, and
+    texts smaller than their medium allows, which the check gives each with the scene it holds
+    for (`text_size.found`)."""
     piece = project.piece
     size = result.scene.size_key
     served = [key for key in project.keys if project.size_key(key) == size]
@@ -2973,6 +2976,7 @@ def _in_scene(
         *((NO_GROUND, finding) for finding in _no_ground(piece, scene, drawn, served)),
         *_of_boxes(scene, steps[size]),
         *_of_letters(project, scene, size, faces),
+        *((paragraph_ends.CHECK, found) for found in paragraph_ends.kept_word_ends(scene, content)),
     ]
     pages = [str(page) for page in scene.get("pages", [])]
     return [

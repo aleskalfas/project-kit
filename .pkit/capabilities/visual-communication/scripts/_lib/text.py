@@ -16,7 +16,9 @@ DEC-005 point 4, DEC-004 point 9, DEC-012 point 4).
   Each part of a line is measured in its own run's role. Lines are filled greedily
   against the planned width minus a margin of 2 % of the em (`BREAK_MARGIN`), taken at
   the greatest font size among the runs' roles, and placed in the planned width, so a
-  renderer's slightly different metrics move no word.
+  renderer's slightly different metrics move no word. The check of a paragraph that a line
+  feed ends on a word the rules keep off a line's end reads the same rules
+  (`LanguageRules.kept_at_end`, DEC-075 point 1).
 - **One line height, one baseline a line.** Each line takes the greatest line height
   among the runs' roles. Its runs stand on one baseline: the leading split evenly
   around the greatest ascent and the greatest descent among the first families of the
@@ -39,7 +41,7 @@ import bisect
 import functools
 import hashlib
 import re
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -68,14 +70,26 @@ class LanguageRules:
     def kept_together(self, paragraph: str) -> set[int]:
         """The break opportunities in `paragraph` these rules forbid: each after a word they
         keep off a line's end and the spaces after it."""
-        found: set[int] = set()
+        return {match.end() for match in self._kept(paragraph)}
+
+    def kept_at_end(self, paragraph: str) -> tuple[int, str] | None:
+        """The word these rules keep off a line's end that `paragraph` ends on, with nothing
+        after it but spaces, found as `kept_together` finds it before a space: where the word
+        starts in `paragraph`, and the word. None where it ends on no such word (DEC-075 point
+        1)."""
+        closed = paragraph.rstrip(" ") + " "
+        for match in self._kept(closed):
+            if match.end() == len(closed):
+                return match.start(), match.group().rstrip(" ")
+        return None
+
+    def _kept(self, paragraph: str) -> Iterator[re.Match[str]]:
+        """Each word these rules keep off a line's end in `paragraph`, with the spaces after
+        it."""
         if self.one_letter_word:
-            found.update(match.end() for match in _ONE_LETTER.finditer(paragraph))
+            yield from _ONE_LETTER.finditer(paragraph)
         if self.short_prepositions:
-            found.update(
-                match.end() for match in _words(self.short_prepositions).finditer(paragraph)
-            )
-        return found
+            yield from _words(self.short_prepositions).finditer(paragraph)
 
 
 #: Each language's line-breaking rules beyond Unicode's, by its primary language subtag.
