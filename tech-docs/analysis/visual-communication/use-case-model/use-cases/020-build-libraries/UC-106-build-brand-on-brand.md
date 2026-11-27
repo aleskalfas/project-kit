@@ -18,6 +18,8 @@ pkit:
         - visual-communication:DEC-003#8
         - visual-communication:DEC-004#6
         - visual-communication:DEC-004#11
+        - visual-communication:DEC-044#1
+        - visual-communication:DEC-044#4
         - COR-017
         - COR-013
 ---
@@ -41,8 +43,8 @@ pkit:
 **Main path:**
 
 1. The developer starts a brand that names the brand it builds on, and the major number of that brand's library versions it fits.
-2. The developer gives new values to what the brand it builds on lets it alter.
-3. The system checks the new brand, and names each value it gives that the brand it builds on does not list.
+2. The developer gives new values to what the brand it builds on lets it alter, and values to what the new brand adds of its own, such as the parts it holds.
+3. The system checks the new brand, and names each value it gives to something of the brand it builds on that that brand does not list.
 4. The developer gives the new brand its own library versions, apart from the brand it builds on.
 5. A piece that names the new brand is drawn in its values, with the layouts and library components of the brand it builds on.
 
@@ -52,10 +54,10 @@ pkit:
 - **1b.** The look would build on two brands at once. A brand builds on one brand at most, so the developer chooses one.
 - **2a.** The look needs the layouts of a kind of piece the brand it builds on does not serve, or a part that brand lacks. The new brand adds them as its own, and never replaces a layout or a part that brand has.
 - **2b.** The look needs an axis or a mode that the brand it builds on lacks, such as a high contrast. The new brand adds none, so the developer asks that brand's library owner to add it.
-- **3a.** The new brand gives a value that the brand it builds on does not list. The developer removes the value, or asks that brand's library owner to list it, and the path rejoins at step 3.
+- **3a.** The new brand gives a value to something of the brand it builds on that that brand does not list. The developer removes the value, or asks that brand's library owner to list it, and the path rejoins at step 3.
 - **5a.** A piece uses two libraries that fit different major numbers of one brand. The system says that the two cannot be used in one piece.
 
-**Postconditions:** The new brand changes only the values that the brand it builds on opens to it, and adds no axis and no mode.
+**Postconditions:** Of what the brand it builds on holds, the new brand changes only the values that brand opens to it, and it adds no axis and no mode.
 
 **Minimal guarantees:**
 
@@ -63,10 +65,10 @@ pkit:
 
 ## Sources
 
-- **The goal:** a brand built on another brand, from the online game platform the maintainer described on 1 November. The platform is an example only, and nothing of a game is built. The goal rests on a brand built on another, within the roles that brand opens to it ([DEC-004 point 6](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-004-brands-and-notations.md#6-a-brand-may-build-on-one-other-brand-within-the-roles-its-base-declares-open-and-those-it-adds-refinement-per-visual-communicationdec-044-brand-own-component-tokens-point-1)).
+- **The goal:** a brand built on another brand, from the online game platform the maintainer described on 1 November. The platform is an example only, and nothing of a game is built. The goal rests on a brand built on another, within the roles that brand opens to it and those the new brand adds ([DEC-004 point 6](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-004-brands-and-notations.md#6-a-brand-may-build-on-one-other-brand-within-the-roles-its-base-declares-open-and-those-it-adds-refinement-per-visual-communicationdec-044-brand-own-component-tokens-point-1), [DEC-044 point 1](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-044-brand-own-component-tokens.md#1-a-brand-gives-values-to-its-own-roles-and-its-components-tokens-whether-or-not-it-has-a-base)).
 - **Its approval:** the brand built on another was decided under the maintainer's delegation. He approved it with the plan of #2423 the same day: "ok go ahead".
 - **The steps and the guarantee:**
-  - **Steps 1, 2 and 5, variants 1a, 1b, 2a and 2b, and the guarantee:** a brand builds on one brand at most, named by its major number, and gives values only to the roles that brand opens. It adds no axis and no mode, and keeps that brand's layouts and parts ([DEC-004 point 6](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-004-brands-and-notations.md#6-a-brand-may-build-on-one-other-brand-within-the-roles-its-base-declares-open-and-those-it-adds-refinement-per-visual-communicationdec-044-brand-own-component-tokens-point-1) and [DEC-001 point 5](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md#5-libraries-hold-values-structure-or-meaning)).
-  - **Step 3 and variant 3a:** a value given to a role that the brand it builds on does not open fails validation ([DEC-004 point 11](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-004-brands-and-notations.md#11-what-the-checks-report-and-how-severely)).
+  - **Steps 1, 2 and 5, variants 1a, 1b, 2a and 2b, and the guarantee:** a brand builds on one brand at most, named by its major number, and gives values only to the roles that brand opens and to those it adds, the tokens of the parts it holds among them, which no brand it builds on opens. It adds no axis and no mode, and keeps that brand's layouts and parts ([DEC-004 point 6](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-004-brands-and-notations.md#6-a-brand-may-build-on-one-other-brand-within-the-roles-its-base-declares-open-and-those-it-adds-refinement-per-visual-communicationdec-044-brand-own-component-tokens-point-1), [DEC-044 point 1](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-044-brand-own-component-tokens.md#1-a-brand-gives-values-to-its-own-roles-and-its-components-tokens-whether-or-not-it-has-a-base) and [DEC-001 point 5](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md#5-libraries-hold-values-structure-or-meaning)).
+  - **Step 3 and variant 3a:** a value given to a role that the brand it builds on holds and does not open fails validation, and a value given to a role the new brand adds is no such value ([DEC-004 point 11](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-004-brands-and-notations.md#11-what-the-checks-report-and-how-severely), [DEC-044 point 4](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-044-brand-own-component-tokens.md#4-what-the-checks-report-and-how-severely)).
   - **Step 4:** a library takes library versions of its own, and a released one never changes (DEC-003 points [1](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-003-change-over-time.md#1-three-numbers-each-with-one-job) and [6](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-003-change-over-time.md#6-a-released-version-never-changes)).
   - **Variant 5a:** no lock fits two major numbers of one library, so a piece cannot use such libraries together ([DEC-003 point 8](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-003-change-over-time.md#8-a-pieces-state-says-who-moves-its-lock)).

@@ -145,6 +145,7 @@ pkit:
         - visual-communication:DEC-033
         - visual-communication:DEC-034#3
         - visual-communication:DEC-035#3
+        - visual-communication:DEC-044#1
         - visual-communication:DEC-036#1
         - visual-communication:DEC-036#2
         - visual-communication:DEC-036#3
@@ -777,7 +778,7 @@ out: web/brand.css
 | `accept-losses` | optional: the losses a person accepted ([Accepting a loss](#accepting-a-loss)) |
 
 - **The lock is the declaration's own.** A person moves it on purpose, and no command moves it (DEC-005 point 7). So the code changes only when the declaration changes, or when the person names the declaration to `pkit visual add`. Naming it lets the command replace a copy not yet released that the lock names, under the same number ([The lock](files.md#the-lock), DEC-013 point 5). The run that leaves the copy prints the difference in the code first.
-- **What the code holds:** the document of values under the lock: every token the brand exports, and every other role of each library of components the lock names, at the brand's value or at its default (DEC-008 point 5), at the versions the lock names. It holds them in every combination of the brand's axes ([Axes and modes](files.md#axes-and-modes)) whose kind the writer spells, each other axis at its default. A library's role that has no value under the brand is left out. Code that reads a library's role names that library's major in its lock, since the library promises its names by major. A brand built on a base is read over the base the lock names. The code follows no piece's modes.
+- **What the code holds:** the document of values under the lock: every token the brand exports, and every other role of each library of components the lock names, at the brand's value or at its default (DEC-008 point 5), and so the tokens of the components each brand the lock names holds, the brand's own and its chain's among them (DEC-044 point 1), at the versions the lock names. It holds them in every combination of the brand's axes ([Axes and modes](files.md#axes-and-modes)) whose kind the writer spells, each other axis at its default. A library's role that has no value under the brand is left out. Code that reads a library's role names that library's major in its lock, since the library promises its names by major. A brand built on a base is read over the base the lock names. The code follows no piece's modes.
 - **Where `out` may not lie:** outside the repository, under `.pkit/`, under a hidden folder, or in the location's library folder, its `code/` folder or its `pieces/` folder. Nor may it be reached through a link, or be a folder.
 - **Committing the code** is the project's choice, as for any file its build writes. Its record goes with it (DEC-006 point 4).
 
