@@ -12,7 +12,8 @@ and nowhere in a capability.
 `folder` (the unconfined form, the review command's runs and a drift command's
 run a person watches, ADR-066 point 10) or `confined` (the confined form, which
 every fixer's run takes where the harness holds it). With `folder`, the request
-may carry `local_settings_from`, the person's checkout. A request that carries
+may carry `local_settings_from`, the person's checkout, and, for a run in a
+reviewer's clone, `seat_permissions` (ADR-102 point 3). A request that carries
 any other key is refused, never run without it.
 
 **The marker** (ADR-066 point 8). The runner refuses whenever `PKIT_AGENT_RUN`
@@ -36,6 +37,14 @@ checkout, the runner first carries their local settings from it into the
 folder (`carry_local_settings`, ADR-066 point 10). The harness gets the runner's
 environment, less the backbone's variables for its run of this runner
 (`RUN_VARIABLES`).
+
+**In a reviewer's clone** (ADR-102 point 3), the request's `seat_permissions`
+names the seat's clone and a settings folder beside the run's folder. The
+runner writes there the allow, ask and deny rules of the seat's clone's
+settings file, and nothing else, and passes that file with `--settings`, the
+one flag this run adds to the unconfined form's closed set (`REVIEWER_FLAGS`).
+No snapshot of a realized model binds a seat's clone yet (ADR-095), so it names
+no bound and registers no hook of its own.
 
 **The confined form** (ADR-066 points 2 to 6 and 9). Before the harness starts,
 the runner refuses, naming the cause, when the harness's version lies outside
@@ -78,6 +87,7 @@ import re
 import secrets
 import shutil
 import signal
+import stat
 import subprocess
 import sys
 import threading
@@ -97,14 +107,45 @@ HARNESS = "claude"
 MARKER = "PKIT_AGENT_RUN"
 
 #: The keys of an unconfined request, `local_settings_from` among them where
-#: the caller asks for the person's local settings. Any other key is refused.
+#: the caller asks for the person's local settings, and `seat_permissions` for
+#: a run in a reviewer's clone (ADR-102 point 3). Any other key is refused.
 REQUEST_KEYS = frozenset(
-    {"schema_version", "agent", "brief", "folder", "local_settings_from", "limit_seconds", "effort"}
+    {
+        "schema_version",
+        "agent",
+        "brief",
+        "folder",
+        "local_settings_from",
+        "seat_permissions",
+        "limit_seconds",
+        "effort",
+    }
 )
 
-#: The keys of a confined request: the unconfined form's, without `folder` and
-#: `local_settings_from`, with `confined`.
-CONFINED_REQUEST_KEYS = (REQUEST_KEYS - {"folder", "local_settings_from"}) | {"confined"}
+#: The keys only an unconfined request carries.
+UNCONFINED_KEYS = frozenset({"folder", "local_settings_from", "seat_permissions"})
+
+#: The keys of a confined request: the unconfined form's, without
+#: `UNCONFINED_KEYS`, with `confined`.
+CONFINED_REQUEST_KEYS = (REQUEST_KEYS - UNCONFINED_KEYS) | {"confined"}
+
+#: The keys of a request's `seat_permissions`: the seat's clone whose settings
+#: file gives the run's rules, and the folder the runner writes them in.
+SEAT_PERMISSIONS_KEYS = frozenset({"seat_clone", "settings_folder"})
+
+#: Where Claude Code keeps a project's settings, in git: the file whose allow,
+#: ask and deny rules a run in a reviewer's clone takes from the seat's clone
+#: (ADR-102 point 3). The harness keeps it from sandboxed writes (ADR-095's
+#: precondition).
+PROJECT_SETTINGS = (".claude", "settings.json")
+
+#: The rules of that file a reviewer's run takes, and nothing else of it.
+SEAT_RULES = ("allow", "ask", "deny")
+
+#: The file the runner writes those rules in, in the request's settings folder,
+#: and the most of the seat's settings file it reads.
+SEAT_SETTINGS_FILE = "settings.json"
+SEAT_SETTINGS_LIMIT = 1024 * 1024
 
 #: Where Claude Code keeps the person's settings for one checkout, out of git
 #: (ADR-029 point 1): the file an unconfined run carries from the person's
@@ -127,6 +168,11 @@ CONFINED_FOLDERS = ("working_copy", "workspace", "temp", "pkit_folder", "project
 #: passes the agent's checked definition, for a name some place ships (ADR-087
 #: point 3).
 FLAGS = {"-p": False, "--agents": True, "--agent": True, "--effort": True}
+
+#: The closed set of a run in a reviewer's clone: the unconfined form's, and
+#: `--settings`, the file of the seat's allow, ask and deny rules the runner
+#: writes, which carries nothing else (ADR-102 point 3).
+REVIEWER_FLAGS = {**FLAGS, "--settings": True}
 
 #: A confined run's tools (ADR-066 point 4): reading, searching, writing new
 #: files and the shell.
@@ -554,6 +600,8 @@ def read_request(text: str) -> dict[str, Any]:
             raise Refused(
                 f"the checkout the local settings come from, {checkout!r}, is not a directory"
             )
+        if "seat_permissions" in request:
+            read_seat_permissions(request["seat_permissions"], folder)
     limit = request.get("limit_seconds")
     if not isinstance(limit, int) or isinstance(limit, bool) or not 1 <= limit <= MAX_LIMIT_SECONDS:
         raise Refused(f"the limit {limit!r} is not from 1 to {MAX_LIMIT_SECONDS} seconds")
@@ -570,6 +618,31 @@ def _real(path: str) -> Path:
 def _inside(path: str | Path, folder: str | Path) -> bool:
     """Whether `path` lies strictly inside `folder`, links followed."""
     return _real(str(folder)) in _real(str(path)).parents
+
+
+def read_seat_permissions(permissions: Any, folder: str) -> None:
+    """Check a request's `seat_permissions` (ADR-102 point 3): the seat's clone and
+    the settings folder, each an absolute directory, the settings folder no link and
+    lying outside the run's folder, which the run writes."""
+    if not isinstance(permissions, dict) or set(permissions) != SEAT_PERMISSIONS_KEYS:
+        raise Refused(
+            "the request's seat_permissions is not an object of seat_clone and settings_folder"
+        )
+    for key in sorted(SEAT_PERMISSIONS_KEYS):
+        value = permissions[key]
+        if not isinstance(value, str) or not os.path.isabs(value) or not os.path.isdir(value):
+            raise Refused(f"the request's {key} {value!r} is not an absolute directory")
+    settings_folder = permissions["settings_folder"]
+    if (
+        os.path.islink(settings_folder)
+        or _real(settings_folder) == _real(folder)
+        or _inside(settings_folder, folder)
+        or _inside(folder, settings_folder)
+    ):
+        raise Refused(
+            "the request's settings folder is a link, or lies in or around the run's folder, "
+            "which the run writes (ADR-102 point 3)"
+        )
 
 
 def read_confined(confined: Any) -> dict[str, Any]:
@@ -1390,18 +1463,26 @@ def checked_source(
 
 
 def command(
-    harness: str, agent: str, effort: str | None, definition: dict[str, Any] | None = None
+    harness: str,
+    agent: str,
+    effort: str | None,
+    definition: dict[str, Any] | None = None,
+    settings: Path | None = None,
 ) -> list[str]:
     """The unconfined form's command line: the closed set's flags, and nothing
     else. With *definition*, the agent's checked definition passed under *agent*,
-    a name unique to the run (ADR-087 point 3)."""
+    a name unique to the run (ADR-087 point 3). With *settings*, the file of the
+    seat's rules for a run in a reviewer's clone, from that run's closed set
+    (ADR-102 point 3)."""
     argv = [harness, "-p"]
     if definition is not None:
         argv += ["--agents", json.dumps({agent: definition})]
     argv += ["--agent", agent]
     if effort is not None:
         argv += ["--effort", effort]
-    check_flags(argv)
+    if settings is not None:
+        argv += ["--settings", str(settings)]
+    check_flags(argv, FLAGS if settings is None else REVIEWER_FLAGS)
     return argv
 
 
@@ -1588,15 +1669,24 @@ def agent_file(agent: str, folder: Path, env: dict[str, str]) -> Path | None:
 
 
 def unconfined_command(
-    harness: str, agent: str, folder: Path, effort: str | None, env: dict[str, str], deadline: float
+    harness: str,
+    agent: str,
+    folder: Path,
+    effort: str | None,
+    env: dict[str, str],
+    deadline: float,
+    settings: Path | None = None,
 ) -> list[str]:
-    """The unconfined form's command line for *agent* (ADR-087 point 3).
+    """The unconfined form's command line for *agent* (ADR-087 point 3), with the
+    file of the seat's rules where *settings* names one (`command`).
 
     For a name some place of the methodology ships, the definition the agents
     area's picker names in the project's tree this runner lies in, checked as a
     confined run checks it, under a name unique to the run. For a name no place
     ships, the agent by name, which the harness loads where it finds it; refused
-    where it finds none.
+    where it finds none. In a reviewer's clone, the runner lies in the clone, so
+    a name no place ships is refused where the clone's commit deploys no copy of
+    it and the person's own agents folder holds none (ADR-102 point 2).
     """
     tree = ADAPTER_FOLDER.parents[2]
     resolver = ADAPTER_FOLDER / RESOLVER
@@ -1609,7 +1699,7 @@ def unconfined_command(
                 f"the agent {agent} is not deployed: no .claude/agents/{agent}.md in {folder} "
                 "or a folder above it, nor in the person's own agents folder"
             )
-        return command(harness, agent, effort)
+        return command(harness, agent, effort, settings=settings)
     definition = checked_source(
         tree,
         source,
@@ -1619,7 +1709,7 @@ def unconfined_command(
         env,
         min(RESOLVE_SECONDS, deadline - time.monotonic()),
     )
-    return command(harness, RUN_AGENT_PREFIX + secrets.token_hex(8), effort, definition)
+    return command(harness, RUN_AGENT_PREFIX + secrets.token_hex(8), effort, definition, settings)
 
 
 def carry_local_settings(checkout: Path, folder: Path) -> None:
@@ -1658,17 +1748,94 @@ def carry_local_settings(checkout: Path, folder: Path) -> None:
         ) from None
 
 
+def seat_settings(seat_clone: Path) -> dict[str, Any]:
+    """The settings a run in a reviewer's clone is passed (ADR-102 point 3): the
+    allow, ask and deny rules of the seat's clone's settings file, and nothing else
+    of it, no mode, sandbox setting, added folder, hook or server. A list the file
+    does not hold, or a file it does not have, gives none.
+
+    The file is read only as a regular file, through no link at it or at its
+    folder, never waited on as a pipe, and up to `SEAT_SETTINGS_LIMIT` bytes.
+    Raises `Refused` where it cannot be read so, is no JSON object, or holds a list
+    of rules that is not a list of strings, rather than run the reviewer without
+    the seat's rules.
+
+    No snapshot of a realized model binds the seat's clone while realizing keeps
+    none (ADR-095 point 3), so the runner names no bound, and registers no hook of
+    its own: the clone's own settings register the hook, as the seat's do, and
+    the reviewer is held as it would be in the seat's clone."""
+    shown = "/".join(PROJECT_SETTINGS)
+    parent = seat_clone / PROJECT_SETTINGS[0]
+    if parent.is_symlink():
+        raise Refused(f"the seat's clone holds a symbolic link on the way to `{shown}`")
+    try:
+        handle = os.open(parent / PROJECT_SETTINGS[1], os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    except FileNotFoundError:
+        return {"permissions": {side: [] for side in SEAT_RULES}}
+    except OSError as exc:
+        raise Refused(
+            f"the seat's settings, `{shown}`, cannot be read: {exc.strerror or exc}"
+        ) from None
+    try:
+        if not stat.S_ISREG(os.fstat(handle).st_mode):
+            raise Refused(f"the seat's settings, `{shown}`, are not a regular file")
+        raw = os.read(handle, SEAT_SETTINGS_LIMIT + 1)
+    except OSError as exc:
+        raise Refused(
+            f"the seat's settings, `{shown}`, cannot be read: {exc.strerror or exc}"
+        ) from None
+    finally:
+        os.close(handle)
+    if len(raw) > SEAT_SETTINGS_LIMIT:
+        raise Refused(f"the seat's settings, `{shown}`, pass {SEAT_SETTINGS_LIMIT} bytes")
+    try:
+        settings = json.loads(raw.decode("utf-8"))
+    except ValueError:
+        raise Refused(f"the seat's settings, `{shown}`, are not a JSON document") from None
+    permissions = settings.get("permissions", {}) if isinstance(settings, dict) else None
+    if not isinstance(permissions, dict):
+        raise Refused(f"the seat's settings, `{shown}`, hold no object of permissions")
+    rules: dict[str, list[str]] = {}
+    for side in SEAT_RULES:
+        listed = permissions.get(side, [])
+        if not isinstance(listed, list) or not all(isinstance(rule, str) for rule in listed):
+            raise Refused(f"the seat's {side} rules, in `{shown}`, are not a list of strings")
+        rules[side] = list(listed)
+    return {"permissions": rules}
+
+
+def write_seat_settings(settings: dict[str, Any], folder: Path) -> Path:
+    """Write the run's *settings* as a new file in its settings *folder*, through no
+    link, and return the file. Raises `Refused` where it cannot be written so."""
+    target = folder / SEAT_SETTINGS_FILE
+    try:
+        with os.fdopen(os.open(target, NEW_FILE_FLAGS, 0o600), "w", encoding="utf-8") as written:
+            json.dump(settings, written)
+    except OSError as exc:
+        raise Refused(f"the run's settings cannot be written: {exc.strerror or exc}") from None
+    return target
+
+
 def run_unconfined(request: dict[str, Any], env: dict[str, str]) -> dict[str, Any]:
     """Run an unconfined request, and answer how it ended. The limit counts from
     here, so the pick and the check of the definition count against it. The
     person's local settings are carried in last before the harness starts, so
-    a run refused before then writes nothing in its folder."""
+    a run refused before then writes nothing in its folder. A run in a
+    reviewer's clone is passed the seat's rules (`seat_settings`), read before
+    the pick and written in its settings folder after it."""
     deadline = time.monotonic() + request["limit_seconds"]
     harness = find_harness(env)
     folder = Path(request["folder"])
-    argv = unconfined_command(
-        harness, request["agent"], folder, request.get("effort"), env, deadline
+    permissions = request.get("seat_permissions")
+    settings = None if permissions is None else seat_settings(Path(permissions["seat_clone"]))
+    settings_file = (
+        None if permissions is None else Path(permissions["settings_folder"]) / SEAT_SETTINGS_FILE
     )
+    argv = unconfined_command(
+        harness, request["agent"], folder, request.get("effort"), env, deadline, settings_file
+    )
+    if settings is not None and permissions is not None:
+        write_seat_settings(settings, Path(permissions["settings_folder"]))
     if "local_settings_from" in request:
         carry_local_settings(Path(request["local_settings_from"]), folder)
     try:

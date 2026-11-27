@@ -43,6 +43,15 @@ What crosses the boundary is ADR-066 point 2's, in two forms:
   the person's local settings: the backbone then names the project root as
   the checkout they come from, and the runner, which alone knows the file its
   harness keeps them in, carries them into the folder (ADR-066 points 1 and 10).
+  - **In a reviewer's clone** (ADR-102): in place of the folder, the commit,
+    the remote and the references of a clone made for the run
+    (`review_clones.ReviewerClone`). The review command asks for one for each
+    reviewer it runs in a seat's clone, the project the command runs in. The
+    backbone makes the clone from the code host, at the commit, and removes it
+    once the run ends (`review_clones`). It runs the runner the clone
+    registers, from the clone's root, and names it the project as the checkout
+    the local settings come from, and as the seat's clone whose settings give
+    the run's rules, with the folder beside the clone it writes them in.
 - **Confined:** the same without the folder, and in its place the commit, the
   command whose run rules hold the run (`<capability>:<command>`), and the
   folder the run's files go to. The backbone makes a clone at the commit,
@@ -53,6 +62,9 @@ What crosses the boundary is ADR-066 point 2's, in two forms:
 The document the command writes for its caller (`AgentRun.as_json`) is the
 contract. A caller decides on its `ending`, never on the exit code. For a
 confined run, it reads the check's verdict before it trusts the run's files.
+A refused run names, as `refusal_cause`, `agent_confinement.RUN_FOLDER` where
+the backbone could not make or write its folder for the run, as from inside a
+sandbox on Linux, so the caller can name a run started outside one.
 """
 
 from __future__ import annotations
@@ -66,10 +78,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, cast
 
-from project_kit import agent_confinement, agent_policy, command_runner
+from project_kit import agent_confinement, agent_policy, command_runner, review_clones
 from project_kit.agent_confinement import CHECK_NOT_RUN, Check, Confinement
 from project_kit.command_runner import END_GRACE_SECONDS, Ending, registered_commands
 from project_kit.manifest import read_backbone_manifest
+from project_kit.review_clones import ReviewerClone
 
 #: The reference under which an adapter registers its runner in its `commands:`
 #: tree (ADR-066 point 1). One fixed reference, so the backbone finds a runner
@@ -133,9 +146,10 @@ class Request:
 
     An unconfined run names its `folder`, and may name the checkout the
     person's local settings are carried from into it (`local_settings_from`).
-    A confined run names neither, and names instead the `commit`, the command
-    whose run rules hold it (`rules_of`, as `<capability>:<command>`) and the
-    folder its files go to (`files_to`)."""
+    A run in a reviewer's clone names none of these, and names instead the
+    clone (`review`, ADR-102). A confined run names neither, and names instead
+    the `commit`, the command whose run rules hold it (`rules_of`, as
+    `<capability>:<command>`) and the folder its files go to (`files_to`)."""
 
     agent: str
     brief: str
@@ -146,11 +160,13 @@ class Request:
     rules_of: str | None = None
     files_to: Path | None = None
     local_settings_from: Path | None = None
+    review: ReviewerClone | None = None
 
     @property
     def confined(self) -> bool:
-        """Whether the run is confined: it names no folder to run in."""
-        return self.folder is None
+        """Whether the run is confined: it names no folder to run in, nor a
+        reviewer's clone."""
+        return self.folder is None and self.review is None
 
     def problem(self, target_root: Path | None = None) -> str | None:
         """Why the request cannot be run as it stands, or None. The CLI checks the
@@ -169,6 +185,14 @@ class Request:
             return f"the limit must be from 1 to {MAX_LIMIT_SECONDS} seconds"
         if self.effort is not None and self.effort not in EFFORT_LEVELS:
             return f"effort {self.effort!r} is not one of {', '.join(EFFORT_LEVELS)}"
+        if self.review is not None:
+            named = (self.folder, self.commit, self.rules_of, self.files_to)
+            if named != (None, None, None, None) or self.local_settings_from is not None:
+                return (
+                    "a run in a reviewer's clone names no folder, commit, rules or folder for "
+                    "its files, and asks for no local settings: the backbone carries them in"
+                )
+            return self.review.problem()
         if self.folder is not None:
             if (self.commit, self.rules_of, self.files_to) != (None, None, None):
                 return (
@@ -207,13 +231,19 @@ class Request:
             return f"the repository holds no commit {self.commit}"
         return None
 
-    def as_json(self, confined: Mapping[str, Any] | None = None) -> dict[str, Any]:
+    def as_json(
+        self,
+        confined: Mapping[str, Any] | None = None,
+        seat_permissions: Mapping[str, str] | None = None,
+    ) -> dict[str, Any]:
         """The request as the runner reads it on standard input: with the folder,
         and the checkout the local settings come from where one is named, or,
         for a confined run, with the `confined` block in their place
         (`agent_confinement.request_block`). A request that asks for no local
         settings carries no key for them, so a runner that predates the key
-        still runs it."""
+        still runs it. A run in a reviewer's clone adds `seat_permissions`: the
+        seat's clone whose settings give the run's rules, and the folder the
+        runner writes them in (ADR-102 point 3)."""
         document: dict[str, Any] = {
             "schema_version": REQUEST_VERSION,
             "agent": self.agent,
@@ -223,6 +253,8 @@ class Request:
             document["folder"] = str(self.folder)
             if self.local_settings_from is not None:
                 document["local_settings_from"] = str(self.local_settings_from)
+            if seat_permissions is not None:
+                document["seat_permissions"] = dict(seat_permissions)
         document["limit_seconds"] = self.limit_seconds
         document["effort"] = self.effort
         if confined is not None:
@@ -240,7 +272,11 @@ class AgentRun:
 
     A confined run also carries its `commit`, the `check` of its clone, the
     folder its `files` were copied to (None when they were not), and the
-    commands it `excluded` from the sandbox."""
+    commands it `excluded` from the sandbox.
+
+    A refused run carries its `refusal_cause` where the backbone names one:
+    `agent_confinement.RUN_FOLDER` where its folder for the run cannot be made
+    or written."""
 
     agent: str
     ending: str
@@ -255,6 +291,7 @@ class AgentRun:
     check: Check | None = None
     files: Path | None = None
     excluded: tuple[tuple[str, ...], ...] = ()
+    refusal_cause: str | None = None
 
     @property
     def succeeded(self) -> bool:
@@ -277,6 +314,7 @@ class AgentRun:
             "check": None if self.check is None else self.check.as_json(),
             "files": None if self.files is None else str(self.files),
             "excluded": [list(command) for command in self.excluded],
+            "refusal_cause": self.refusal_cause,
         }
 
     @property
@@ -347,7 +385,8 @@ def run_agent(target_root: Path, request: Request) -> AgentRun:
     whole group without asking first. So the runner would be killed before it
     could end the harness, which leads a session of its own and would run on.
 
-    A confined request runs in a clone at its commit (`_run_confined`). An
+    A confined request runs in a clone at its commit (`_run_confined`), and one
+    in a reviewer's clone in a clone made for it (`_run_in_review_clone`). An
     unconfined one takes the runner of the project whose root its folder is,
     else the project's (`_unconfined_root`)."""
     marked = inside_a_run(request.agent, confined=request.confined, commit=request.commit)
@@ -362,6 +401,8 @@ def run_agent(target_root: Path, request: Request) -> AgentRun:
     problem = request.problem(target_root)
     if problem is not None:
         return _refused(request, problem)
+    if request.review is not None:
+        return _run_in_review_clone(target_root, request, request.review)
     if request.confined:
         return _run_confined(target_root, request)
     root = _unconfined_root(target_root, cast("Path", request.folder))
@@ -380,7 +421,12 @@ def run_agent(target_root: Path, request: Request) -> AgentRun:
 
 
 def _refused(
-    request: Request, reason: str, *, runner: str | None = None, diagnostics: str = ""
+    request: Request,
+    reason: str,
+    *,
+    runner: str | None = None,
+    diagnostics: str = "",
+    cause: str | None = None,
 ) -> AgentRun:
     """A run refused before its runner started, as its document states it."""
     return AgentRun(
@@ -392,6 +438,7 @@ def _refused(
         confined=request.confined,
         commit=request.commit,
         check=CHECK_NOT_RUN if request.confined else None,
+        refusal_cause=cause,
     )
 
 
@@ -454,7 +501,41 @@ def _run_confined(target_root: Path, request: Request) -> AgentRun:
         with agent_confinement.confinement(target_root, cast("str", request.commit)) as made:
             return _run_in(made, request)
     except agent_confinement.Refused as refused:
-        return _refused(request, refused.reason)
+        return _refused(request, refused.reason, cause=refused.cause)
+
+
+def _run_in_review_clone(target_root: Path, request: Request, review: ReviewerClone) -> AgentRun:
+    """Run a request in a reviewer's clone of its own (ADR-102 points 2 and 3).
+
+    The clone is made from the code host, at the commit the request names, and
+    removed on every exit (`review_clones.reviewer_clone`). The runner is the one
+    the clone registers, run from the clone's root, as for any unconfined run
+    whose folder is a project's root. It is named the project, the seat's clone,
+    as the checkout the person's local settings come from, and as the clone whose
+    settings give the run's rules, which it writes in the folder beside the
+    clone. A clone that cannot be made refuses the run, with its cause."""
+    try:
+        with review_clones.reviewer_clone(target_root, review) as made:
+            found = _runner_of(made.clone, request)
+            if isinstance(found, AgentRun):
+                return found
+            seat = target_root.resolve()
+            payload = dataclasses.replace(
+                request, folder=made.clone, local_settings_from=seat, review=None
+            ).as_json(
+                seat_permissions={"seat_clone": str(seat), "settings_folder": str(made.rules)}
+            )
+            run = command_runner.run_command(
+                found.script,
+                [],
+                cwd=made.clone,
+                bound_seconds=request.limit_seconds + RUNNER_MARGIN_SECONDS,
+                stdin=json.dumps(payload).encode("utf-8"),
+                grace_seconds=END_GRACE_SECONDS,
+            )
+            return _read(request.agent, found.adapter, run)
+    except agent_confinement.Refused as refused:
+        return _refused(request, refused.reason, cause=refused.cause)
 
 
 def _run_in(made: Confinement, request: Request) -> AgentRun:

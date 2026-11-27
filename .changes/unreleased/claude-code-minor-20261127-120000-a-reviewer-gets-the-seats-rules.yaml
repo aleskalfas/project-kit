@@ -1,0 +1,21 @@
+component: claude-code
+kind: minor
+custom:
+  category: Added
+body: >
+  The agent runner takes a run in a reviewer's clone (ADR-102 point 3). An
+  unconfined request may carry `seat_permissions`, naming the seat's clone and
+  a settings folder beside the run's folder. The runner then reads the
+  `allow`, `ask` and `deny` lists of the seat's clone's `.claude/settings.json`,
+  as a regular file through no link, writes them, and nothing else of that
+  file, as a new `settings.json` in the settings folder, and passes it with
+  `--settings`, the one flag that run adds to the unconfined form's closed
+  set. Claude Code ignores a project's allow rules in a folder nobody
+  trusted, so a reviewer in its own clone keeps the seat's rules this way. A
+  settings file it cannot read as rules, or a settings folder that is a link
+  or lies in or around the run's folder, refuses the run. No snapshot of a
+  realized model binds a seat's clone yet (ADR-095), so the runner names no
+  bound and registers no hook of its own. A runner older than this one
+  refuses such a request as carrying a key it does not run. The README's
+  "The unconfined form" and the enforcement declaration's new `reviewer-run`
+  block say what holds such a run and what stays open.

@@ -30,7 +30,7 @@ pkit:
         - src/project_kit/schemas_validate.py
         - src/project_kit/sync.py
         - src/project_kit/upgrade.py
-      record: [COR-001, COR-002, COR-005, COR-006, "COR-013#1", "COR-013#7", "COR-013#8", COR-028, COR-047, COR-070, ADR-066, ADR-073, ADR-076, ADR-083, ADR-085, ADR-086, ADR-087, "ADR-100#9", "ADR-103#4", "ADR-103#5", "project-management:DEC-084#1"]
+      record: [COR-001, COR-002, COR-005, COR-006, "COR-013#1", "COR-013#7", "COR-013#8", COR-028, COR-047, COR-070, ADR-066, ADR-073, ADR-076, ADR-083, ADR-085, ADR-086, ADR-087, "ADR-100#9", "ADR-103#4", "ADR-103#5", ADR-102, "ADR-095#3", "project-management:DEC-084#1"]
       artefact:
         - .pkit/adapters/claude-code/README.md
         - .pkit/adapters/claude-code/README.md#what-this-adapter-ships
@@ -227,7 +227,7 @@ A command that starts an agent nobody can answer during its run never calls a ha
 
 - **A registered command.** The adapter registers it in its package's `commands:` tree, under the one reference `run-agent`. The backbone finds it through its one lookup of that tree ([the lifecycle reference's manifest schema, "How a registered command is run"](../lifecycle/manifest.md#how-a-registered-command-is-run)). A capability's command of that name is no runner.
 - **Run once for each run.** Each call starts one agent, so a runner is not idempotent. The backbone runs it under the agent-run policy that the manifest schema states, with no arguments and the request on standard input.
-- **Where it runs:** from the project's root. A confined run's runner is the one its clone registers, run from the clone's root. Where an unconfined run's folder is a project's root, its runner is the one that project registers, run from that folder. So a run in a clone at a commit gets the runner that commit registers.
+- **Where it runs:** from the project's root. A confined run's runner, and a run's in a reviewer's clone, is the one its clone registers, run from the clone's root. Where an unconfined run's folder is a project's root, its runner is the one that project registers, run from that folder. So a run in a clone at a commit gets the runner that commit registers.
 - **One runner for a project.** Where no registered adapter registers one, the run is refused, and the command that asked starts no agent and says why. Where more than one does, the run is refused too, until a record says how a project names its harness.
 
 **The request** is one JSON document on standard input: `schema_version` (`1`), `agent`, `brief`, `limit_seconds` and `effort`, a level or `null`. A runner refuses a request with any other key, rather than run it without that key. So a runner that does not know the confined form refuses it.
@@ -242,6 +242,12 @@ The request then takes one of two forms:
 An unconfined request may also hold this key:
 
 - `local_settings_from`: the absolute path of the person's checkout. The runner then copies the file its harness keeps for one checkout, out of git, from there into `folder` before the harness starts. It copies nothing where `folder` already holds that file, and refuses the run where a link lies on the way. Only the runner knows which file it is, so no capability names a harness's file.
+- `seat_permissions`: for a run in a reviewer's clone, an object of two absolute folders.
+  - `seat_clone`: the seat's clone, the checkout the review command runs in.
+  - `settings_folder`: a folder beside the reviewer's clone that the run does not work in.
+  - The runner reads the allow, ask and deny rules of the settings file the seat's clone keeps in git. It passes them to the harness as the run's settings, and nothing else of that file: no mode, sandbox setting, added folder, hook or server. It writes them in `settings_folder`.
+  - It refuses the run where it cannot read that file, or where `settings_folder` is a link or lies in or around `folder`.
+  - Where a snapshot of a realized model binds the seat's clone, the runner also registers the hook from the copy. The runner names that snapshot as the hook's bound. Realizing keeps no snapshot yet, so none binds. The runner names none, and the reviewer is held as it would be in the seat's clone.
 
 When the drift command starts a fixer, and in which form, is project-management's ([its README, "Starting the fixers"](../capabilities/project-management/README.md#starting-the-fixers--fix-drift)).
 
