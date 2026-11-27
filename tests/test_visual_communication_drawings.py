@@ -33,6 +33,9 @@ it draws.
   top declares, and a drawing of a top its base serves, ask the brand's owner for
   attention; and the version states each top it serves, with the layouts it leaves. In a
   released version each failure asks for attention instead, and a release reads them all.
+  A drawing's own token whose default does not hold fails in its file, and one its file
+  reads nowhere asks the brand's owner for attention, or is stated as a fact where the
+  brand gives it a value or opens it (DEC-044 point 4).
 
 The engine's rules are drawn from components written as mappings in memory (`FakeEnv`);
 the deck under the test brand from a project in a temporary folder, its drawing of the
@@ -43,6 +46,7 @@ built on the test brand.
 from __future__ import annotations
 
 import copy
+import json
 from pathlib import Path
 from typing import Any
 
@@ -1364,3 +1368,64 @@ def test_a_drawing_whose_list_of_ties_is_drawn_by_default_by_no_tie_fails_at_its
     found = alone(root, "tie-default", "end-clash")
     assert ("tie-default", "fails", file, "parts.links.draw") in found
     assert ("end-clash", "fails", file, "parts.links.draw") in found
+
+
+#: A token of the cover's own, and its path.
+EDGE = "component.test-brand.cover.edge"
+
+
+def edged(default: str = "{surface}") -> dict[str, Any]:
+    """The fixture's drawing of the cover, declaring a token of its own, `edge`, that
+    defaults to `default` and that its file reads nowhere."""
+    return cover(tokens={"edge": {"type": "color", "default": default}})
+
+
+@pytest.mark.parametrize(
+    ("kept", "level", "who"),
+    [
+        ("", "attention", "the owner of `test-brand`"),
+        ("given", "fact", ""),
+        ("opened", "fact", ""),
+    ],
+    ids=["neither", "given", "opened"],
+)
+def test_a_token_a_drawing_reads_nowhere_is_kept_where_its_brand_gives_it_a_value_or_opens_it(
+    tmp_path: Path, kept: str, level: str, who: str
+) -> None:
+    """A drawing carries no status, so the brand keeps one of its tokens only where it gives
+    it a value or opens it, until its next major (DEC-034 point 8, DEC-044 point 4)."""
+    root, _ = brands(tmp_path)
+    hold(root, edged())
+    folder = root / BRAND_FOLDER
+    if kept == "given":
+        path = folder / "tokens" / "base.tokens.json"
+        data = json.loads(path.read_text(encoding="utf-8"))
+        white = {"colorSpace": "srgb", "components": [1.0, 1.0, 1.0], "alpha": 1}
+        data["component"] = {"test-brand": {"cover": {"edge": {"$type": "color", "$value": white}}}}
+        path.write_text(json.dumps(data), encoding="utf-8")
+    if kept == "opened":
+        library = folder / "library.yaml"
+        text = library.read_text(encoding="utf-8")
+        assert "open: [accent, space]" in text
+        library.write_text(text.replace("open: [accent, space]", f"open: [accent, space, {EDGE}]"))
+    assert alone(root, layout.TOKEN_UNREAD) == [
+        (layout.TOKEN_UNREAD, level, COVER_FILE, "tokens.edge")
+    ]
+    [read] = [f for f in read_in_full(root).findings if f.code == layout.TOKEN_UNREAD]
+    assert (read.level, read.who) == (level, who)
+
+
+def test_a_drawings_token_whose_default_the_brand_keeps_private_fails_in_its_file(
+    tmp_path: Path,
+) -> None:
+    """The brand's private tokens hold no role a default may alias, so a default that
+    names one leads nowhere: the brand checked alone finds it in the drawing's file, as a
+    component library's is found (DEC-044 point 4)."""
+    root, _ = brands(tmp_path)
+    hold(root, edged("{scheme.paper}"))
+    assert alone(root, "default-dangling") == [
+        ("default-dangling", "fails", COVER_FILE, "tokens.edge")
+    ]
+    assert [f.file for f in read_in_full(root).findings if f.code == "default-dangling"] == [
+        COVER_FILE
+    ]

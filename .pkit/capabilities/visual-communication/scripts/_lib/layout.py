@@ -3184,22 +3184,33 @@ class Component:
         return self._value_dims[name]
 
 
-def unread_token_findings(component: Component, *, file: str, library: str) -> list[Finding]:
+def unread_token_findings(
+    component: Component, *, file: str, library: str, kept: Collection[str] = ()
+) -> list[Finding]:
     """A finding for each component token `component` declares that its file reads nowhere
     (DEC-035 point 9), in its file `file` of the library version `library`. A brand's value
     for it is only wasted, so none fails. In an experimental component it asks the
     library's owner for attention, since the component may drop the token at once; in a
     stable or deprecated one it states a fact, since the token stays until the library's
-    next major (DEC-035 point 6)."""
+    next major (DEC-035 point 6). A brand's drawing carries no status, so one of its tokens
+    is kept only where it is among `kept`, the tokens its brand gives a value or opens,
+    which it states as a fact, and asks the brand's owner for attention otherwise (DEC-034
+    point 8, DEC-044 point 4)."""
     name = component.use.partition("/")[0]
-    promised = component.status in PROMISED
+    drawing = component.draws is not None
     found = []
     for path in component.unread_tokens:
+        promised = path in kept if drawing else component.status in PROMISED
         message = (
             f"`{component.use}` declares the component token `{path}`, and its file reads it "
             "nowhere, so a brand's value for it changes nothing"
         )
-        if promised:
+        if promised and drawing:
+            message += (
+                ": its brand gives it a value or opens it, so the drawing keeps it until the "
+                "brand's next major"
+            )
+        elif promised:
             message += f": a {component.status} component keeps it until the library's next major"
         found.append(
             Finding(
@@ -3556,7 +3567,9 @@ class Context:
                 self._roles[path] = missing
         found = self._roles[path]
         if isinstance(found, UnvaluedRole):
-            raise UnvaluedRole(found.role, found.library, named=found.named)
+            raise UnvaluedRole(
+                found.role, found.library, reached=found.reached, of_brand=found.of_brand
+            )
         if isinstance(found, KeyError):
             raise KeyError(path)
         return found
@@ -3591,23 +3604,36 @@ class Context:
 
     def unvalued_at_lock(self, unvalued: UnvaluedRole, part: str) -> None:
         """Records that `part` reads a library's own role the brand leaves with no value
-        (DEC-008 points 8 and 9). Where the brand, or a brand it builds on, names the
-        library, that brand owes the role a value, which is its own finding, so the part
-        takes none. Where none does, neither the brand nor the library alone is at fault:
-        the finding lies at the lock that combines them, which the piece names, so it says
-        so as `piece`. It names no version, so it fails."""
-        if unvalued.named:
+        (DEC-008 points 8 and 9). Where the brand, or a brand it builds on, reaches the
+        library's roles, what leaves the role with no value is that brand's finding, or the
+        library's, so the part takes none. Where none does, neither the brand nor the library
+        alone is at fault: the finding lies at the lock that combines them, which the piece
+        names, so it says so as `piece`. It names no version, so it fails. A token of a
+        brand's own component reaches no value under a brand outside that brand's chain, and
+        naming the holding brand reaches none of its roles (DEC-044 points 3 and 4)."""
+        if unvalued.reached:
             return
         library, role = unvalued.library, unvalued.role
-        message = (
-            f"under this lock, {part} reads `@{role}`, a role of {self.library(library)} that "
-            f"has no value: its chain of defaults reaches none, and the brand does not name "
-            f"`{library}` to give it one"
-        )
-        fix = (
-            f"lock a brand that names `{library}` and gives `@{role}` a value, or a version "
-            f"of `{library}` whose `@{role}` has a default that reaches a shared role"
-        )
+        if unvalued.of_brand:
+            message = (
+                f"under this lock, {part} reads `@{role}`, a component token of the brand "
+                f"{self.library(library)} that has no value: its chain of defaults reaches "
+                f"none, and the piece's brand is neither `{library}` nor built on it"
+            )
+            fix = (
+                f"draw the piece under `{library}` or a brand built on it, or lock a version "
+                f"of `{library}` whose `@{role}` has a default that reaches a shared role"
+            )
+        else:
+            message = (
+                f"under this lock, {part} reads `@{role}`, a role of {self.library(library)} "
+                f"that has no value: its chain of defaults reaches none, and the brand does not "
+                f"name `{library}` to give it one"
+            )
+            fix = (
+                f"lock a brand that names `{library}` and gives `@{role}` a value, or a version "
+                f"of `{library}` whose `@{role}` has a default that reaches a shared role"
+            )
         self.add(
             Finding("unknown-role", FAILS, message, where="lock", fix=fix, extra={"piece": True})
         )

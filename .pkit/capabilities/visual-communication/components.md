@@ -111,6 +111,10 @@ pkit:
         - visual-communication:DEC-035#3
         - visual-communication:DEC-035#4
         - visual-communication:DEC-035#5
+        - visual-communication:DEC-044#1
+        - visual-communication:DEC-044#2
+        - visual-communication:DEC-044#3
+        - visual-communication:DEC-044#4
         - visual-communication:DEC-036#1
         - visual-communication:DEC-036#2
         - visual-communication:DEC-036#3
@@ -149,6 +153,7 @@ pkit:
         - .pkit/capabilities/visual-communication/files.md#pieceyaml
         - .pkit/capabilities/visual-communication/files.md#the-lock
         - .pkit/capabilities/visual-communication/files.md#the-foundations
+        - .pkit/capabilities/visual-communication/files.md#brands
         - .pkit/capabilities/visual-communication/files.md#rolesyaml
         - .pkit/capabilities/visual-communication/files.md#picture-roles
         - .pkit/capabilities/visual-communication/files.md#picture-files
@@ -319,11 +324,12 @@ parts:
     box: {fill: component.ui.card.fill, stroke: line}
 ```
 
-- **`tokens`** maps each token's name to `{type, default}`. The name is one segment of the name shape ([Shapes](files.md#shapes)), and the component's file gives the rest of its path, `component.<library>.<component>.<name>`. The card's tokens above are `component.ui.card.fill` and `component.ui.card.gap`.
-- **Its type** is any type a role takes but `picture`. **Its default** is always given, and aliases a role of that type: an own role of the component's library, or a role of a library it builds on, the shared roles included. It never aliases a component token, the component's own included, nor a role of an order, which a brand tunes for an order's steps alone (DEC-032 point 6; [The foundations](files.md#the-foundations)).
+- **`tokens`** maps each token's name to `{type, default}`. The name is one segment of the name shape ([Shapes](files.md#shapes)), and the component's file gives the rest of its path, `component.<library>.<component>.<name>`, a brand's own component's under the brand's own name. The card's tokens above are `component.ui.card.fill` and `component.ui.card.gap`.
+- **Its type** is any type a role takes but `picture`. **Its default** is always given, and aliases a role of that type: an own role of the component's library, or a role of a library it builds on, the shared roles included. In a brand's own component, it aliases a role of a library the brand names, the shared roles included, and never one of the brand's private tokens, which is no role (DEC-044 point 1). It never aliases a component token, the component's own included, nor a role of an order, which a brand tunes for an order's steps alone (DEC-032 point 6; [The foundations](files.md#the-foundations)).
 - **A token names what it styles, not a part.** Several of the component's parts may read one token, such as a box's edge and a divider line that a brand restyles as one.
 - **Its own parts read it by its full path,** wherever they read a role. A paint names it, as in `fill: component.ui.card.fill`. So does a text's style, and a formula reads it as `@component.ui.card.gap` ([References](#references)). No other component reads it, and nothing a piece writes names one. A part that reads a token its own component does not declare, in a paint, a text's style or a formula, is reported as `component-token-undeclared`, and the engine keeps what the part reads, the formula included (*checks*).
 - **Its value** is a brand's, where the brand names the library and gives it one, and else its default's, as for a library's own role ([`roles.yaml`](files.md#rolesyaml)).
+- **A brand's own component's token** takes the brand's value, whether or not the brand has a base, since no base holds it. A brand built on that brand, directly or along its chain, gives it a value only where its own base opens it, and names no brand for it but its base. Under any other brand it draws at its default, in that brand's values where its default leads to one; a part that reads it where its default leads to none fails at the lock (DEC-044 points 1 to 3; [A library's roles](files.md#a-librarys-roles), [Open roles](files.md#open-roles)).
 - **A local component declares no token.** Where it would want one, let its parts read the role the token's default would alias.
 
 ### Parts
@@ -694,7 +700,7 @@ A formula is refused with a message that names it and says why, such as "the for
 - **It reads what it may not:** a value, a part or an option the component lacks, an option that names an item of a list over which not exactly one part repeats, below where a step may reach, `:place` or `:places` in any formula but a `cross-size`, or `own-center` or `own-middle` of a part of its own that is no line, of an item or of an end.
 - **It reads the size it gives:** a `cross-size` that reads its part's size across the line where the part gives none, itself or through a named value, as a loop (DEC-038 point 7).
 - **Its dimensions disagree,** or it gives another dimension than its key needs.
-- **It reads a role** that has no value under the brand, a length in a unit other than `px`, or a role that is neither a length nor a number. A role has none where no library the piece locks declares it, or where it is a library's role that neither the brand nor its chain of defaults gives a value ([`roles.yaml`](files.md#rolesyaml)). A part reads no value from a picture role, whether the brand gives it a file or not ([Picture roles](files.md#picture-roles)). A library's role with no value, a component token among them, is found at the piece's lock, not in the component. Where the brand, or a base below it, names the library, the part takes no finding: that brand's `library-role-missing`, or its library's own finding where a default does not hold, reports it.
+- **It reads a role** that has no value under the brand, a length in a unit other than `px`, or a role that is neither a length nor a number. A role has none where no library the piece locks declares it, or where it is a library's role that neither the brand nor its chain of defaults gives a value ([`roles.yaml`](files.md#rolesyaml)). A part reads no value from a picture role, whether the brand gives it a file or not ([Picture roles](files.md#picture-roles)). A library's role with no value, a component token among them, is found at the piece's lock, not in the component. Where the brand, or a base below it, names the library, the part takes no finding: that brand's `library-role-missing`, or its library's own finding where a default does not hold, reports it. A token of a brand's own component is found at the lock too, where the piece's brand is neither that brand nor built on it, since naming that brand reaches none of its roles (DEC-044 points 3 and 4).
 
 Beside a formula, it refuses then a `cross-size` on a part whose items are pages, and a `stretch` written beside a `cross-size` that gives a size, as a second writer of the size ([Repeating over a list](#repeating-over-a-list-row-and-column)). It judges that loop and that `stretch` for each set of options, sizes and `:as` that holds together, so a pair only some options would draw is found in the library's own check.
 

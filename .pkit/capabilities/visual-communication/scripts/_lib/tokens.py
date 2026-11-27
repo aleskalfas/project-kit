@@ -2,7 +2,7 @@
 foundations' declarations of the shared roles, axes, colour families, shapes, an order's
 roles and pairs (DEC-004, DEC-032 point 1, DEC-036 point 1),
 the own roles of the component libraries resolved with a brand (DEC-008), and the
-component tokens of their components (DEC-035).
+component tokens of their components and of each brand's own (DEC-035, DEC-044).
 
 **The foundations' declarations** (`roles.yaml`, format `roles`) name each shared role with
 its type, and a default that aliases an older role where it has one; each shared axis with
@@ -34,20 +34,28 @@ the scope holds it among its library's roles, and tells it apart (`Scope.tokens`
 that cannot be read is left out, its finding in its component's file. No pair names one
 (DEC-035 point 8). Only its component reads it, which the engine judges where it reads the
 component (`layout`). The foundations ship components too, so theirs declare tokens at
-`component.foundations`, as any library's do, though the foundations have no own roles.
+`component.foundations`, as any library's do, though the foundations have no own roles. So
+does each brand's own component, a drawing among them, at `component.<brand>`, the brand
+standing as the component's library: format 1 reads no brand's own roles, so its
+components' tokens are all the scope holds of a brand (DEC-035 point 1, DEC-044 point 1).
 
 **A scope** (`Scope`) is the roles one resolution reads: the foundations' and the own roles
-of each component library resolved with them, one version of each, under a lock or as a
-version is checked alone (DEC-008 point 1). It judges each library's defaults and pairs
-against the libraries it builds on there: a default that aliases a component token, a
-role of an order (DEC-032 point 6), a role of another type or of a library it does not
-build on, a default that leads nowhere or a loop of defaults, each fails; a pair that, its
-own roles replaced by their defaults, falls on no pair the foundations, the library or a
-library it builds on declares at a level as strict fails; a role whose chain of defaults
-does not end at a shared role is stated as a fact. A role's type reads from the scope with
-no brand. It holds each component library, one that declares neither an own role nor a
-component token among them, since a brand that names a library draws its tops too (DEC-009
-point 3).
+of each component library resolved with them, and the component tokens of each such
+library's components and of each brand's, one version of each, under a lock or as a
+version is checked alone (DEC-008 point 1, DEC-044 point 1). It judges each library's
+defaults and pairs, and a brand's defaults as a library's, against the libraries it builds
+on there: a default that aliases a component token, a role of an order (DEC-032 point 6),
+a role of another type or of a library it does not build on, a default that leads nowhere
+or a loop of defaults, each fails; a pair that, its own roles replaced by their defaults,
+falls on no pair the foundations, the library or a library it builds on declares at a level
+as strict fails; a role whose chain of defaults does not end at a shared role is stated as
+a fact. A default of a brand's own component reaches the roles of each library the brand
+names, the shared roles where it names the foundations. A brand it names, along its chain
+or outside it, holds no role a default may alias, since format 1 reads no brand's own
+roles and no default aliases a component token (DEC-044 point 1). A role's type reads from
+the scope with no brand. It holds each component library, one that declares neither an own
+role nor a component token among them, since a brand that names a library draws its tops
+too (DEC-009 point 3).
 
 **A brand** is one library version of kind `brand`. Its `library.yaml` names the DTCG
 version, its Resolver document, its open roles, and the brand it builds on as its base, if
@@ -118,23 +126,28 @@ A brand that breaks either is at fault where its own values take part
 (`picture-role-modes`, `picture-role-proportion`); where its base's alone do, the base's
 own finding says so.
 
-**A brand and a library's own roles** (DEC-008 points 1 and 4 to 6):
+**A brand and a library's own roles** (DEC-008 points 1 and 4 to 6, DEC-044 points 1 to
+3):
 
-- *reached only where named:* a brand reaches a library's roles and its components'
-  tokens, to give one a value, open it or alias it, only where its `builds-on` names that
-  library by the major the scope's version fits (`named`). A token it holds under the name
-  of a library it names, or under `component.<library>`, gives one of its roles, or of its
-  components' tokens, a value; one that names none of them, or is of another type, is a
-  finding. Under the name of a library it does not name, or under `component.<library>`, a
-  token stays private, and where the scope holds that library, as under a lock, it asks
-  for attention. A token under `component.<the brand's own name>` stays private, with no
-  finding (DEC-035 point 7);
+- *reached where named, or its own, or along its chain:* a brand reaches a library's roles
+  and its components' tokens, to give one a value, open it or alias it, only where its
+  `builds-on` names a component library by the major the scope's version fits (`named`),
+  where it is the library, or where the library is a brand along its chain of bases
+  (`reached`). Naming a brand outside its chain reaches none of that brand's roles. A token
+  it holds under the name of a library it reaches, or under `component.<library>`, gives
+  one of its roles, or of its components' tokens, a value; one that names none of them, or
+  is of another type, is a finding. Format 1 reads no brand's own roles, so every token
+  under the name of a brand along its chain, outside `component`, is one. Under its own
+  name, outside `component`, a token stays private, with no finding, until the capability
+  reads a brand's own roles. Under the name of a library it does not reach, or under
+  `component.<library>`, a token stays private, and where the scope holds that library, as
+  under a lock, it asks for attention;
 - *defaults below every brand:* a default lies under the base's tokens and the brand's own
   sources, and is resolved after the merge, so it follows the value the brand gives the
   role it aliases. A role whose chain of defaults reaches no value has none under the
   brand; a brand that names its library gives each of its roles with no default a value
   in every combination, or that is a finding;
-- *exports:* a brand exports, beside the shared roles, each role of a library it names
+- *exports:* a brand exports, beside the shared roles, each role of a library it reaches
   that it or its base gives a value (`roles`). It exports a shared picture role only
   where it or its base gives it a value (DEC-025 point 4), and such a role is `pictured`.
   Every role with a value under it but a picture role, a role left at its default
@@ -153,17 +166,22 @@ its major is the one the entry names. In each combination:
   own sources in its resolution order. The brand's value for a role its base opens wins in
   the combinations its sources cover, and the base's holds elsewhere; every token that
   aliases the role, the base's own included, follows the merged value. A value the brand
-  gives a role its base does not open is a finding, and the base's value holds;
+  gives a role its base does not open is a finding, and the base's value holds, but for a
+  token of its own components, which no base holds, so it gives one a value with no base
+  opening it (DEC-044 point 1);
 - *each library's private tokens stay its own:* an alias reaches the exported roles and
   the tokens of the library that writes it, never a token its base keeps private, which
   fails. So a base may reshape its private tokens freely;
 - *the base's axes:* the brand varies values on its base's axes, by their names and modes,
   its base's sizes and its own axes among them. A modifier for another axis, one that
   declares an axis of its own, a context for another mode, or another default fails;
-- *chains narrow:* the brand's open roles name only roles its base opens to it (format 1
-  has no brand's own roles), so each link of a chain opens at most what the last opens.
-  A base opens a role of a library only where it names that library, and a brand built on
-  it gives the role a value only where it names the library too (DEC-008 point 4).
+- *chains narrow:* the brand's open roles name only roles its base opens to it, and the
+  tokens of its own components, so each link of a chain opens at most what the last opens
+  and its own. A base opens a role of a library only where it reaches that library, and a
+  brand built on it gives the role a value only where it reaches the library too: a
+  component library by naming it, and a brand along its chain, its own components' tokens
+  among them, through its base, naming none of that chain but its base (DEC-008 point 4,
+  DEC-044 point 2).
 
 A brand that cannot be resolved raises TokenError, carrying its findings. One that can is
 a Brand, whose `findings` hold what is wrong but leaves it usable: an open role it does
@@ -173,7 +191,9 @@ combinations of a key and not in others or given files of two proportions there,
 declared pair below its contrast, an order's text between its two ends or a first end that
 stands out less from the page's ground than the last (DEC-032 point 2), a
 token under a library's name that gives none of its roles a value, a role of a library it
-names that it leaves with no value. Its `facts` hold what its version alone states: each
+names that it leaves with no value. Of a brand's own components' tokens and their defaults,
+the scope's findings say what is wrong, each naming the brand's version (`Scope.findings`,
+DEC-044 point 4). Its `facts` hold what its version alone states: each
 shared picture role it gives no value (DEC-025 point 9). A library's own `roles.yaml` is
 no brand's: its findings are the scope's (`Scope.findings`), each naming the library's
 version. Every finding of a brand names the brand's version as where it lies, so its level
@@ -299,10 +319,11 @@ class UnknownRole(KeyError):
 
 
 class RoleWithoutValue(UnknownRole, UnvaluedRole):
-    """A role the scope declares that has no value under the brand: a library's own role
-    whose chain of defaults reaches none, which no brand of its chain gives one. The engine
-    reads it as `env.UnvaluedRole`: it names the role's library, and whether a brand of the
-    chain names that library (DEC-008 points 4 and 9)."""
+    """A role the scope declares that has no value under the brand: a library's own role, or
+    a component token, whose chain of defaults reaches none, which no brand of its chain
+    gives one. The engine reads it as `env.UnvaluedRole`: it names the role's library,
+    whether that library is a brand, and whether a brand of the chain reaches its roles
+    (`Brand.chain_reaches`, DEC-008 points 4 and 9, DEC-044 point 4)."""
 
 
 @dataclass(frozen=True)
@@ -416,6 +437,8 @@ class Declarations:
       findings name it.
     - `own`: for a library other than the foundations, its name, the group its own roles
       lie under; "" for the foundations, whose roles are shared.
+    - `brand`: whether the library is a brand, of which format 1 reads its components'
+      tokens alone, and no own role (DEC-044 point 1).
     - `builds_on`: the libraries it builds on, by name.
     - `tokens`: the component tokens its components declare, by token path (DEC-035
       points 1 and 2), the foundations' components among them.
@@ -434,6 +457,7 @@ class Declarations:
     label: str = ""
     file: str = ""
     own: str = ""
+    brand: bool = False
     builds_on: tuple[str, ...] = ()
     tokens: dict[str, ComponentToken] = field(default_factory=dict)
     findings: tuple[Finding, ...] = ()
@@ -904,8 +928,8 @@ def _read_pairs(
 class Scope:
     """The roles one resolution reads (DEC-008 point 1): the foundations' shared roles, and
     the own roles of each component library resolved with them, and the component tokens
-    of its components, one version of each, as their declarations give them. A role's type
-    reads from it with no brand.
+    of its components and of each brand's own, one version of each, as their declarations
+    give them. A role's type reads from it with no brand.
 
     - `foundations`: the foundations' declarations; `axes`, `families`, `shapes` and
       `top_groups` are theirs.
@@ -913,7 +937,9 @@ class Scope:
       components' tokens, by its name, a library that declares neither among them, so a
       brand names it (DEC-009 point 3). The foundations' lie among them where the scope
       holds their version, with their components' tokens and no role, since their roles
-      are shared (DEC-035 points 1 and 7).
+      are shared (DEC-035 points 1 and 7). So does each brand's, marked `brand`, with its
+      own components' tokens and no role, since format 1 reads no brand's own roles
+      (DEC-044 point 1).
     - `roles`: every role, by its token path, each component token among them; `owner`,
       the library whose own role or component token each is, or "" for a shared role.
     - `tokens`: each component token, by its token path (DEC-035 points 1 and 2). It is
@@ -1226,7 +1252,9 @@ def read_scope(folders: Mapping[str, Path], *, root: Path | None = None) -> Scop
     other library of kind `components`, with the own roles its `roles.yaml` declares
     (DEC-008 point 8) and the component tokens its components declare (DEC-035 point 1). A
     library that declares neither lies in the scope all the same, with none, since a brand
-    that names it draws its tops (DEC-009 point 3). A library whose `library.yaml` cannot
+    that names it draws its tops (DEC-009 point 3). Each brand lies in it with the
+    component tokens its own components declare, its drawings among them, and no own role,
+    which format 1 does not read (DEC-044 point 1). A library whose `library.yaml` cannot
     be read adds nothing, its own check reporting it. Where `folders` holds no foundations,
     as for a library that builds on none, the scope holds no shared role. Findings name
     files relative to `root` when given. Raises TokenError for the foundations'
@@ -1254,14 +1282,14 @@ def read_scope(folders: Mapping[str, Path], *, root: Path | None = None) -> Scop
             library = read_library(folder)
         except LibraryError:
             continue
-        if library.kind != "components":
+        if library.kind not in ("components", "brand"):
             continue
         builds_on = [need.name for need in library.builds_on]
         tokens, problems = read_component_tokens(
             folder, name=library.name, library=library.label, root=root
         )
         path = folder / "roles.yaml"
-        if path.is_file():
+        if library.kind == "components" and path.is_file():
             declared = read_own_roles(
                 path,
                 name=library.name,
@@ -1277,6 +1305,7 @@ def read_scope(folders: Mapping[str, Path], *, root: Path | None = None) -> Scop
                 pairs=(),
                 label=library.label,
                 own=library.name,
+                brand=library.kind == "brand",
                 builds_on=tuple(builds_on),
             )
         own.append(replace(declared, tokens=tokens, findings=(*declared.findings, *problems)))
@@ -1313,12 +1342,12 @@ class _View:
     point 1): the token that gives each role its value, whichever library of the chain
     writes it or the role's default; `merged`, the same before each own role's default that
     reaches no value is left out; each library's private tokens, by its label; and the
-    libraries each brand of the chain names, by its label."""
+    libraries whose roles each brand of the chain reaches, by its label (`Brand.reached`)."""
 
     roles: dict[str, _Token]
     merged: dict[str, _Token]
     private: dict[str, dict[str, _Token]]
-    named: dict[str, frozenset[str]]
+    reaches: dict[str, frozenset[str]]
 
 
 @dataclass(frozen=True)
@@ -1361,12 +1390,16 @@ class Brand:
       it varies it or not, each shared size axis it or its base gives, with the modes
       given (DEC-021 point 2), and each axis of its own or its base's, whole (DEC-004 point
       2). They are the axes and modes it exports (DEC-004 point 5).
-    - `named`: the libraries of the scope it names among those it builds on, by the major
-      their version fits, whose roles it reaches (DEC-008 point 4) and whose tops it draws
-      (DEC-009 point 3).
+    - `named`: the component libraries of the scope it names among those it builds on, by
+      the major their version fits, whose roles it reaches (DEC-008 point 4) and whose tops
+      it draws (DEC-009 point 3). No brand is among them (`_named`).
+    - `reached`: the libraries whose roles it reaches: those it names, itself and each
+      brand along its chain (`along`), its base first (DEC-008 point 4, DEC-044 points 1
+      and 2).
     - `roles`: the token paths it exports, in path order: the shared roles, each shared
       picture role only where it or its base gives it a value (DEC-025 point 4), and each
-      role of a library it names that it or its base gives a value (DEC-008 point 5).
+      role of a library it reaches that it or its base gives a value, its own components'
+      tokens among them (DEC-008 point 5, DEC-044 point 1).
     - `valued`: every role with a value in every combination, in path order: its exports,
       and each other role of the scope's libraries, at its default. A picture role is none
       of them, since no brand owes one (DEC-025 point 4).
@@ -1375,7 +1408,8 @@ class Brand:
       point 7, DEC-025 point 4).
     - `open`: its open roles, as its `library.yaml` lists them.
     - `opened`: the roles a brand built on it may give values: those its open roles name,
-      narrowed to those its base opens to it.
+      narrowed to those its base opens to it and its own components' tokens (DEC-044
+      point 2).
     - `base`: the brand it builds on as its base, read, or None.
     - `findings`: what is wrong, leaving it usable: its own, then its base's.
     - `facts`: what its version states, and no piece: each shared picture role it gives no
@@ -1432,6 +1466,31 @@ class Brand:
     def label(self) -> str:
         return f"{self.name}@{self.version}"
 
+    @property
+    def along(self) -> tuple[str, ...]:
+        """The names of the brands along its chain of bases, its base first, then each brand
+        that base builds on as its base in turn (DEC-044 point 2)."""
+        found: list[str] = []
+        brand = self.base
+        while brand is not None:
+            found.append(brand.name)
+            brand = brand.base
+        return tuple(found)
+
+    @property
+    def reached(self) -> frozenset[str]:
+        """The libraries whose roles it reaches, to give one a value, open it or alias it
+        (DEC-008 point 4, DEC-044 points 1 and 2): each component library it names, itself,
+        and each brand along its chain, which it reaches through its base."""
+        return self.named | {self.name, *self.along}
+
+    @property
+    def kept_tokens(self) -> frozenset[str]:
+        """The component tokens it keeps until its next major, since taking one away breaks:
+        each it exports, given a value, and each it opens (DEC-004 point 5). A drawing's token
+        among them that its file reads nowhere is stated as a fact (DEC-044 point 4)."""
+        return frozenset(path for path in (*self.roles, *self.opened) if path in self.scope.tokens)
+
     def resolve(self, token_path: str, combination: Mapping[str, str]) -> Any:
         """The value of the role at `token_path` in `combination` (an axis left out takes
         its default), aliases resolved, in canonical form: a colour `{colorSpace,
@@ -1443,7 +1502,13 @@ class Brand:
         if token_path not in self.valued:
             if token_path in self.scope.roles and self.scope.owner[token_path]:
                 library = self.scope.owner[token_path]
-                raise RoleWithoutValue(token_path, library, named=self.names(library))
+                declared = self.scope.libraries.get(library)
+                raise RoleWithoutValue(
+                    token_path,
+                    library,
+                    reached=self.chain_reaches(library),
+                    of_brand=declared is not None and declared.brand,
+                )
             raise UnknownRole(token_path)
         key = keys.key_of(combination, self.axes)
         return self._resolved[key][token_path].value
@@ -1498,14 +1563,15 @@ class Brand:
             return self.base.picture_of(given, named)
         return self._pictures.judge(given.name, named=named, file="", where="")
 
-    def names(self, library: str) -> bool:
-        """Whether the brand, or a brand of the chain below it, names the library `library`
-        among those it builds on (DEC-008 point 4). A role of such a library that has no
-        value is that brand's finding (`library-role-missing`), or its library's where its
-        default does not hold."""
+    def chain_reaches(self, library: str) -> bool:
+        """Whether the brand, or a brand of the chain below it, reaches the roles of the
+        library `library` (`reached`, DEC-008 point 4): names it among those it builds on, is
+        it, or has it along its chain. A role of such a library that has no value is that
+        brand's finding (`library-role-missing`), or its library's where its default does not
+        hold (DEC-044 point 4)."""
         brand: Brand | None = self
         while brand is not None:
-            if library in brand.named:
+            if library in brand.reached:
                 return True
             brand = brand.base
         return False
@@ -1619,13 +1685,16 @@ def _unreadable(exc: Exception, folder: Path, shown: str) -> Finding:
 
 
 def _named(raw: Any, scope: Scope) -> frozenset[str]:
-    """The libraries of `scope` that a `builds-on`, `raw`, names by the major their version
-    there fits (DEC-008 point 4)."""
+    """The component libraries of `scope` that a `builds-on`, `raw`, names by the major their
+    version there fits (DEC-008 point 4). A brand it names is none of them: naming a brand
+    reaches nothing of it, a base's roles reaching the brand through its chain (DEC-044
+    points 2 and 3)."""
     return frozenset(
         entry["name"]
         for entry in (raw if isinstance(raw, list) else [])
         if isinstance(entry, Mapping)
         and entry.get("name") in scope.libraries
+        and not scope.libraries[entry["name"]].brand
         and isinstance(entry.get("major"), int)
         and not isinstance(entry.get("major"), bool)
         and entry["major"] == scope.libraries[entry["name"]].major
@@ -1634,7 +1703,9 @@ def _named(raw: Any, scope: Scope) -> frozenset[str]:
 
 class _BrandReader:
     """Reads one brand version; collects what it finds as findings. `chain` names the
-    brands built on it that are being read, the last built on it directly."""
+    brands built on it that are being read, the last built on it directly. `reached` is the
+    libraries whose roles it reaches (`Brand.reached`), the brands along its chain among
+    them once its base is read."""
 
     def __init__(
         self,
@@ -1654,6 +1725,7 @@ class _BrandReader:
         self.name = str(library.get("name"))
         self.label = f"{library.get('name')}@{library.get('version')}"
         self.named = _named(library.get("builds-on"), scope)
+        self.reached = self.named | {self.name}
         self.shown = shown
         self.fonts_folder = fonts
         self.root = root
@@ -1743,6 +1815,8 @@ class _BrandReader:
                 "dtcg",
             )
         base = self._read_base(library.get("builds-on"))
+        if base is not None:
+            self.reached |= {base.name, *base.along}
         resolver = self._read_resolver(library.get("resolver"), base)
         if self.fatal or resolver is None:
             raise TokenError(self._unique(self.fatal))
@@ -2522,8 +2596,10 @@ class _BrandReader:
         """The tokens of the combination `key` before aliases are resolved: the base's, or
         the roles' defaults without a base, then the brand's own sources in order, later
         winning (DEC-008 point 1). A role its base does not open keeps the base's token, a
-        finding. A token at a role of a library the brand does not name, or of another type
-        than the role, stays private (DEC-008 point 4)."""
+        finding, but a token of the brand's own components, which it gives a value with no
+        base opening it (DEC-044 point 1). A token at a role of a library whose roles the
+        brand does not reach, or of another type than the role, stays private (DEC-008 point
+        4)."""
         if base is None:
             merged = {
                 path: _Token(path, role.type, f"{{{default}}}", {}, "", prefix=self.shown)
@@ -2531,26 +2607,26 @@ class _BrandReader:
                 if (default := self.scope.default_of(path)) is not None
             }
             below: dict[str, dict[str, _Token]] = {}
-            named: dict[str, frozenset[str]] = {}
+            reaches: dict[str, frozenset[str]] = {}
         else:
             under = base._views[key]
-            merged, below, named = dict(under.merged), under.private, under.named
+            merged, below, reaches = dict(under.merged), under.private, under.reaches
         own: dict[str, _Token] = {}
         for file in sources:
             for path, token in self.flat.get(file, {}).items():
                 library = self.scope.owner.get(path)
                 if (
                     library is None
-                    or (library and library not in self.named)
+                    or (library and library not in self.reached)
                     or (library and token.type not in (None, self.scope.roles[path].type))
                 ):
                     own[path] = token
-                elif base is None or path in base.opened:
+                elif base is None or path in base.opened or library == self.name:
                     merged[path] = token
                 else:
                     why = (
                         f"does not name `{library}`, so it opens none of its roles"
-                        if library and library not in base.named
+                        if library and library not in base.reached
                         else "does not open it to the brand"
                     )
                     holds = (
@@ -2568,7 +2644,7 @@ class _BrandReader:
             self._pruned(merged),
             merged,
             {**below, self.label: own},
-            {**named, self.label: self.named},
+            {**reaches, self.label: self.reached},
         )
 
     def _pruned(self, merged: Mapping[str, _Token]) -> dict[str, _Token]:
@@ -2844,25 +2920,35 @@ class _BrandReader:
     def _library_of(self, path: str) -> tuple[str, str]:
         """The library a brand's token at `path` lies under, and the group it lies in: the
         library's name, its own roles' group, or `component.<library>`, where the tokens of
-        its components lie (DEC-008 point 4, DEC-035 point 7). None, as "", for a token
-        under `component.<the brand's own name>`, where its own components' tokens lie,
-        and for one under `component` alone."""
+        its components lie, the brand's own components' under its own name (DEC-008 point
+        4, DEC-044 point 1). None, as "", for a token under `component` alone."""
         segments = path.split(".")
         if segments[0] != COMPONENT:
             return segments[0], segments[0]
-        if len(segments) < 2 or segments[1] == self.name:
+        if len(segments) < 2:
             return "", ""
         return segments[1], f"{COMPONENT}.{segments[1]}"
 
+    def _reach_of(self, library: str) -> str:
+        """How the brand reaches the roles of `library`, one of `reached`, in words."""
+        if library == self.name:
+            return "the brand holds the components whose tokens lie there"
+        if library in self.named:
+            return f"the brand names `{library}`"
+        return f"`{library}` is a brand along its chain"
+
     def _check_library_tokens(self) -> None:
         """Each of the brand's tokens under the name of a library of the scope, or under
-        `component.<library>` (DEC-008 point 4, DEC-035 point 7): where the brand names the
-        library, one that is none of its roles or of its components' tokens, or is of
-        another type, is a finding; where it does not, the token stays private and asks for
-        attention. The foundations are judged under `component.foundations` alone, since
-        they have no own roles. A token under `component.<the brand's own name>` is private,
-        and judged here no further, though DEC-044 points 1 and 4 have it give one of the
-        brand's own components' tokens a value, or be a finding."""
+        `component.<library>` (DEC-008 point 4, DEC-035 point 7, DEC-044 points 1 to 4):
+        where the brand reaches the library's roles, one that is none of its roles or of its
+        components' tokens, or is of another type, is a finding; where it does not, the token
+        stays private and asks for attention. A brand reaches its own components' tokens, and
+        those of each brand along its chain, whether or not it names that brand, and naming a
+        brand outside its chain reaches nothing. The foundations are judged under
+        `component.foundations` alone, since they have no own roles. Format 1 reads no
+        brand's own roles, so a token under the brand's own name, outside `component`, is
+        private and asks nothing, and every token under the name of a brand along its chain,
+        outside `component`, names none of its roles."""
         for file, tokens in sorted(self.flat.items()):
             for path, token in tokens.items():
                 library, group = self._library_of(path)
@@ -2870,9 +2956,25 @@ class _BrandReader:
                 under_tokens = group != library
                 if declared is None or not (under_tokens or declared.own):
                     continue
+                if library == self.name and not under_tokens:
+                    continue  # until the capability reads a brand's own roles (DEC-044 point 1)
                 role = (declared.tokens if under_tokens else declared.roles).get(path)
                 theirs = "its components' tokens" if under_tokens else "its roles"
-                if library not in self.named:
+                if library not in self.reached and declared.brand:
+                    self._keep(
+                        "library-token-private",
+                        f"`{path}` lies under `{group}`, of the brand {declared.label}, which is "
+                        f"neither this brand nor one along its chain: the brand does not reach "
+                        f"its roles, whether or not it names it, so the token stays private and "
+                        f"gives `{library}` nothing",
+                        file,
+                        path,
+                        ATTENTION,
+                        fix=f"move `{path}` to a group of the brand's own: only `{library}` and "
+                        f"the brands built on it give {theirs} values",
+                        who=f"the owner of the brand {self.name}",
+                    )
+                elif library not in self.reached:
                     self._keep(
                         "library-token-private",
                         f"`{path}` lies under `{group}`, which the brand does not name, by the "
@@ -2885,10 +2987,20 @@ class _BrandReader:
                         f"`{path}` to a group of the brand's own",
                         who=f"the owner of the brand {self.name}",
                     )
+                elif role is None and declared.brand and not under_tokens:
+                    self._keep(
+                        "library-token",
+                        f"`{path}` lies under `{group}`, and {self._reach_of(library)}, but it is "
+                        f"none of its roles, since the capability reads no brand's own roles: a "
+                        f"token there gives one of them a value, and the brand's private tokens "
+                        f"lie in groups of its own",
+                        file,
+                        path,
+                    )
                 elif role is None:
                     self._keep(
                         "library-token",
-                        f"`{path}` lies under `{group}`, and the brand names `{library}`, but it "
+                        f"`{path}` lies under `{group}`, and {self._reach_of(library)}, but it "
                         f"is none of {theirs}: a token there gives one of them a value, and the "
                         f"brand's private tokens lie in groups of its own",
                         file,
@@ -3052,17 +3164,21 @@ class _BrandReader:
 
     def _check_open(self, raw: Any, base: Brand | None) -> tuple[tuple[str, ...], frozenset[str]]:
         """The open roles as `open` lists them, and the roles they open: those each entry
-        names of the shared roles and the roles of the libraries the brand names, narrowed
-        to those its base opens to it (DEC-004 point 6, DEC-008 point 4)."""
+        names of the shared roles and the roles of the libraries whose roles the brand
+        reaches, narrowed to those its base opens to it and the tokens of the brand's own
+        components, which no base holds (DEC-004 point 6, DEC-008 point 4, DEC-044 points 1
+        and 2). An entry that names a role of a brand outside its chain opens nothing, and
+        fails, whether or not the brand names that brand (DEC-044 point 3)."""
         if not isinstance(raw, list):
             self._keep("open-shape", "`open` is not a list of roles", "library.yaml", "open")
             return (), frozenset()
         openable = {
             path
             for path, library in self.scope.owner.items()
-            if not library or library in self.named
+            if not library or library in self.reached
         }
-        open_to_it = base.opened if base is not None else frozenset(openable)
+        added = frozenset(path for path in openable if self.scope.owner[path] == self.name)
+        open_to_it = base.opened | added if base is not None else frozenset(openable)
         opened: set[str] = set()
         for entry in raw:
             named = {
@@ -3082,16 +3198,7 @@ class _BrandReader:
                         "",
                     )
                 )
-                self._keep(
-                    "open-unknown",
-                    f"the open role `{entry}` names roles of `{library}`, which the brand does not "
-                    f"name among the libraries it builds on, so it opens none of them"
-                    if library
-                    else f"the open role `{entry}` names no role the brand exports, nor a group "
-                    f"of them",
-                    "library.yaml",
-                    "open",
-                )
+                self._keep("open-unknown", self._unknown(entry, library), "library.yaml", "open")
                 continue
             closed = sorted(named - open_to_it)
             if closed and base is not None:
@@ -3099,13 +3206,30 @@ class _BrandReader:
                     "open-wider",
                     f"the open role `{entry}` opens {', '.join(f'`{p}`' for p in closed)}, which "
                     f"its base {base.label} does not open to it: a brand opens only roles open "
-                    f"to it",
+                    f"to it, and the tokens of its own components",
                     "library.yaml",
                     "open",
                     fix=f"take `{entry}` out of `open`, or name only roles {base.label} opens",
                 )
             opened |= named & open_to_it
         return tuple(entry for entry in raw if isinstance(entry, str)), frozenset(opened)
+
+    def _unknown(self, entry: str, library: str | None) -> str:
+        """Why the open role `entry` opens nothing, `library` holding a role it names, if
+        any: a library whose roles the brand does not reach, or no role at all."""
+        declared = self.scope.libraries.get(library) if library else None
+        if declared is not None and declared.brand:
+            return (
+                f"the open role `{entry}` names roles of `{library}`, a brand that is neither "
+                f"this brand nor one along its chain, whose roles it does not reach, whether or "
+                f"not it names it, so it opens none of them"
+            )
+        if library:
+            return (
+                f"the open role `{entry}` names roles of `{library}`, which the brand does not "
+                f"name among the libraries it builds on, so it opens none of them"
+            )
+        return f"the open role `{entry}` names no role the brand exports, nor a group of them"
 
     def _read_fonts(
         self,
@@ -3351,22 +3475,27 @@ def _target_in(
 ) -> tuple[str, str]:
     """Where an alias in `token`, at `where`, leads: a role, or a private token of the
     library that writes `token` (DEC-004 point 6). A brand's token reaches a library's
-    role only where that brand names the library; a default reaches any role (DEC-008
-    point 4). Raises _Problem for an alias into another library's private token, or one
-    that leads nowhere."""
+    role only where that brand reaches the library's roles: names it, is it, or has it
+    along its chain; a default reaches any role (DEC-008 point 4, DEC-044 point 2). Raises
+    _Problem for an alias into another library's private token, or one that leads
+    nowhere."""
     library = scope.owner.get(target)
     if target in view.private.get(token.owner, {}) and (
-        target not in view.roles or (library and library not in view.named[token.owner])
+        target not in view.roles or (library and library not in view.reaches[token.owner])
     ):
         return (token.owner, target)
     if target in view.roles and (
-        not library or token.owner == "" or library in view.named[token.owner]
+        not library or token.owner == "" or library in view.reaches[token.owner]
     ):
         return ("", target)
     if library and token.owner:
+        declared = scope.libraries.get(library)
         why = (
             "which has no value under the brand"
-            if library in view.named[token.owner]
+            if library in view.reaches[token.owner]
+            else f"a brand that is neither {token.owner} nor one along its chain, so it does not "
+            f"reach its roles"
+            if declared is not None and declared.brand
             else f"which {token.owner} does not name among the libraries it builds on"
         )
         raise _Problem(

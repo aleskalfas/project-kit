@@ -475,6 +475,7 @@ class Project:
             library: self.root / self.location / FOLDER / library / version
             for library, version in self.lock.items()
         }
+        self._locked = locked
         self.scope = tokens.read_scope(
             {
                 **{name: folder for name, folder in locked.items() if folder.is_dir()},
@@ -483,14 +484,7 @@ class Project:
             root=self.root,
         )
         self.foundations = self.scope.foundations
-        self.brand = tokens.read_brand(
-            self.version_folder(piece.brand),
-            self.scope,
-            fonts=self.root / self.location / FONTS,
-            root=self.root,
-            locked=locked,
-            walked=held.walked,
-        )
+        self.brand = self.locked_brand(piece.brand)
         self.notations = {
             name: notations.read_notation(
                 self.version_folder(name),
@@ -541,6 +535,20 @@ class Project:
                         f"{piece.file(PIECE_FILE)}: `{MEDIA}`: `{medium}` names the size "
                         f"`{size}`, which the piece is not drawn at: it is drawn at {at}"
                     )
+
+    def locked_brand(self, library: str) -> tokens.Brand:
+        """The version of the brand `library` the lock names, read over its base against the
+        scope of the locked versions, as the piece's brand is read. Raises Refused when the
+        lock names none, or the project does not hold it, and `tokens.TokenError` when it
+        cannot be read."""
+        return tokens.read_brand(
+            self.version_folder(library),
+            self.scope,
+            fonts=self.root / self.location / FONTS,
+            root=self.root,
+            locked=self._locked,
+            walked=self.held.walked,
+        )
 
     def label(self, library: str) -> str:
         """`<library>@<version>` of a locked library."""
