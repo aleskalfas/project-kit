@@ -51,6 +51,7 @@ Translates kit content for the [Claude Code](https://docs.claude.com/en/docs/cla
 ├── run-agent.py                       # the agent runner: starts one agent in Claude Code for `pkit agents run`
 ├── probe-confined-run.py              # the probe of the runner's confined form; a person runs it, never a test
 ├── probe-messaging.py                 # the probe of messaging between sessions; a person runs it, never a test
+├── probe-reviewer-clone.py            # the probe of a reviewer's run in its own clone; a person runs it, never a test
 ├── tool-access.json                   # Claude Code's keys for an agent's tool access, its names' forms, the built-in tools it knows, and the withheld entries it admits
 ├── harness-support.yaml               # how far Claude Code meets each harness requirement the core declares
 ├── permission-enforcement.yaml        # which permission dimensions this harness realizes, and via which layer
@@ -414,6 +415,30 @@ Two facts are the runner's own logic, with nothing of the harness beneath them, 
 
 - The hook takes both its model's root and its anchor from `CLAUDE_PROJECT_DIR`. A working run needs the two apart: the model from outside the clone, the anchor the clone.
 - The hook judges `agent:<name>`, by the name the run passes to `--agent`.
+
+#### The probe of a reviewer's clone (`probe-reviewer-clone.py`)
+
+[ADR-102](../../../tech-docs/architecture/decisions/ADR-102-reviews-in-own-clone.md) point 6 has a probe confirm, on each platform the adapter supports, what a reviewer's run in its own clone rests on, before reviews in a seat's clone rest on it. This probe takes the record's first and fourth facts. The second and third rest on a snapshot that binds the seat's clone, which nothing keeps yet ([ADR-095](../../../tech-docs/architecture/decisions/ADR-095-hook-out-of-reach.md) point 3), and they and the run on Linux are [#3528](https://github.com/aleskalfas/project-kit/issues/3528)'s <!-- unanchored: names the Task that extends the probe, a pointer and no statement of the system -->.
+
+A person runs it, never a test. It starts one real run, which signs in and spends, so it refuses to start unless given `--start-claude`, and it refuses inside an agent's run. It needs no other step of the person's:
+
+```
+python3 .pkit/adapters/claude-code/probe-reviewer-clone.py --start-claude
+```
+
+- **The code host.** Through `gh`, in the checkout the probe lies in, it reads the base repository, its default branch, and the newest pull request, or the one `--pr` names.
+- **The reviewer's clone.** It makes one in a new folder under `~/.cache` (or `--root`), outside every working tree and the per-user temp folder, as the backbone's run command makes one (ADR-102 point 2). The clone is made from the code host, sharing no object with the checkout and borrowing none. It holds no hook, and its one remote has a push address no push can use. The pull request's head is fetched through the code host's reference for it and checked against the head read, and the clone is checked out at the default branch's head with no branch, with its agent workspace. The folder for the run's rules lies beside it.
+- **This checkout's runner.** It copies the runner and the deploy's resolver of the checkout it lies in into the clone, so it probes that runner whether or not the default branch holds it yet, and adds a small probe agent.
+- **One run.** It starts one run in the clone through the runner's own functions, as a run in a reviewer's clone, with a fixed brief. The checkout the probe lies in stands as the seat's clone: the runner passes its allow, ask and deny rules and carries its local settings in. To the runner's command line the probe adds only `--output-format stream-json --verbose --include-hook-events`, which make the harness's stream readable and change no permission.
+
+It prints, for each fact, `pass` or `FAIL` with what it saw beneath, and exits 0 only when all pass:
+
+- the run starts in the reviewer's clone, and finishes
+- the runner passes the seat's allow, ask and deny rules, and nothing else
+- the first fact: the code host's command line (`gh pr view`), git (`git rev-parse HEAD`, and `git log` of the change's head, which the clone fetched) and a methodology's check (`pkit rule-sets altered`) each run with no prompt, and give what only that command could
+- the fourth fact: a file tool's write into the seat's checkout is refused, and no file lands. Whether a person would have been asked shows in the harness's words for the refusal, and in the answers the `PreToolUse` hooks gave, which the probe prints beside the facts.
+
+A write that lands is removed, by the path the probe named. The scratch folder is removed unless `--keep`, which keeps the run's answer and its stream in `answer.json`. The harness keeps some state in the person's home for the folder it ran in, as it does for each reviewer's clone (ADR-102's Rationale, "What it costs"). In what it prints, the probe gives the home folder as `~` and replaces nothing else, so read the results before posting them anywhere. The results are recorded on [#3467](https://github.com/aleskalfas/project-kit/issues/3467) <!-- unanchored: names the Task that records the results, a pointer and no statement of the system -->.
 
 ### Live permission enforcement (`permission-hook.py`)
 
