@@ -1,8 +1,8 @@
 ---
 rule-set: OPS
 loaded: true
-budget: 2335
-version: 7.0.0
+budget: 2371
+version: 8.0.0
 rules:
   RS-OPS-001:
     status: accepted
@@ -102,7 +102,7 @@ rules:
         anchors: {record: [COR-028]}
   RS-OPS-017:
     status: accepted
-    origin: {date: 2026-10-17, by: "Aleš Kalfas", why: "Several open questions at once make the person parse and re-argue them all, so an agent asks one decision at a time, each with its recommendation (project-kit#1648)."}
+    origin: {date: 2026-11-26, by: "Aleš Kalfas", why: "Several open questions at once make the person parse and re-argue them all, so an agent asks one decision at a time, each with its recommendation (project-kit#1648). A guess made alone is worth setting against what happens only while it is the person's own, so a recommendation waits until it is recorded (project-kit#3520)."}
     pkit:
       friction:
         unanchored-because: "A rule about how an agent talks with the person; no record or file carries it out."
@@ -226,7 +226,7 @@ Violating any of these breaks the methodology's invariants. Treat them as gates,
 
 ### RS-OPS-017 — Discuss one decision at a time
 
-**Discuss one decision at a time, with your recommendation.** When a choice needs the user, surface one decision per turn, not several open questions at once; a summary of work already done is not a decision (project-kit#1648).
+**Discuss one decision at a time, with your recommendation.** When a choice needs the user, surface one decision per turn, not several open questions at once; a summary of work already done is not a decision. Where the procedure you follow has the user answer alone, as with a guess at a number made before it is compared, give no recommendation, or any hint of one, until their answer is recorded (project-kit#1648; project-kit#3520).
 
 ### RS-OPS-018 — Reference by meaning, then identifier
 
