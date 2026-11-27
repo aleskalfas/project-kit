@@ -630,6 +630,62 @@ def _stops_on_signal() -> Generator[None]:
     help="Confined: the folder the run's files are copied to after the run.",
 )
 @click.option(
+    "--clone-at",
+    "clone_at",
+    default=None,
+    metavar="SHA",
+    help="In a reviewer's clone: the full id of the commit, the default branch's head, the "
+    "clone is made at from the code host. With the other --clone options, for a reviewer "
+    "the review command runs in a seat's clone, the project you run the command in.",
+)
+@click.option(
+    "--clone-remote",
+    "clone_remote",
+    default=None,
+    metavar="NAME",
+    help="In a reviewer's clone: the name of its one remote, the one the default branch "
+    "resolves through.",
+)
+@click.option(
+    "--clone-url",
+    "clone_url",
+    default=None,
+    metavar="URL",
+    help="In a reviewer's clone: the address the code host gives for the pull request's base "
+    "repository, which the clone fetches from and never pushes to.",
+)
+@click.option(
+    "--clone-default",
+    "clone_default",
+    default=None,
+    metavar="BRANCH",
+    help="In a reviewer's clone: the default branch, which the clone fetches.",
+)
+@click.option(
+    "--clone-branch",
+    "clone_branches",
+    multiple=True,
+    metavar="BRANCH",
+    help="In a reviewer's clone: a branch the clone fetches besides, such as the change's "
+    "base. Repeatable.",
+)
+@click.option(
+    "--clone-head-ref",
+    "clone_head_ref",
+    default=None,
+    metavar="REF",
+    help="In a reviewer's clone: the code host's reference for the change's head, such as "
+    "refs/pull/<N>/head.",
+)
+@click.option(
+    "--clone-head",
+    "clone_head",
+    default=None,
+    metavar="SHA",
+    help="In a reviewer's clone: the full id of the commit --clone-head-ref must resolve to, "
+    "the head the review names.",
+)
+@click.option(
     "--limit",
     "limit_seconds",
     type=click.IntRange(1, _AGENT_RUN_MAX_LIMIT_SECONDS),
@@ -654,6 +710,13 @@ def agents_run(
     commit: str | None,
     rules_of: str | None,
     files_to: Path | None,
+    clone_at: str | None,
+    clone_remote: str | None,
+    clone_url: str | None,
+    clone_default: str | None,
+    clone_branches: tuple[str, ...],
+    clone_head_ref: str | None,
+    clone_head: str | None,
     limit_seconds: int,
     effort: str | None,
     as_json: bool,
@@ -675,6 +738,13 @@ def agents_run(
       the mode the settings there, or the harness, choose. With
       --local-settings, it first carries the person's local settings into
       FOLDER from the project the command runs in (ADR-066 point 10).
+      In a reviewer's clone, with --clone-at, --clone-remote, --clone-url,
+      --clone-default, --clone-head-ref and --clone-head together, and
+      --clone-branch where a branch is fetched besides: the run works in a
+      clone of its own, made from the code host at the commit and removed
+      after the run. The runner gives it the allow, ask and deny rules of the
+      settings of the project the command runs in, a seat's clone, and
+      carries the person's local settings in from it (ADR-102).
     - Confined, with --commit, --rules-of and --files-to, together: the run
       runs in a fresh clone at the commit, held by the run rules of the named
       command, and its files are copied to the folder after the clone is
@@ -690,24 +760,34 @@ def agents_run(
     `refused_calls` (the calls the harness refused), `confined`, and for a
     confined run `commit`, `check` (`verdict`: `clean`, `breach` or
     `not-run`, and its `changes`), `files` (the folder, once copied) and
-    `excluded` (the commands run outside the sandbox). Without it, the agent's
-    output, and on standard error how the run ended, and for a confined run
-    the check and the excluded commands.
+    `excluded` (the commands run outside the sandbox), and `refusal_cause`
+    (`run-folder` where the backbone's folder for the run cannot be made or
+    written, else null). Without it, the agent's output, and on standard
+    error how the run ended, and for a confined run the check and the
+    excluded commands.
 
     Exit 0 when the harness finished and exited 0; 1 on any other ending; 2 on a
     usage error. A caller decides on the document's `ending`, never on the exit.
     Reference: `.pkit/cli/README.md`, "Agent runs".
     """
     confined_options = (commit, rules_of, files_to)
-    confined = folder is None and any(option is not None for option in confined_options)
+    clone_options = (clone_at, clone_remote, clone_url, clone_default, clone_head_ref, clone_head)
+    in_clone = any(option is not None for option in clone_options) or bool(clone_branches)
+    confined = (
+        folder is None and not in_clone and any(option is not None for option in confined_options)
+    )
     marked = agent_runs.inside_a_run(agent_name, confined=confined, commit=commit)
     if marked is not None:
         sys.exit(_show_agent_run(marked, as_json))
-    if folder is not None and confined_options != (None, None, None):
+    review = _reviewer_clone(
+        in_clone, folder, confined_options, local_settings, clone_options, clone_branches
+    )
+    if review is None and folder is not None and confined_options != (None, None, None):
         raise click.UsageError("--folder and --commit, --rules-of, --files-to exclude each other.")
-    if folder is None and None in confined_options:
+    if review is None and folder is None and None in confined_options:
         raise click.UsageError(
-            "give --folder, or --commit, --rules-of and --files-to, all three together."
+            "give --folder; or --commit, --rules-of and --files-to, all three together; or "
+            "--clone-at with the other --clone options."
         )
     if local_settings and folder is None:
         raise click.UsageError("--local-settings goes only with --folder.")
@@ -725,6 +805,7 @@ def agents_run(
         rules_of=rules_of,
         files_to=None if files_to is None else files_to.resolve(),
         local_settings_from=target_root if local_settings else None,
+        review=review,
     )
     problem = request.problem(target_root)
     if problem is not None:
@@ -736,6 +817,48 @@ def agents_run(
     except _AskedToStop as stopped:
         sys.exit(128 + stopped.signum)
     sys.exit(_show_agent_run(run, as_json))
+
+
+def _reviewer_clone(
+    in_clone: bool,
+    folder: Path | None,
+    confined_options: tuple[str | Path | None, ...],
+    local_settings: bool,
+    clone_options: tuple[str | None, ...],
+    clone_branches: tuple[str, ...],
+) -> agent_runs.ReviewerClone | None:
+    """The reviewer's clone `agents run`'s --clone options name, or None where they
+    name none. Raises a usage error where they come with another form's options, or
+    without one another."""
+    if not in_clone:
+        return None
+    if folder is not None or confined_options != (None, None, None) or local_settings:
+        raise click.UsageError(
+            "the --clone options exclude --folder, --local-settings, and --commit, "
+            "--rules-of, --files-to: a reviewer's clone takes the local settings itself."
+        )
+    clone_at, remote, url, default, head_ref, head = clone_options
+    if (
+        clone_at is None
+        or remote is None
+        or url is None
+        or default is None
+        or head_ref is None
+        or head is None
+    ):
+        raise click.UsageError(
+            "give --clone-at, --clone-remote, --clone-url, --clone-default, --clone-head-ref "
+            "and --clone-head together."
+        )
+    return agent_runs.ReviewerClone(
+        commit=clone_at,
+        remote=remote,
+        url=url,
+        default_branch=default,
+        branches=clone_branches,
+        head_ref=head_ref,
+        head=head,
+    )
 
 
 def _show_agent_run(run: agent_runs.AgentRun, as_json: bool) -> int:

@@ -603,12 +603,14 @@ AGENTS_RUN = Contract(
                 "excluded": "list",
                 "excluded[]": "list",
                 "excluded[][]": "str",
+                "refusal_cause": "str|null",
             }
         )
     },
     sets={
         "ending": frozenset({"finished", "not-started", "timed-out", "refused", "no-answer"}),
         "check.verdict": frozenset({"clean", "breach", "not-run"}),
+        "refusal_cause": frozenset({"run-folder"}),
     },
 )
 
@@ -657,6 +659,7 @@ def test_the_agent_run_document_holds_its_contract(
         enumerations={
             "ending": agent_runs.ENDINGS,
             "check.verdict": (confinement.CLEAN, confinement.BREACH, confinement.NOT_RUN),
+            "refusal_cause": (confinement.RUN_FOLDER,),
         },
     )
 
