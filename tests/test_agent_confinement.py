@@ -267,6 +267,7 @@ def test_a_confined_run_reaches_the_clones_runner_in_the_confined_form(
         "check": {"verdict": "clean", "changes": []},
         "files": str(project.files_to),
         "excluded": [],
+        "refusal_cause": None,
     }
 
 
