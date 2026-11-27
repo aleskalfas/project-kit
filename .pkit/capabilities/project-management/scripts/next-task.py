@@ -5,12 +5,13 @@
 #   "ruamel.yaml>=0.18",
 # ]
 # ///
-"""Project-management capability — next-task (DEC-059 point 7, DEC-061 point 5).
+"""Project-management capability — next-task (DEC-059 point 7, DEC-061 point 5, DEC-081
+point 6).
 
 A worker takes its next task from one pool that every seat shares, or, where
 the topology declares pools of workers, from the pools its seat serves:
 
-    next-task [--dry-run] [--yes] [--limit N]
+    next-task [--dry-run] [--yes] [--limit N] [--task N]
 
 It picks the next ready Task, the highest in priority first (DEC-012), within
 the scope of the seat this clone holds, and starts it, claimed, through
@@ -56,6 +57,14 @@ Steps:
   - `start-work <N> --yes` starts the first free Task. Where it fails and the
     Task is now another instance's, the first claim held: this clone backs off
     and takes the next ready Task. Any other failure stops the run.
+  - `--task N` takes the Task a directive names (DEC-081 point 6), and only
+    where it is among the Tasks this run would offer the clone: ready, in its
+    seat's scope, in its pools where the topology declares them, and neither
+    assigned to another account nor held by another instance. It claims the
+    Task through the same `start-work`, so the clash guard keeps a second agent
+    off it. Otherwise it starts nothing and exits 6, saying why. Where another
+    instance claims it first, the run exits 6 too, and the worker reports the
+    loss and runs `next-task` again for its next ready Task.
 
 Exit codes:
   0  a Task was started, or a dry run said which it would start
@@ -70,6 +79,8 @@ Exit codes:
      a ready Task's owner could not be read and no other Task was free
   5  no Task is ready for this clone, so nothing was started; where pools are
      declared, the line says why in terms of the seat's pools
+  6  the Task `--task` names is not among those this clone may take, or another
+     instance claimed it first, so nothing was started; the line says why
   *  a failed `start-work` passes its exit code through
 """
 
@@ -107,6 +118,10 @@ from _lib.membership import (
 #: No Task is ready for this clone: nothing was started.
 EXIT_NONE_READY = 5
 
+#: The Task ``--task`` names is not among those this clone may take, or another
+#: instance claimed it first: nothing was started (DEC-081 point 6).
+EXIT_NOT_OFFERED = 6
+
 #: How many open issues one listing reads, unless `--limit` says otherwise.
 DEFAULT_LIMIT = 1000
 
@@ -141,10 +156,24 @@ def main() -> int:
             "reaches it refuses, since a dependency it did not return could be open."
         ),
     )
+    parser.add_argument(
+        "--task",
+        type=int,
+        default=None,
+        metavar="N",
+        help=(
+            "Take Task N, as a directive from this seat's directing seat names it, only "
+            "where it is among the Tasks this clone may take of its own choosing; otherwise "
+            "start nothing, and exit 6 with why (DEC-081 point 6)."
+        ),
+    )
     session_guard.add_override_argument(parser)
     args = parser.parse_args()
     if args.limit < 1:
         print("error: --limit must be a positive number.", file=sys.stderr)
+        return 2
+    if args.task is not None and args.task < 1:
+        print("error: --task must be an issue number.", file=sys.stderr)
         return 2
 
     capability_root = resolve_capability_root(args.capability_root)
@@ -262,6 +291,21 @@ def main() -> int:
     ):
         print(f"[warn] next-task: #{number} skipped: {why}.", file=sys.stderr)
     print(f"next-task: {_pool_line(len(ready), taker)}")
+    if args.task is not None:
+        why = task_pool.why_left(
+            listing.rows or (),
+            args.task,
+            open_numbers=_numbers(listing),
+            login=person,
+            scope=taker.scope,
+            takes_over=taker.takes_over,
+            readers=readers,
+            milestones=milestones,
+        )
+        if why is not None:
+            return _not_offered(args.task, why)
+        ready = [candidate for candidate in ready if candidate.number == args.task]
+        print(f"next-task: #{args.task} is named, and is among them.")
 
     clone = taker.clone
     # This clone's own Tasks come before the pool: only a Task assigned to its
@@ -294,6 +338,8 @@ def main() -> int:
                 continue
             mine = task_pool.owned_by(resolution, clone.instance, candidate.state)
             if not mine and not task_pool.in_pool(resolution, candidate.state):
+                if args.task is not None:
+                    return _not_offered(args.task, _held(resolution))
                 print(f"  skipped #{candidate.number}: {_held(resolution)}")
                 continue
         print(f"next-task: {candidate.describe(own=mine)}")
@@ -315,6 +361,13 @@ def main() -> int:
         if clone is not None and task_pool.taken_by_another(
             instance_claims.read_owner(candidate.number, clone, config), clone.instance
         ):
+            if args.task is not None:
+                print(
+                    f"[note] next-task: another instance claimed #{candidate.number} first, and "
+                    "the first claim holds, so this clone did not take it. Report the loss, and "
+                    "run next-task for this clone's next ready Task."
+                )
+                return EXIT_NOT_OFFERED
             print(
                 f"[note] next-task: another instance claimed #{candidate.number} first, and the "
                 "first claim holds, so this clone takes the next ready Task."
@@ -401,6 +454,17 @@ def _pool_line(count: int, taker: task_pool.Taker) -> str:
         else "its own first, then the highest in priority"
     )
     return f"{count} {noun} ready for {who}, {within}, {order}."
+
+
+def _not_offered(number: int, why: str) -> int:
+    """Refuse the Task ``--task`` names, saying why, and start nothing (DEC-081
+    point 6). Scheduling it or putting it into a pool stays the person's act."""
+    print(
+        f"[refused] next-task: #{number} is not among the Tasks this clone may take, so "
+        f"nothing was started: {why}.",
+        file=sys.stderr,
+    )
+    return EXIT_NOT_OFFERED
 
 
 def _held(resolution: instance_ownership.OwnershipResolution) -> str:

@@ -1,10 +1,12 @@
 ---
 id: DEC-065
 title: A change to a check the review reads lapses the hold
-status: accepted
+status: superseded
 date: 2026-11-17
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
+
+> **Superseded by [visual-communication:DEC-070-ship-call-and-one-round].** No hold remains for a change to the capability's code to lapse.
 
 **In plain terms:** the graphic-design review reads what the checks found, and grades two rules by where they measured. A change to a check, such as a new threshold, can move those grades in every project, as a reworded rule does. So such a change lapses the hold, as a change to the rules' text, the reviewer's definition, the design knowledge or the model does. A check that lands after a calibration then lapses that calibration's hold, so a calibration need not wait for each check to land, as the record of how faults lower grades had it wait ([visual-communication:DEC-046-faults-lower-grades] point 8). This record overturns that wait: waiting becomes a matter of economy, not of safety. The command that gives the verdict sees a change to a check by two digests: one of the capability's code, where each check's code, its own values and its reach lie, and one of its list of checks. A check's code cannot be told apart from the rest of the code file by file, so the code's digest takes all of it, and any change to the code lapses the hold. A hold therefore lasts only while the code stays as it was calibrated, and a calibration pays best on code that is to ship and stay.
 

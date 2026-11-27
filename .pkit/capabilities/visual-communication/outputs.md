@@ -7,6 +7,7 @@ pkit:
       path:
         - .pkit/capabilities/visual-communication/package.yaml
         - .pkit/capabilities/visual-communication/agents/graphic-design-reviewer.md
+        - .pkit/capabilities/visual-communication/agents/graphic-designer.md
         - .pkit/capabilities/visual-communication/scripts/add.py
         - .pkit/capabilities/visual-communication/scripts/render.py
         - .pkit/capabilities/visual-communication/scripts/export.py
@@ -58,13 +59,8 @@ pkit:
         - .pkit/capabilities/visual-communication/schemas/values.schema.json
         - .pkit/capabilities/visual-communication/schemas/values-2.schema.json
         - .pkit/capabilities/visual-communication/schemas/review.schema.json
-        - .pkit/capabilities/visual-communication/schemas/calibration.schema.json
         - .pkit/capabilities/visual-communication/schemas/look-report.schema.json
-        - .pkit/capabilities/visual-communication/scripts/verdict.py
-        - .pkit/capabilities/visual-communication/scripts/_lib/verdicts.py
         - .pkit/capabilities/visual-communication/scripts/_lib/reading.py
-        - .pkit/capabilities/visual-communication/scripts/_lib/calibration.py
-        - .pkit/capabilities/visual-communication/scripts/_lib/bar.py
         - tests/fixtures/visual-communication/libraries/tests/1.0.0/components/stamp.yaml
         - .pkit/capabilities/visual-communication/scripts/_lib/scene_checks.py
       record:
@@ -165,19 +161,16 @@ pkit:
         - visual-communication:DEC-039#3
         - visual-communication:DEC-039#4
         - visual-communication:DEC-039#5
-        - visual-communication:DEC-042#4
-        - visual-communication:DEC-042#6
-        - visual-communication:DEC-042#1
-        - visual-communication:DEC-042#3
-        - visual-communication:DEC-042#9
-        - visual-communication:DEC-042#10
+        - visual-communication:DEC-045#1
+        - visual-communication:DEC-045#2
         - visual-communication:DEC-030#2
+        - visual-communication:DEC-030#5
         - visual-communication:DEC-062#1
         - visual-communication:DEC-062#2
         - visual-communication:DEC-063#1
-        - visual-communication:DEC-065#1
-        - visual-communication:DEC-065#2
         - visual-communication:DEC-066#2
+        - visual-communication:DEC-070#2
+        - visual-communication:DEC-070#5
         - ADR-097
       artefact:
         - .pkit/capabilities/visual-communication/components.md#exposes
@@ -200,16 +193,16 @@ pkit:
         - .pkit/capabilities/visual-communication/files.md#the-clones-local-folder
         - .pkit/capabilities/visual-communication/files.md#the-lock
         - .pkit/capabilities/visual-communication/files.md#the-browser
-        - .pkit/capabilities/visual-communication/files.md#the-bar-and-the-bounds
         - .pkit/cli/README.md#validate
         - .pkit/cli/README.md#machine-readable-output
       source:
         - html-page-print-runs
+        - html-page-firefox-print-runs
 ---
 
 # What is made from a piece
 
-Plugins make what the capability gives out. A renderer draws a piece's scenes as previews and exports. A producer makes a picture a piece shows. A code writer writes a brand out as code. What each command reads, writes and refuses as a whole is under *Commands* in the README. This page also holds the documents `pkit visual pages` and `pkit visual verdict` print for a program ([What `pkit visual pages` prints](#what-pkit-visual-pages-prints); [The verdict's document](#the-verdicts-document)).
+Plugins make what the capability gives out. A renderer draws a piece's scenes as previews and exports. A producer makes a picture a piece shows. A code writer writes a brand out as code. What each command reads, writes and refuses as a whole is under *Commands* in the README. This page also holds the document `pkit visual pages` prints for a program ([What `pkit visual pages` prints](#what-pkit-visual-pages-prints)).
 
 ## Contents
 
@@ -222,7 +215,6 @@ Plugins make what the capability gives out. A renderer draws a piece's scenes as
 - [Produced pictures](#produced-pictures)
 - [Written code](#written-code)
 - [The viewing step](#the-viewing-step)
-- [The verdict](#the-verdict)
 <!-- /pkit:contents -->
 
 ## Plugins
@@ -237,7 +229,7 @@ Every plugin is the capability's, and a project adds none (DEC-005 point 12): no
 
 - the `svg` renderer, at version 1.5.0, which draws the formats `svg` and `svg-modes`
 - the `pdf` renderer, at version 1.6.0
-- the `html` renderer, at version 1.9.0
+- the `html` renderer, at version 1.10.0
 - the `css` code writer, at version 1.0.0
 - the `json` code writer, at version 1.0.0
 
@@ -264,6 +256,8 @@ Each plugin also declares what it needs beyond the project's files: the outside 
 - **What rose with round turns.** A connector came to hold `rx`, the radius its turns are drawn round at, and a line that ends in an arrowhead came to stop at the head's base ([Ties and connectors](components.md#ties-and-connectors), [Primitives](components.md#primitives)). A renderer that does not declare `rx` is reported as leaving it out before it runs ([The loss report](#the-loss-report)), so the seam stayed at 8. The SVG renderer rose to 1.4.0, the PDF renderer to 1.6.0 and the HTML renderer to 1.7.0, since each draws round turns, and a line with an arrowhead shorter by the head. A line with no arrowhead and no `rx` draws as before. The code writers read no scene, so their versions stay.
 - **What rose with an order's steps.** A paint came to name a step of an order, whose value no document of values holds, and which a renderer takes from the colours it is handed with the scene. A renderer that wrote a paint's name where a step's name cannot go would draw nothing there, with no error, so the seam rose to 9, and every plugin's declaration names it (DEC-032 point 5). The SVG renderer rose to 1.5.0, since a switching file gives the arrowhead of a step an id of its own, and the HTML renderer to 1.8.0, since it paints each step with a custom property of its own. The PDF renderer paints a step as any colour it is handed, so its version stays at 1.6.0. A scene with no step draws as before. The code writers read no scene, so their versions stay.
 - **What rose with a line's ground.** Under forced colours, each line of a text came to lie on a ground the file draws, and an opaque fill's edge to lie inside the fill ([Modes](#modes), DEC-039). The HTML renderer rose to 1.9.0, since its file holds each line's ground, a box's or an ellipse's inset shape, and a path's or a sign's clip. Outside forced colours it draws as before. It reads a ground's height from the faces it embeds, as the engine does, and nothing new from the scene, so the seam stayed at 9, and no other plugin's version rose.
+- **What rose with a run's ground beneath its lines.** Outside forced colours, a run's ground came to lie beneath all the lines of its text (*Text* in [The HTML renderer](#the-html-renderer), DEC-039 point 3). The HTML renderer rose to 1.10.0, since its file draws another output for the same scene. It reads nothing new from the scene, so the seam stayed at 9, and no other plugin's version rose.
+- **What came with Firefox's print.** The HTML renderer's version 1.10.0, the one a run's ground beneath its lines raised it to, also came with the change for Firefox's print (*Firefox and a page at another width* in [Printing](#printing)). Each length comes to the same on the page as before. It reads nothing new from the scene, so the seam stayed at 9, and no other plugin's version rose.
 - **The document of values** that producers and code writers read has its own version, 2 ([The hand-over](#the-hand-over)). Version 2 holds the file a brand gives each picture role, and version 1 held none.
 - **What rose with picture roles.** The document rose to 2, and the seam stayed at 5. A brand with no picture role gets the same code, so the code writers' versions stay. Each renderer draws a picture role's file as it draws any picture it is handed, so the renderers' versions stay too.
 - **A code writer's spelling** has versions of its own, called *forms*. A declaration of written code names its form, and a writer keeps writing every form it shipped (DEC-005 point 8). The CSS writer writes form 1. The JSON writer writes forms 1 and 2, each that version of the document of values ([The JSON code writer](#the-json-code-writer)).
@@ -393,8 +387,8 @@ The `html` renderer draws a scene as one *page file*: the scene's pages in one w
 
 - **A page** is real text over shapes. Each text of the scene is HTML text. Boxes, ellipses, lines, paths and pictures lie in SVG *layers*, each written as the SVG renderer writes it ([The SVG renderer](#the-svg-renderer)).
 - **The draw order.** The file keeps the scene's order. Each run of shapes between two texts is one layer, the size of the page, so a later shape lies over an earlier text. A layer takes no pointer, so the text under it can still be selected.
-- **Text.** A text is one element at its frame: its left, top and width. Each line is a child of it, placed alone at the baseline the engine gave it, and never wraps. A line's alignment in the frame is the text's anchor. Each run on a line is a span in its own font, size and paint. Spans follow each other at the browser's own widths. A run's ground is its span's background in its role, with the room the engine gave it as padding where it starts and ends, and its corners rounded there. Its height is the browser's: the span's font's ascent and descent. A run's sign is an inline SVG at the start of its span, as wide as the run's font size, raised as the engine placed it, with the gap as its margin, in the run's paint. So both keep to their run at the browser's widths. A reader's tools pass over a sign (DEC-036 point 5).
-- **Size.** Every length on a page is a share of the page's width, written in `cqw`, so a page scales with no script. In a narrower window a page shrinks and keeps its proportions. In a wider one it keeps its own size, and no rule of the file clips a text.
+- **Text.** A text is one element at its frame: its left, top and width. Each line is a child of it, placed alone at the baseline the engine gave it, and never wraps. A line's alignment in the frame is the text's anchor. Each run on a line is a span in its own font, size and paint. Spans follow each other at the browser's own widths. A run's ground is drawn by its span's `::before`, over the span's box in its role, with the room the engine gave it as padding where it starts and ends, and its corners rounded there. Each text is a stacking context of its own and each run's ground lies beneath all the lines of its text, so a ground on a later line covers no line above it, at any line step (DEC-039 point 3). Its height is the browser's: the span's font's ascent and descent. A run's sign is an inline SVG at the start of its span, as wide as the run's font size, raised as the engine placed it, with the gap as its margin, in the run's paint. So both keep to their run at the browser's widths. A reader's tools pass over a sign (DEC-036 point 5).
+- **Size.** Every length on a page is a share of the page's width, so a page scales with no script. They are written in `cqw`, save the few that *Firefox and a page at another width*, in [Printing](#printing), names. In a narrower window a page shrinks and keeps its proportions. In a wider one it keeps its own size, and no rule of the file clips a text.
 - **Pages** follow each other down the document in the scene's order, each in the middle of the window, 24 px apart. Each keeps its own size. The file sets no colour value around them. It holds no rule on a window's width. A deck's slides lie inside a keyline, on a backdrop ([Fixed pages](#fixed-pages)). In print the pages follow each other down the sheets ([Printing](#printing)).
 - **A physical size.** A page file is read in a window, and prints on the sheets its reader picks, since it holds no page rule (DEC-026 point 4). So its format has no physical page of its own, and it draws a top with a physical size as any other, losing nothing (DEC-034 point 3). The PDF export draws each page at that size.
 - **The head** declares the file's encoding, UTF-8, its language and its viewport.
@@ -449,8 +443,9 @@ The renderer prints a page file as DEC-026 decides: its pages follow one another
 - **The keyline on a white sheet.** The keyline's share, 48 ([What the HTML renderer declares](#what-the-html-renderer-declares)), keeps at least 3 to 1 against a white sheet, in light and in dark (DEC-026 point 3). Under more contrast a dark page's keyline is white on the white sheet, and the page's own ground marks its edge there. In a dark mode, the page's dark ground, printed in its own colours, also sets it apart from the white sheet (DEC-026 point 5).
 - **Each page in its own colours.** Each page lies on the browser's ground colour, and the file asks the browser to print the page, and what it holds, in their own colours, by CSS's `print-color-adjust: exact`. The document around the pages takes neither, so the sheet around them prints as the reader's setting for backgrounds says. No mode is picked for print: the reader's signals pick it, as the browser sets them when it prints (DEC-026 point 5).
 - **The sheet is the reader's.** The file holds no page rule, so the reader's print dialog sets the sheet's size, its margins and its orientation, with its header, its footer and its scale (DEC-026 point 4).
-- **Where a page that runs on breaks** is the browser's pick, until a record of its own decides it (DEC-026 point 1). A page that runs on breaks where the sheet ends. The renderer places each line alone, so a break may cut a line of text or move it off its place, and cut or lose a shape. In the print runs, Chrome cut each shape the sheet's end crossed, a part on each sheet, and kept each text on its shapes. Firefox printed a page's shapes on its first sheet alone, and lost the line the first sheet's end crossed ([the print runs](https://github.com/aleskalfas/project-kit/issues/3010)). WebKit printed nothing under the tool the runs used, so Safari's only check is a person's print (DEC-026 point 7).
-- **Firefox and a page narrower than the area.** In Firefox, the text of a page narrower than the sheet's area prints at a larger scale than its shapes, near the area's width over the page's, so its lines drift off their boxes. A page the area shrinks, such as a deck's slide, keeps its text on its shapes there ([the print runs](https://github.com/aleskalfas/project-kit/issues/3010)).
+- **Where a page that runs on breaks** is the browser's pick, until a record of its own decides it (DEC-026 point 1). A page that runs on breaks where the sheet ends. The renderer places each line alone, so a break may cut a line of text or move it off its place, and cut or lose a shape. In the print runs, Chrome cut each shape the sheet's end crossed, a part on each sheet, and kept each text on its shapes, and Firefox lost the line the first sheet's end crossed ([the print runs](https://github.com/aleskalfas/project-kit/issues/3010)). At html 1.10.0, the runs found that on a page that ran over three sheets, Firefox showed no shape on the second, and set the lines on the third off the shapes there, by up to 409 px of the page ([the Firefox print runs](https://github.com/aleskalfas/project-kit/issues/3012#issuecomment-6895134208)). WebKit printed nothing under the tool the runs used, so Safari's only check is a person's print (DEC-026 point 7).
+- **Firefox and a page at another width.** In Firefox's print, a length in `cqw` takes the width the printer's paper area gives at a scale of 1, whatever width the page prints at. So the file writes a text's frame, a line's ground and the strut that places a line's baseline, where the line has a width, as percentages of the box each lies in, the page or the line, which CSS takes of that box's width. On a page that fits its sheets, in Firefox each line of a page's text starts on its shapes, as near as in Chrome's print. That holds on a page narrower than the area, on a slide the area shrinks, at another scale of the print dialog, and under the page rules the runs tried ([the Firefox print runs](https://github.com/aleskalfas/project-kit/issues/3012#issuecomment-6895134208)).
+- **Firefox and a run's size.** A run's font size stays in `cqw`, since no other unit of CSS takes a font's size from a box's width, and so does its sign's size, which keeps to the run's. So in Firefox a run is laid out at the size the paper area gives, and painted at the page's. Where a page prints at another width than that, a line's later runs start off their place: after a gap where the page prints narrower, and over the run before where it prints wider, where a line is also cut at its end. A slide printed on A4 upright at a scale of 1 keeps its runs in place ([the Firefox print runs](https://github.com/aleskalfas/project-kit/issues/3012#issuecomment-6895134208)).
 
 ### What the HTML renderer declares
 
@@ -955,10 +950,13 @@ The schema [`look-report.schema.json`](schemas/look-report.schema.json) fixes th
   - **`band`:** on each band of a page, its `number` from 1, how many the page has, `of`, and its `top` and `height` in the page's px. A page's bands follow one another in order.
   - **`too-wide`:** true on each image of a page too wide for its smallest text to read. Another image holds no such key.
 - **`dropped`:** each text or run the page does not show, with its element and its characters. Each page is read whole, once, so a text in two bands is listed once.
-  - **Through the SVG renderer,** each text or run the tool drew nothing of, whatever the cause. `whole` is true for a whole text, and false for a run lost from a line. A text in the colour of what lies beneath it, or under a later element, was drawn, so it is not here. `dropped-not-read` names the causes this read does not reach, `cut` and `covered`, so a text a part covers, or the page's edge cuts, is not named: read the images for it (DEC-037 point 1).
-  - **Through the HTML renderer,** each span the page does not show in full, in one entry for each cause, which its `why` names: `no ink`, `off the page`, `cut` or `covered`. A span's ink is its letters alone, in its own paint: the read hides its sign and its ground. A span wholly off its page is named off the page alone. A span is `cut` where part of its strong ink lies past its page's edge, and `covered` where the page drawn whole hides part of its strong ink on the page, under a part drawn after it: a shape, a line, a text, or under forced colours a text's ground. A cut or covered entry gives `share`, the share of the span's strong ink its cause loses, from 0 to 1. A span both cut and covered gives two entries (DEC-037 points 1 and 2).
-  - **Strong ink.** A span's strong ink is measured where its letters alone are drawn, in the browser's text colour on its ground colour, `CanvasText` on `Canvas`. A pixel is strong where the letters change it by more than half the difference of those two colours, so a letter's strength is its shape's, whatever its paint's alpha. What the page shows of it is what changes in the page drawn whole as its letters alone change between those two colours (DEC-037 point 3).
-  - **The sliver.** A loss smaller than 0.01 of the span's em squared, both in device pixels, names no entry, and each cause is judged alone. The first read's edge control holds that a graze of its last device row stays under the sliver, and its háček plant that a lost háček passes it ([The HTML renderer's pages](#the-html-renderers-pages)).
+  - **Through the SVG renderer,** each text or run the tool drew nothing of, and each span it drew in part, in one entry for each cause, which its `why` names (DEC-045 point 2). `no ink` and `off the page` are for a text or run the tool drew nothing of, and the entry also holds `whole`, true for a whole text and false for a run lost from a line. A span whose ink lies wholly past an edge, its strong ink where it holds any and else its counted ink (below), is `off the page` and never `cut`, and so is a text whose line lies wholly past a side, further than the room the tool draws past it. A text whose runs left for two causes gives an entry for each run. `cut` and `covered` are for a span drawn in part, with `share` and `island` (below). A span both cut and covered gives two entries. The tool draws the span alone in its counting draw (below), on a swath of image pixels with room past the page, and the page whole twice, the span's letters black and then white. Counted ink past the page's edge is cut, and counted ink on the page that the two whole draws show alike is covered. resvg draws nothing past the page, so a cut text is gone from the image for every reader, and only this read finds it. A page whose group does more than move what it holds fails the look, naming the group: the reads follow a move alone (DEC-045 point 1).
+  - **Through the HTML renderer,** each span the page does not show in full, in one entry for each cause, which its `why` names: `no ink`, `off the page`, `cut` or `covered`. A span's ink is its letters alone, in its own paint: the read hides its sign and its ground. A span wholly off its page is named off the page alone. A span is `cut` where part of its strong ink lies past its page's edge, and `covered` where the page drawn whole hides part of its strong ink on the page, under a part drawn after it: a shape, a line, a text, or under forced colours a text's ground. A span both cut and covered gives two entries (DEC-037 points 1 and 2).
+  - **`share` and `island`.** Through either renderer, `share` on a `cut` or `covered` entry is the share of the span's strong ink the cause loses, from 0 to 1 (DEC-037 point 2). Through the SVG renderer, where the span holds no strong ink, it is the share of its counted ink, so a faint full stop hidden whole gives 1. Through the SVG renderer, `island` is true on an entry whose cause takes an island of the span's counted ink, such as a dot, whatever its share. Another entry holds no such key (DEC-045 point 2).
+  - **Strong ink.** Through the HTML renderer, a span's strong ink is measured where its letters alone are drawn, in the browser's text colour on its ground colour, `CanvasText` on `Canvas`. A pixel is strong where the letters change it by more than half the difference of those two colours, so a letter's strength is its shape's, whatever its paint's alpha. What the page shows of it is what changes in the page drawn whole as its letters alone change between those two colours (DEC-037 point 3). Through the SVG renderer, a span's counting draw is its letters alone, drawn opaque black on white. A pixel there is ink at a level where its darkest sample is that level or darker, of 255: strong ink at 127, and two lighter levels at 159 and 191. A span's counted ink is its pixels at 191 or darker, strong ink among them (DEC-045 point 1).
+  - **What is too small to name.** Each cause is judged alone, through either renderer: the pixels the page's edge cuts and those a part covers are never added together. Through the HTML renderer, a loss smaller than 0.01 of the span's em squared, both in device pixels, is a sliver and names no entry. The first read's edge control holds that a graze of its last device row stays under the sliver, and its háček plant that a lost háček passes it ([The HTML renderer's pages](#the-html-renderers-pages)). Through the SVG renderer a cause names an entry where it hides at least the threshold, or takes an island (below). The threshold is the whole pixels that 0.01 of the span's em squared holds of its strong ink, both in image pixels, the product rounded to six decimal places before it is rounded down, and at least one pixel. So a loss of fewer pixels names none by its size, and a loss of exactly that many names one. The threshold is 1 pixel up to an em of about 14.1, 4 at 20 and 16 at 40. A box whose edge only touches the foot of a text, a graze, hides a row of ink whose pixels turn on where the edge falls among them, so whether it is named cannot be told from the text's size. It is often named, but not always, so a `dropped` list that names none is no sign that no box touches a text's foot. The cure is the layout's, the box moved clear of the letters (DEC-045 point 1).
+  - **An island of ink.** Through the SVG renderer, an island of a span's counted ink is a set of its pixels at one of the three levels or darker, each meeting another by a side or a corner, and meeting no other such pixel of the span. A cause takes an island where it hides some pixel of it wholly and leaves none of it showing at its level: a pixel shows at a level where the page drawn whole still shows enough of its ink for it to be that dark. Past the page's edge, where a pixel is cut or shows, a cause takes an island only by cutting all of it. A cause that takes an island at any of the three levels is named, whatever the threshold holds. So a dot, a háček or a full stop that stands apart from its letter and is hidden whole is named, and a graze, which takes part of a stroke, only where it holds the threshold. The threshold's share and rounding, the three levels and the joining are set here, and change here with no new record (DEC-045 point 1).
+  - **What the read can leave unnamed.** DEC-045 point 1 gives four losses of a mark the read can pass over: a dot a face draws fused to its letter at its smallest sizes, such as the dot of ż; a mark joined to its letter below the baseline, where a graze lies, such as the ogonek of ą or ę; a mark split between the page's edge and a part; and a small dot that a box's edge fades to a faint line without hiding any of it wholly. Read the images for these.
   - **What it leaves to you.** A text in the colour of what lies under it, or one that reads poorly through a translucent fill, shows, so it is not here: judge it in the images.
 - **`losses`:** each [loss](#the-loss-report) the renderer reports. A loss that names a key is listed under that key alone. `accepted` is true for one the piece [accepts](#accepting-a-loss), which the report names all the same.
 - **`drawn-otherwise`:** each run measured in more than one family, with its element, its characters and the families. resvg may set the whole run on a line in one of them, where a browser sets only the characters the first family lacks. Through the HTML renderer, an entry is a span with `why`:
@@ -1039,92 +1037,10 @@ A project's build pipeline may draw each piece's HTML pages on every change it c
 
 ### Where the review's reports are kept
 
-[The reviewer](README.md#the-reviewer) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle --> writes a report for each round. The reviewer writes no file: it replies with the report, and whoever dispatched it keeps the report as it was written, in two files (DEC-042 points 4 and 6).
+[The reviewer](README.md#the-reviewer) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle --> writes a report for each reading of a piece. It writes no file: it replies with the report, and whoever dispatched it keeps the report whole, as it was written, and commits none of it.
 
-- **Where.** Both lie in `.pkit/capabilities/visual-communication/project/local/reviews/<piece>/`, named by the round's number `<n>`, from 1. That folder lies in the clone's local folder, as the look's images do ([The clone's local folder](files.md#the-clones-local-folder); DEC-015 point 4), so no file of it is committed.
-- **The whole report,** `.pkit/capabilities/visual-communication/project/local/reviews/<piece>/round-<n>.md`. A later round's review reads it only once it has written its grades, and where the loop hands a round to the person, that round's report goes with it.
-- **The document alone,** `.pkit/capabilities/visual-communication/project/local/reviews/<piece>/round-<n>.yaml`: the report's fenced YAML document and nothing else, so that it reads as one instance of `visual-communication:review`.
-- **Kept as written.** Nobody summarises, filters or answers either file before it is kept.
-- **Not validated.** `pkit validate` checks no kept file, though each document names its schema ([The binding](files.md#the-binding)).
-- **One folder for each piece,** which a later round adds to and no run replaces. A look replaces its own folder and leaves this one.
-
-## The verdict
-
-`pkit visual verdict <piece>` gives the *verdict* against the project's bar from a round's review report, and says whether it ends the designer's loop (DEC-042 point 1). The verdict needs no judgement, so a command gives it, and anyone gives the same verdict again from the same report. The reviewer runs no command, so whoever reads its report runs this one.
-
-- **What it reads.** The document the round's report opens with, kept alone as `round-<n>.yaml` ([Where the review's reports are kept](#where-the-reviews-reports-are-kept)): the highest round kept, or the one `--round` names. The bar, from the capability's configuration alone ([The bar and the bounds](files.md#the-bar-and-the-bounds)), and the rule sets it covers. And, to tell whether the verdict ends the loop, what [When it ends the loop](#when-it-ends-the-loop) compares.
-- **The rules the bar covers.** Each rule of a set it covers that the capability's check finds graded, and each single rule it covers.
-- **A page meets the bar** where each of its unmarked grades on those rules reaches the bar's grade. **The piece meets it** where every page does, and each unmarked grade it takes as a whole does. A grade of a rule the bar does not cover counts for nothing.
-- **A marked grade is left out,** a need or the asker's, and named apart with its mark (DEC-042 point 4).
-- **What it prints.** The report it read, the bar and the rules it covers. Then whether the piece meets the bar, each page with whether it meets it, the piece as a whole, and each grade that fails the bar, with its evidence, and each marked grade left out. Last, whether the verdict ends the loop, and each reason it does not. `--json` prints the same as one document, with the reading the hold was compared on, under `reading` ([The accepted calibration's data](#the-accepted-calibrations-data)).
-- **It writes nothing,** and needs no network.
-
-### When no verdict is given
-
-- **No bar.** Where the configuration holds no bar, no verdict is given, and the designer's loop ends as DEC-030 point 2 says (DEC-042 point 3).
-- **A covered rule the report leaves out.** Where the report neither grades a rule the bar covers nor lists it as not graded, no verdict is given, since one that passed would rest on no grade of that rule. The command names each such rule.
-- **Refused.** The command prints `error: …` and exits 1 where no report of the piece is kept, the report or the configuration cannot be read, the report's schema refuses it, or the report is of another piece or round than it is kept as. So does a bar the configuration's schema refuses, or one the capability's check fails, such as a bar over what the check does not find graded.
-- **A document that does not parse.** Where the report's document does not parse as YAML, the command refuses it as one that cannot be read, and gives no verdict from it. Its message names the report as one whose document does not parse, and what the reader found where it stopped. Where the reader names that place, the message gives its line and column in `round-<n>.yaml`. Written plain, a value that holds `: ` does not parse, and nor does one that opens with a quoted phrase and goes on after it. The reviewer writes each value in words as a block scalar, which parses words of either kind.
-
-Otherwise it exits 0, whatever the verdict, and 2 on a usage error.
-
-### When it ends the loop
-
-The verdict ends the designer's loop at the bar only while the *hold* is on (DEC-042 points 9 and 10). Otherwise it informs, and the loop ends as DEC-030 point 2 says. The command says each reason the hold is off:
-
-- **No report accepted.** The capability ships no accepted calibration's data.
-- **A bar that reaches past it.** The bar covers a rule with no evidence of its own in the accepted report. A bar over some of the accepted rules alone gets the hold.
-- **A lapse,** where anything that could move the grades differs from the accepted data:
-  - the set of a covered rule, at another major;
-  - a covered rule's text, by its digest. A rule the bar does not cover lapses nothing;
-  - the reviewer's definition, the capability's own `agents/graphic-design-reviewer.md`, by its digest. Another definition of `graphic-design-reviewer`, in the project's own place for agents or in another capability's, lapses the hold too, since the command cannot tell which of them ran;
-  - the design knowledge, by its digest;
-  - the capability's code, by its digest: each program file in its `scripts/` folder, those written in the language its commands run in. Each check the review reads lies there, with the values of its own it measures by, its reach and the viewing step's code that gives its findings ([Scenes](checks.md#scenes) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->). So does the rest of the code, such as the engine, the renderers and the versions of the dependencies a script pins, so every change to the code lapses the hold, one that moves no grade included. A compiled cache, a folder's marker or an editor's file beside the code lapses nothing (DEC-065 point 2);
-  - the capability's list of checks, `checks.md`, by the digest of its body, which the reviewer reads for what a check means. A change to its front matter alone lapses nothing;
-  - the model the round's report names, or its effort, one named and the other not included.
-- **Data it cannot read.** Accepted data the command cannot read, or that its schema refuses.
-
-A lapse only takes the hold away. The command starts nothing, and a new calibration is a person's to start (DEC-042 point 9).
-
-### The accepted calibration's data
-
-Once whoever maintains the capability accepts a calibration's report, a refinement of DEC-042 writes the values the hold is compared on: `calibration.yaml`, in the capability's own folder, bound to `visual-communication:calibration` ([The binding](files.md#the-binding); [`calibration.schema.json`](schemas/calibration.schema.json)). Only that refinement's change writes them, and the command reads them. Until a report is accepted, the capability ships no such file. That change edits no program file in `scripts/` and not the body of `checks.md`: an edit to either would make the state it lands differ from the data it writes, so the hold it records would lapse as it lands (DEC-065 point 2).
-
-- **`rules`:** each rule with evidence of its own in the accepted report, by its id, with the major of its set and the digest of its text.
-- **`reviewer`:** the digest of the reviewer's definition.
-- **`design-knowledge`:** the digest of the design knowledge.
-- **`code`:** the digest of the capability's code.
-- **`checks`:** the digest of the list of checks.
-- **`model`:** the full name of the model the calibration's review ran on, with its effort where the harness has one.
-- **Each digest** is a SHA-256 of what it names, written `sha256:<hex>`, as [`calibration.schema.json`](schemas/calibration.schema.json) sets out.
-- **The reading** holds the same values as they stand now, in the data's shape: for the rules the bar covers, and the model the round's report names.
-
-### The verdict's document
-
-`pkit visual verdict <piece> --json` prints what the command answers as one JSON document. It keeps to the rule the CLI reference states for a document a command prints for a program ([Machine-readable output](../../cli/README.md#machine-readable-output)): a key, or a value of a set, may be added, one goes only as a breaking change of the capability, and none comes to mean anything else. The document carries no version. Where the command refuses, it prints none and exits 1.
-
-- **`piece`:** the piece's name, as given.
-- **`round`:** the number of the round whose report it read.
-- **`report`:** the path of the report's document it read, `round-<n>.yaml`, from the project's root ([Where the review's reports are kept](#where-the-reviews-reports-are-kept)).
-- **`bar`:** the bar as the configuration holds it, carried as it is written there, so its keys are the configuration's ([The bar and the bounds](files.md#the-bar-and-the-bounds)). `null` where the configuration holds no bar.
-- **`rules`:** each rule the bar covers, by its id, and empty where there is no bar.
-- **`verdict`:** `null` where no verdict is given. Otherwise:
-  - `meets`: whether the piece meets the bar.
-  - `pages`: each page the report names, in the order it first names it, with `page`, its id, `meets`, whether it meets the bar, and `failing`, each unmarked grade of it that fails the bar.
-  - `piece`: the piece as a whole, with `meets`, whether each unmarked grade it takes as a whole reaches the bar, and `failing`, each such grade that does not.
-  - `marked`: each marked grade, left out of the verdict.
-- **A grade,** in each of those lists:
-  - `rule`: the rule's id.
-  - `on`: where the grade lies, `page` with the page's id, or `piece`, `true`, for the piece as a whole.
-  - `grade`: `below competent`, `competent`, `professional` or `excellent` ([named no reading](../../cli/README.md#machine-readable-output)).
-  - `evidence`: the reviewer's evidence for it, in its words.
-  - `mark`: on a marked grade alone, `need` or `asker` ([named no reading](../../cli/README.md#machine-readable-output)). A grade without it is unmarked.
-- **`ends-the-loop`:** whether the verdict ends the designer's loop ([When it ends the loop](#when-it-ends-the-loop)).
-- **`why`:** each reason, in words, that no verdict is given or that the verdict ends no loop. Empty where it ends the loop.
-- **`reading`:** `null` where no verdict is given. Otherwise the reading the hold was compared on, in the shape of the accepted calibration's data ([The accepted calibration's data](#the-accepted-calibrations-data)):
-  - `rules`: each rule the bar covers, by its id, with `major`, the major of its set, and `text`, the digest of its text.
-  - `reviewer`: the digest of the reviewer's definition, or `null` where the capability ships none.
-  - `design-knowledge`: the digest of the design knowledge.
-  - `code`: the digest of the capability's code.
-  - `checks`: the digest of the list of checks, or `null` where the capability ships none.
-  - `model`: the model the round's report names, with its `name`, and its `effort` only where the report names one.
+- **A person, or a session,** keeps it in `.pkit/capabilities/visual-communication/project/local/reviews/<piece>/reading-<n>.md`, `<n>` counting the piece's readings from 1. That folder lies in the clone's local folder, as the look's images do ([The clone's local folder](files.md#the-clones-local-folder); DEC-015 point 4). A look replaces its own folder, and leaves this one.
+- **The designer** keeps the reports of its round in a file of its own in the agent workspace, since its grant names nothing inside the methodology's folder ([visual-communication:DEC-030-design-agents] point 5).
+- **The second reading of a round** is told the file that keeps the first's report, and reads it only once its own findings are written. It then says of each finding of the first whether the page still shows it ([visual-communication:DEC-070-ship-call-and-one-round] point 5).
+- **Kept as written.** Nobody summarises, filters or answers a report before it is kept, or before the second reading reads it. The round hands the person the second report as the reviewer wrote it (DEC-070 point 2).
+- **Not validated.** `pkit validate` checks no kept report, though the document it opens with names its schema ([The binding](files.md#the-binding)).

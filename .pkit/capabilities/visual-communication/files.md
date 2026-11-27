@@ -7,6 +7,7 @@ pkit:
       path:
         - .pkit/capabilities/visual-communication/package.yaml
         - .pkit/capabilities/visual-communication/agents/graphic-design-reviewer.md
+        - .pkit/capabilities/visual-communication/agents/graphic-sketcher.md
         - .pkit/capabilities/visual-communication/scripts/status.py
         - .pkit/capabilities/visual-communication/scripts/add.py
         - .pkit/capabilities/visual-communication/scripts/release.py
@@ -37,6 +38,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/comparison.py
         - .pkit/capabilities/visual-communication/scripts/_lib/tokens.py
         - .pkit/capabilities/visual-communication/scripts/_lib/pictures.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/paths.py
         - .pkit/capabilities/visual-communication/scripts/_lib/notations.py
         - .pkit/capabilities/visual-communication/scripts/_lib/outlines.py
         - .pkit/capabilities/visual-communication/scripts/_lib/keys.py
@@ -68,7 +70,6 @@ pkit:
         - .pkit/capabilities/visual-communication/schemas/roles.schema.json
         - .pkit/capabilities/visual-communication/schemas/notation.schema.json
         - .pkit/capabilities/visual-communication/schemas/review.schema.json
-        - .pkit/capabilities/visual-communication/schemas/calibration.schema.json
         - .pkit/capabilities/visual-communication/libraries/foundations/library.yaml
         - .pkit/capabilities/visual-communication/libraries/foundations/roles.yaml
         - .pkit/capabilities/visual-communication/libraries/foundations/components/figure.yaml
@@ -93,7 +94,6 @@ pkit:
         - tests/fixtures/visual-communication/libraries/test-notation/1.0.0/library.yaml
         - tests/fixtures/visual-communication/libraries/test-notation/1.0.0/notation.yaml
         - tests/fixtures/visual-communication/libraries/test-parts/1.0.0/roles.yaml
-        - .pkit/capabilities/visual-communication/scripts/_lib/bar.py
         - .pkit/capabilities/visual-communication/schemas/config.yaml
       record:
         - visual-communication:DEC-001#3
@@ -195,14 +195,26 @@ pkit:
         - visual-communication:DEC-036#3
         - visual-communication:DEC-036#7
         - visual-communication:DEC-036#8
-        - visual-communication:DEC-042#3
-        - visual-communication:DEC-042#6
-        - visual-communication:DEC-042#7
-        - visual-communication:DEC-042#9
+        - visual-communication:DEC-056#1
+        - visual-communication:DEC-056#2
+        - visual-communication:DEC-056#3
+        - visual-communication:DEC-056#4
+        - visual-communication:DEC-056#6
         - visual-communication:DEC-068#4
+        - visual-communication:DEC-070#4
+        - visual-communication:DEC-070#5
+        - visual-communication:DEC-071#1
+        - visual-communication:DEC-071#3
+        - visual-communication:DEC-072
+        - visual-communication:DEC-055#1
+        - visual-communication:DEC-055#2
+        - visual-communication:DEC-055#7
+        - visual-communication:DEC-055#8
+        - visual-communication:DEC-053#4
         - ADR-057#2
       artefact:
         - .pkit/cli/README.md#validate
+        - .pkit/permissions/README.md#the-agent-workspace
 ---
 
 # The files of the visual work
@@ -229,7 +241,7 @@ The *location* is the one folder of the repository that holds the project's visu
 
 ### Where it is recorded
 
-The capability's configuration, `.pkit/capabilities/visual-communication/project/config.yaml`, records the location under the key `location`, as a path relative to the repository's top. Beside it, the configuration may name a browser ([The browser](#the-browser)), a bar for the designer's loop and the bounds of the loop ([The bar and the bounds](#the-bar-and-the-bounds)), and holds nothing else. A command records the location the first time it writes there, so a later change of the default moves no recorded location (DEC-002 point 1). A configuration as a command creates it:
+The capability's configuration, `.pkit/capabilities/visual-communication/project/config.yaml`, records the location under the key `location`, as a path relative to the repository's top. Beside it, the configuration may name a browser ([The browser](#the-browser)), and holds nothing else. A command records the location the first time it writes there, so a later change of the default moves no recorded location (DEC-002 point 1). A configuration as a command creates it:
 
 ```yaml
 pkit_schema: visual-communication:config
@@ -266,26 +278,6 @@ browser: ~/browsers/chromium/chrome
 - **The path** names the program, not its folder. It is absolute, or starts `~/` in your home folder, or is relative to the repository's top.
 - **Only here.** No flag and no environment variable names a browser. A command starts that program with no prompt, so the choice lies in a file the project reviews.
 - **No command writes it.** Write the line by hand, and remove it to go back to the first browser found.
-
-### The bar and the bounds
-
-The configuration may hold a *bar*, under the key `bar`, and the *bounds* of the designer's loop, under the key `bounds` (DEC-042 points 3 and 6). The bar says how good a page and the piece must be before the loop may end. The bounds say how many rounds the loop may run. They sit side by side, and neither is part of the other:
-
-```yaml
-bar:
-  covers: [COMM@2, GRAPHIC@4]
-  at-least: professional
-bounds:
-  to-the-bar: 5
-  polish: 2
-```
-
-- **`covers`** lists the rules the bar holds each page and the piece to. An item is a rule set's id, such as `COMM@2`, or one rule's id, such as `RS-COMM-003@2`, each with the major of its set. A set of the project's own covers only its own rules, never those it inherits.
-- **`at-least`** is the grade each page and the piece must reach on them: `professional` or `excellent`. A grade below `professional` is refused, since a loop that met such a bar would end on a rule finding the designer could still mend.
-- **One bar.** A project keeps one bar. The capability ships none.
-- **`to-the-bar`** is the most rounds the loop runs to the bar, and **`polish`** the most rounds of polish once it meets it. Absent, the schema's default holds: 5 rounds to the bar and 2 of polish. Whoever dispatches the designer may lower either for one run, and never raise it.
-- **Only here.** No flag, no agent and no dispatcher hands anyone a bar, so the choice lies in a file the project reviews.
-- **Checked** by the core's data validation against the schema, which refuses another shape. The capability's check fails a bar that covers what it does not find graded, and one whose major for a set differs from the major the project's sets in `rule-sets/` under its internal documentation root pin for it, or from the set's own where none of them pins it ([`bar-ungraded` and `bar-major`](checks.md#files-and-binding)). The project corrects either in the configuration.
 
 ## What the location holds
 
@@ -360,9 +352,20 @@ It removes each folder whole, then takes each entry out of the list as text ([Th
 - `before-after/<piece>/`: a piece's scenes drawn around a change to its lock's versions, in `before/` without the change and in `after/` with it;
 - `handover/<piece>/`: what `pkit visual produce` hands a producer, and what the producer writes, until the command keeps it in the piece's folder;
 - `look/<piece>/`: the images, the frames and the report `pkit visual look` writes;
-- `reviews/<piece>/`: the reviewer's report of each round, as whoever dispatched the reviewer kept it, whole in `round-<n>.md` and its document alone in `round-<n>.yaml` ([Where the review's reports are kept](outputs.md#where-the-reviews-reports-are-kept) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->).
+- `reviews/<piece>/`: the reviewer's report of each reading, kept whole in `reading-<n>.md` by a person or a session that dispatched the reviewer ([Where the review's reports are kept](outputs.md#where-the-reviews-reports-are-kept) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->).
 
 *What is made from a piece* names the files in each. While `pkit visual look` runs, the folder also holds a temporary folder of the fonts it hands its tool, which the run removes.
+
+### The sketch, in the agent workspace
+
+A new presentation that the designer designs, or one it redesigns whole, starts as a *sketch*: a drawing of every page, which the agent `graphic-sketcher` draws by hand outside the engine (DEC-071 point 1). The sketch is no file of the visual work:
+
+- **Where.** In the agent workspace of the checkout the designer works in, at `.agent-workspace/visual-communication/sketch/<piece>/`, a folder for each piece, named as the piece is. That is the capability's own folder in the workspace ([the permissions README, "The agent workspace"](../../permissions/README.md#the-agent-workspace)). None of it lies in the location, or in the clone's local folder (DEC-071 point 3).
+- **Never committed.** Nothing in the agent workspace is committed, so no file of the sketch is ([the permissions README, "The agent workspace"](../../permissions/README.md#the-agent-workspace)).
+- **Who writes it.** `graphic-sketcher`, in a medium it draws freely and you can open, such as a web page it writes by hand. Its handoff names each file it wrote.
+- **Who reads it.** The designer, to rebuild it as the piece, and you. No command, check or review reads it, and none of the capability's formats apply to it. Once the rebuild is drawn, nothing draws from it: the piece's source is its content and its libraries.
+- **How long.** It is kept at least until your ship call on the piece. A later sketch of the same piece replaces it. The workspace's removal command does not reach it, since it refuses a path under a capability's own folder ([the permissions README, "The agent workspace"](../../permissions/README.md#the-agent-workspace)).
+- **One checkout.** It lies only in the checkout the designer worked in, in its agent workspace, not with the pages the viewing step drew. Copy it to read it on another machine.
 
 ## Names, ids and the binding
 
@@ -398,9 +401,9 @@ pkit_schema: visual-communication:piece
 schema_version: 1
 ```
 
-The schema is `visual-communication:<kind>`, one of `config`, `piece`, `content`, `brief`, `library`, `component`, `roles`, `notation`, `libraries`, `produced-record`, `code-record`, `findings`, `exports`, `code`, `review` and `calibration`. The format number is `1`, shared by every schema of the capability (DEC-003 point 1). The command that creates a file writes both fields, and a person who writes a file by hand writes them too (DEC-002 point 3).
+The schema is `visual-communication:<kind>`, one of `config`, `piece`, `content`, `brief`, `library`, `component`, `roles`, `notation`, `libraries`, `produced-record`, `code-record`, `findings`, `exports`, `code` and `review`. The format number is `1`, shared by every schema of the capability (DEC-003 point 1). The command that creates a file writes both fields, and a person who writes a file by hand writes them too (DEC-002 point 3).
 
-No path binds a file, and the capability writes no line that points an editor at a schema (DEC-002 point 3). The core's data validation checks the shape of each bound file it reads against the schema it names. The check finds the configuration, and each file of the location's table that has a schema, by its name and place. It reports one whose binding is missing or names another schema (*What the check reports*). The documents of the reviewer's kept reports name `visual-communication:review`, yet `pkit validate` checks none of them. They lie in the clone's local folder, which git ignores ([The clone's local folder](#the-clones-local-folder)), and the core's data validation reads only the files git sees (ADR-057 point 2). Nor does the check read them. The accepted calibration's data, `calibration.yaml` in the capability's own folder, names `visual-communication:calibration`. The capability ships it once whoever maintains the capability accepts a calibration's report, and no command writes it ([The accepted calibration's data](outputs.md#the-accepted-calibrations-data) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->). Token files, the Resolver document, fonts and pictures carry no binding: each keeps its own format.
+No path binds a file, and the capability writes no line that points an editor at a schema (DEC-002 point 3). The core's data validation checks the shape of each bound file it reads against the schema it names. The check finds the configuration, and each file of the location's table that has a schema, by its name and place. It reports one whose binding is missing or names another schema (*What the check reports*). The document a reviewer's report opens with, the fixed form of its report, names `visual-communication:review` ([visual-communication:DEC-070-ship-call-and-one-round] point 5), yet `pkit validate` checks no kept report. A kept report lies in a folder git ignores, such as the clone's local folder ([The clone's local folder](#the-clones-local-folder)), and the core's data validation reads only the files git sees (ADR-057 point 2). Nor does the check read them. Token files, the Resolver document, fonts and pictures carry no binding: each keeps its own format.
 
 ### How the files are read
 
@@ -444,6 +447,7 @@ lock:
 | `languages` | yes | The languages of its content, each once. The first is its source language. Each has its `content.<language>.yaml`. |
 | `audience` | yes | Who the piece is for, in words. |
 | `shown` | yes | Where the piece is shown, in words. |
+| `media` | no | The media it is shown in, which the check of a text's size measures by (DEC-055 point 1): `screen`, a screen at hand, read at arm's length or nearer; `room`, a screen read from across a room, projected or not; `paper`, a printed page. One of two forms holds for the whole piece, and either names one medium at least. A list, each medium once, such as `[screen, room]`, has each medium show every size the piece is drawn at. A mapping from each medium to the sizes it shows, such as `{screen: [desktop], room: [projector]}`, names under each medium one size at least, each once, and each a mode of the size axis the piece is drawn at, a key's size being its mode, else the axis's default. A size the piece is not drawn at fails. No scene reads it, so an export leaves it out. `shown` says the place in words beside it, and whoever writes the two keeps them in agreement. |
 | `explains` | yes | `true` where the piece explains, rather than only shows. |
 | `exports` | yes | The formats an export makes, of `svg`, `svg-modes`, `pdf` and `html` (*Exports* in *What is made from a piece*). `svg` and `svg-modes` write files of one name, so a piece names one of them. `svg-modes` takes no mode of no pair it reads that parts the piece's combinations (DEC-018 point 4). |
 | `state` | yes | The piece's stage of life, `draft`, `final` or `published`, which says who moves its lock ([The lock](#the-lock)). `pkit visual mark-final` sets `final`. A published piece owes a current copy, which each of its exports writes (*The current copy* in *What is made from a piece*). |
@@ -576,6 +580,7 @@ caption: The flow.
 - **`override`** points a painted part of the component at another role, by its token path, never at a value or a component token. `override: {b: accent}` paints the part `b` with `accent`.
 - **`concept`** names what the component it places stands for: a concept of a notation the piece names, as `<notation>/<concept>`, such as `concept: test-notation/store` ([Notations](#notations)). The concept gives the component its colour family; how a component paints with its family is in *Components*.
 - **A field of runs,** one its component marks as taking runs (*Components*), takes text, as any field of text does, or a list of *runs*: spans of its text, each in a style of its own (DEC-012 point 1). A run is text, set in the field's first style, or a mapping of `text`, which holds text, and perhaps `style`, one of the words of the field's run styles, and `concept`, written as above, which gives the run its colour family. The format fixes these three keys on a run, which places no component, so a run holds no other key and no reserved key binds it. The runs' texts are joined as written, with nothing between them. YAML drops the spaces at the edges of a plain text, so a run with a space at its edge is written in quotes, and so is a run whose text YAML would read as another value, such as `null` or `true` ([How the files are read](#how-the-files-are-read)). The field is filled where one of its runs holds text. A run carries no id: a list of runs holds runs, not items, so no rule of ids reaches it. A terminal's line, its command in the field's first style: `line: [{text: "$ ", style: prompt}, pkit visual render deck, {text: "  # draws every page", style: comment}]`.
+- **A field of paths,** one its component marks as holding paths (*Components*), takes a path, or a list of paths, each naming one file of the repository (DEC-056 points 1 and 2). A path is the names of folders and a file, joined by `/`, from the repository's root. It starts with no `/`, and holds no empty name, no `.` or `..`, no `\`, no control character, and no `*`, `?` or `[`, so it is no glob. It names, letter for letter, a file version control lists: one the index holds, whether or not the working tree holds it, or one not yet tracked and not ignored. A folder, a file git ignores, and a file in the folder of a piece's version handed out or of a published piece's copy name no document. A path is a citation, shown as it is written and never as a link, and the check finds whether its file is there, never whether it changed. The paths are the field's value, so they may differ between languages, as its text does. A list of paths holds texts, not items, and carries no ids, so no rule of ids reaches it. A slide's documents: `documents: [.pkit/decisions/core/COR-017-capability-pattern.md]`.
 - **An id** marks an item, or another component the content places, that another part of the piece names (DEC-001 point 3). It is unique in its list. Each list holds the same ids in every language as in the source language, in any order.
 
 Each key of a mapping that places a component must be a field or an option of that component, an arrangement field or an end field of its list where the mapping is an item, or a reserved key. A key that both an item's component and its list declare is read by neither (DEC-010 point 2, DEC-011 point 1). A key of a page in a layout must be a slot of that layout, `layout`, or a reserved key. How a component declares its fields, options, states, layouts, slots and lists is in *Components*.
@@ -644,7 +649,7 @@ A reason holds these fields:
 
 #### The makers' record of drafts
 
-The designer owns each word of a piece that is not the asker's, and the asker's words include a lead, title or takeaway once the asker has seen it (DEC-042 point 7). The `drafts` of a part record the ones the designer drafted and the asker has not seen:
+The designer owns each word of a piece that is not the asker's, and the asker's words include a lead, title or takeaway once the asker has seen it ([visual-communication:DEC-070-ship-call-and-one-round] point 4). The `drafts` of a part record the ones the designer drafted and the asker has not seen:
 
 ```yaml
 cover:
@@ -821,13 +826,22 @@ Every change to a version the capability ships reaches a project that brings it 
 
 ### The foundations
 
-The capability ships the foundations' released versions 1.0.0 and 1.1.0, each at `.pkit/capabilities/visual-communication/releases/foundations/<version>/` ([The libraries the capability ships](#the-libraries-the-capability-ships)). Each is of kind `components` and builds on nothing. Release 1.0.0 needs release 0.3.0, and release 1.1.0 needs release 0.4.0. Release 1.1.0 adds the size axis `device` ([Axes and modes](#axes-and-modes)), the top `site`, the roles `size.site` and `size.line`, the roles of a run's sign and ground, and the shapes. The top, the roles and the shapes are additions, which need a minor ([What a release compares](#what-a-release-compares)). The axis was one too, released while no brand could hold an axis of its own. A new shared axis now breaks, since a brand's own axis may take its name (DEC-004 point 5). Their version being built stays where it was, at `libraries/foundations/`, and carries 1.2.0. To release 1.1.0 it adds a fourth mode of `device`, `projector`, the roles of an order, each with a default, and their pairs, the shared type of a page's title, `type.title`, with a default, and the deck's tokens `title` and `lead`, the types of a page's title and of the line under it, each defaulting to the shared type the deck drew it in before. It changes the deck's look: the lead stands a small space under the title, and a slide's visual reaches down to one large space above its limit or its footer, or to the margin where it has neither. These need a minor, and only `pkit visual add foundations --being-built` takes it. A piece reads them from the library folder alone, so `pkit visual add foundations` copies the newest released version, 1.1.0, whole to `libraries/foundations/1.1.0/`, and `pkit visual add foundations@1.0.0` copies release 1.0.0 to `libraries/foundations/1.0.0/`. It lists each with `source: {kind: shipped}`, `released: true` and the hash the library's record keeps ([What the location holds](#what-the-location-holds)). The foundations hold:
+The capability ships the foundations' released versions 1.0.0 and 1.1.0, each at `.pkit/capabilities/visual-communication/releases/foundations/<version>/` ([The libraries the capability ships](#the-libraries-the-capability-ships)). Each is of kind `components` and builds on nothing. Release 1.0.0 needs release 0.3.0, and release 1.1.0 needs release 0.4.0. Release 1.1.0 adds the size axis `device` ([Axes and modes](#axes-and-modes)), the top `site`, the roles `size.site` and `size.line`, the roles of a run's sign and ground, and the shapes. The top, the roles and the shapes are additions, which need a minor ([What a release compares](#what-a-release-compares)). The axis was one too, released while no brand could hold an axis of its own. A new shared axis now breaks, since a brand's own axis may take its name (DEC-004 point 5). Their version being built stays where it was, at `libraries/foundations/`, and carries 1.2.0. To release 1.1.0 it adds a fourth mode of `device`, `projector`, the roles of an order, each with a default, and their pairs, the shared type of a page's title, `type.title`, and the shared type of running text read before the body, `type.lead`, each with a default, and the deck's tokens `title` and `lead`, the types of a page's title and of the line under it. The title defaults to the shared type the deck drew it in before, and the lead to `type.lead`, so under a brand that gives neither the lead nor `type.lead` a value, the lead takes the body the deck drew it in before (DEC-072 point 3). It changes the deck's look: the lead stands a small space under the title, and a slide's visual reaches down to one large space above its limit or its foot, or to the margin where it has neither. It adds to the slide an optional slot, `documents`, a list of the paths of the documents the slide's claim rests on (DEC-056 point 3). The deck's own drawing shows them under the footer, a small space between the two, a path to a line in the type of code, with no word before them, so the foot is the footer and the documents. A slide that gives none is drawn as before (DEC-056 point 4). These need a minor, and only `pkit visual add foundations --being-built` takes it. A piece reads them from the library folder alone, so `pkit visual add foundations` copies the newest released version, 1.1.0, whole to `libraries/foundations/1.1.0/`, and `pkit visual add foundations@1.0.0` copies release 1.0.0 to `libraries/foundations/1.0.0/`. It lists each with `source: {kind: shipped}`, `released: true` and the hash the library's record keeps ([What the location holds](#what-the-location-holds)). The foundations hold:
 
 - `library.yaml`;
 - `roles.yaml`, the shared roles, axes, colour families, shapes, an order's roles and contrast pairs that every library shares (DEC-004 points 2, 7 and 8, DEC-032 point 1, DEC-036 point 1);
 - `components/figure.yaml`, the top component `figure`, for a figure in a documentation page;
 - `components/deck.yaml`, the top component `deck`, for a presentation: each of its slides is a page, in its layout `cover` or `slide`, or drawn by the component it names;
 - `components/site.yaml`, the top component `site`, for a web page or a portal of several: each of its `pages` is a web page, in its layout `standard`, or drawn by the component it names (DEC-022 point 1).
+
+Their version being built declares the smallest text size of each medium each top's pages are made for (DEC-055 points 2 and 8; [A smallest text size](components.md#a-smallest-text-size)), each value with its source beside it in the top's file:
+
+- **The figure** is made for a screen at hand and for paper. On a screen it declares 11 px, and on paper 10.67 px.
+- **The deck** is made for a screen at hand and for a room. On a screen it declares 11 px.
+- **The site** is made for a screen at hand, and declares 11 px there.
+- **A screen at hand: 11 px,** from Apple's Human Interface Guidelines, *Typography*, whose table of default and minimum sizes gives a minimum of 11 pt on iOS and iPadOS and of 10 pt on macOS. It states a font size, in the point the platforms lay out in, which a browser on them takes as one CSS px. One value holds for every screen at hand, so the larger is taken.
+- **Paper: 10.67 px,** from PLOS ONE's figure guidelines, which ask that text within a figure be set at 8 to 12 point. It states a font size at the figure's printed size. A figure has no physical size, so it prints at the PDF export's px, 96 to the inch, and 8 pt, a seventy-second of an inch each, is 10.67 px at the scene's rounding.
+- **A room: none.** No top declares a room's smallest size until the display image size standard (ANSI/INFOCOMM V202.01) is read, in the edition it cites, since its publisher's page alone does not define the viewing ratio its least shares are given for, and a value drawn from it could not state what it assumes (DEC-055 point 8). So a piece shown in a room is stated as unmeasured there, and the review judges its texts there by `shown`. No value assumes a viewing ratio yet.
 
 A site of one page is a single web page. The layout `standard` has one slot, `main`. Its page lays the site's `header`, its `main` part and the site's `footer` one under another, each the page's whole width, on the page's background. Each part sets its own inset, so a colour it paints reaches the page's edge and its content keeps from it. A component that sets no inset touches the edge.
 
@@ -837,7 +851,7 @@ A site of one page is a single web page. The layout `standard` has one slot, `ma
 
 The top components the capability ships are the foundations' (DEC-007 point 1).
 
-Their shared roles are the colours `background`, `surface`, `text-primary`, `text-secondary`, `accent` and `line`. The dimensions are `space.1` to `space.4`, `size.figure`, `size.slide`, a slide's width, and `size.site`, the width of a site's pages. Its default, `{size.slide}`, draws a site as wide as a slide where a brand gives it no value, so no released brand owes it one (DEC-004 point 7). `size.line` is the length of a line of text at most. Its default, `{size.figure}`, caps a line at a figure's width where a brand gives it no value. `space.sign-gap` is the gap between a run's sign and its first character, `space.ground-room` the room a run's ground leaves at each end of its span, and `space.ground-corner` the radius of the ground's corners there (DEC-036 point 3; [Text](components.md#text)). Each defaults to `{space.1}`, so no released brand owes them a value. The strokes are `stroke.thin`, an edge's width, and `stroke.thick`, the width of a line drawn on its own. The font families are `font.body` and `font.heading`. The typographies are `type.body`, `type.heading`, `type.strong`, the body's size and line height in a heavier weight, and `type.code`, a monospace type for code. Their version being built adds `type.title`, the type of a page's title, which names the whole page, so a brand can set it apart from the heads of the page's parts. Its default, `{type.heading}`, sets a page's title as a heading where a brand gives it no value, so no released brand owes it one (DEC-004 point 7). The one picture role is `picture.logo`, the brand's logo, which no brand owes a value ([Picture roles](#picture-roles)).
+Their shared roles are the colours `background`, `surface`, `text-primary`, `text-secondary`, `accent` and `line`. The dimensions are `space.1` to `space.4`, `size.figure`, `size.slide`, a slide's width, and `size.site`, the width of a site's pages. Its default, `{size.slide}`, draws a site as wide as a slide where a brand gives it no value, so no released brand owes it one (DEC-004 point 7). `size.line` is the length of a line of text at most. Its default, `{size.figure}`, caps a line at a figure's width where a brand gives it no value. `space.sign-gap` is the gap between a run's sign and its first character, `space.ground-room` the room a run's ground leaves at each end of its span, and `space.ground-corner` the radius of the ground's corners there (DEC-036 point 3; [Text](components.md#text)). Each defaults to `{space.1}`, so no released brand owes them a value. The strokes are `stroke.thin`, an edge's width, and `stroke.thick`, the width of a line drawn on its own. The font families are `font.body` and `font.heading`. The typographies are `type.body`, `type.heading`, `type.strong`, the body's size and line height in a heavier weight, and `type.code`, a monospace type for code. Their version being built adds `type.title`, the type of a page's title, which names the whole page, so a brand can set it apart from the heads of the page's parts. Its default, `{type.heading}`, sets a page's title as a heading where a brand gives it no value, so no released brand owes it one (DEC-004 point 7). It adds `type.lead` too, the type of running text read before the body, such as a page's opening paragraph or the line under a slide's title, which any component may name, a piece's own among them. It names a use of running text, not which text is a page's lead ([The brief](#the-brief)), and its default, `{type.body}`, sets it as the body where a brand gives it no value, so no released brand owes it one (DEC-072 points 1, 2 and 5). The one picture role is `picture.logo`, the brand's logo, which no brand owes a value ([Picture roles](#picture-roles)).
 
 They declare six colour families: `neutral`, `blue`, `green`, `orange`, `purple` and `red` (DEC-004 point 10). Each has three members: `fill`, the colour of what it paints; `line`, its edge; and `text`, the text on its fill. Each member is a shared colour role of the family's own, `family.<family>.<member>`, such as `family.blue.fill`, with no default, so a brand gives each a value. Each family's text and fill are a pair at the level `text`.
 
@@ -933,6 +947,7 @@ A change of how something looks breaks nothing (DEC-003 point 6). So it passes o
   - **What a field takes.** A field breaks where it no longer takes a type, a value or a count of items it took. A key below it, removed or newly required, breaks it too (DEC-003 point 6). Another change of its schema, such as its `description`, is neither a break nor an addition.
   - **Its options, states and exposed parts.** Each removed breaks, and so do an option's word removed and an option that comes to take another kind of thing (DEC-003 point 6). Each new one, and a new word, is an addition (DEC-009 point 7). An option's default word is neither.
   - **Its fields of runs.** A field that ceases to take runs breaks, and so do a change of its first word and a word removed (DEC-012 point 6). A field that comes to take runs, and a new word after the first, are additions.
+  - **Its fields of paths.** A field that comes to hold paths breaks, since content written for it may then fail the check of a path (DEC-056 point 6). A field that ceases to hold paths refuses no content, and is neither a break nor an addition. A new field of paths is a new field.
   - **Its lists.** A list's component field removed or renamed breaks, and so does marking a field it held as one (DEC-010 point 7). So does an arrangement field or one of its words removed. A new component field, arrangement field or word is an addition. An arrangement field's default is neither.
   - **Its ties.** End fields declared for a list it held break, and so do its end fields swapped or one removed (DEC-011 point 6). So does a component that ceases to take ends. A new list of ties is an addition.
   - **A top's layouts.** A layout or a slot removed breaks, and so does a new required slot (DEC-003 point 6, DEC-009 point 7). A top that makes its layouts its pages' forms, or ceases to, breaks too (DEC-010 point 7). A new layout and a new optional slot are additions. A slot of a page's form is compared as a field is, and a slot that comes to hold pages, or ceases to, breaks.
@@ -1022,6 +1037,31 @@ For each combination of modes, the capability merges the brand's sources in reso
 
 A `fontFamily` token names each family's font file in the capability's extension key, `pkit.visual-communication`, as `font.body` does above. `files` maps each family to a file of the brand's version folder, or to `{"hash": "sha256:<hex>"}`. A family named by its hash is a font the brand may not ship. The project commits it in the location's `fonts/`, where the capability finds it by the hash of its bytes (DEC-004 point 9). `measure` is `file`: the font is measured from its file. A font file is committed unchanged with its licence, where its licence allows (DEC-004 point 9).
 
+### Lines set tight on purpose
+
+A brand marks a typography role whose lines it sets tight on purpose with `tight-lines: true` in the capability's extension key on the role's token (DEC-053 point 4):
+
+```json
+{
+  "type": {
+    "heading": {
+      "$type": "typography",
+      "$value": {"fontFamily": "{font.heading}", "fontSize": {"value": 48, "unit": "px"}, "fontWeight": 600, "letterSpacing": {"value": 0, "unit": "px"}, "lineHeight": 0.95},
+      "$extensions": {"pkit.visual-communication": {"tight-lines": true}}
+    }
+  }
+}
+```
+
+It says that letters that meet across the lines of a text whose line step comes from that role are meant, so validation states them as a fact, `letters-touch-meant`, in place of asking for attention ([what the check reports](checks.md#scenes)). On a typography token the extension holds `tight-lines: true` alone. Any other key or value there, and `tight-lines` on a token of another type, is `tokens-shape`. The word changes no value: the role draws as it did without it.
+
+- **It counts only where its version gives the step.** The word counts where the number the role's line height takes lies in the file of the version that holds the word, however the role's token reaches it, through a chain of aliases or through a role a base opens. So a word on a role whose value aliases a role another version gives, such as a base's, counts for nothing, and nor does a base's word on a role whose number a brand built on it gives, through a role the base opens. Where more than one role gives a text its step, each carries the word, and their line heights come from the one version that holds it.
+- **Only a released version's word counts.** It counts where its version is one the list marks released, whose folder still matches the list's hash, and for a copy of a brand the capability ships, where that hash is also the one the capability records. A word in a version not yet released gives the check nothing.
+- **A value given drops the base's word.** A brand that gives a role its base opens a value writes its own token for the role, which takes the base's place whole, its `$extensions` with it ([Open roles](#open-roles)). So the base's word no longer lies on the role's token, and the brand writes the word on its own token where it means the setting too.
+- **It says nothing on a group.** The word speaks for one role's step, so `tight-lines` in a group's `$extensions` gives nothing, and asks the brand's owner for attention, `tight-lines-refused`, without failing. On a picture role's group it is `picture-shape`, as any key there but the file's is.
+
+A brand's version that writes the word is released only on a capability that reads it, since its release reads the version in full and names that capability's version as the release it needs (DEC-014 point 1).
+
 ### Picture roles
 
 A *picture role* is a role whose value is a picture file of the brand's version (DEC-025 point 4). The foundations declare the shared picture roles in one group, `picture`. The first is `picture.logo`, the brand's logo. Only the foundations declare a picture role.
@@ -1100,7 +1140,7 @@ A brand's findings hold its base's too, each naming the base's version. A declar
 
 ### Axes and modes
 
-An *axis* is one way a brand's values vary, such as the colour scheme. A *mode* is one value on one axis, such as `dark` (DEC-004 point 2). The foundations declare the shared axes. Their release 1.0.0 declares two value axes: `colour-scheme`, with `light` and `dark`, and `contrast`, with `standard` and `high`. Their release 1.1.0 adds the size axis `device`, with `desktop`, `tablet` and `phone`, and the default `desktop`. Their version being built adds a fourth mode, `projector`, a screen read from across a room (DEC-021 point 1).
+An *axis* is one way a brand's values vary, such as the colour scheme. A *mode* is one value on one axis, such as `dark` (DEC-004 point 2). The foundations declare the shared axes. Their release 1.0.0 declares two value axes: `colour-scheme`, with `light` and `dark`, and `contrast`, with `standard` and `high`. Their release 1.1.0 adds the size axis `device`, with `desktop`, `tablet` and `phone`, and the default `desktop`. Their version being built adds a fourth mode, `projector`, a screen read from across a room (DEC-021 point 1). A mode names what a piece is drawn for, and the piece's `media` where it is shown, so no size chooses a medium: a deck projected that names no size is drawn at `desktop`, and its `media` hold it to the room (DEC-055 point 1; [`piece.yaml`](#pieceyaml)).
 
 - **A brand varies an axis** through a modifier of its Resolver document, in the modes it gives. It may leave out an axis it does not vary. It adds no mode to a shared axis, and changes no default.
 - **A brand that builds on no other may add axes of its own** (DEC-004 point 2). Each is a modifier whose name no shared axis takes, with its kind in the capability's extension key, `"$extensions": {"pkit.visual-communication": {"kind": "value"}}`, or `"size"`. Its contexts are its modes, two or more, each a name, and its `default` is one of them. The brand has the axis whole, and exports it with its modes (DEC-004 point 5). A modifier of no shared axis that declares no kind fails, and so does an axis of a brand's own that takes a shared axis's name ([What the check reports](checks.md)).
@@ -1114,13 +1154,13 @@ An *axis* is one way a brand's values vary, such as the colour scheme. A *mode* 
 
 ### The neutral brand
 
-The capability ships `neutral`, a brand to start from, so a project can draw before it writes a brand of its own. Its released version 1.0.0 lies at `.pkit/capabilities/visual-communication/releases/neutral/1.0.0/` ([The libraries the capability ships](#the-libraries-the-capability-ships)). It is of kind `brand` and needs release 0.3.0. Its version being built stays where it was, at `libraries/neutral/`. It carries 1.1.0, since it gives the sizes of `device` and an order's ends, additions, and takes cooler greys, a change of look, each of which needs a minor (DEC-013 point 3). It gives `projector`, an order's roles and the type of a page's title, which only the foundations' version being built declares, so it reads on that version alone, and is released after it (DEC-013 point 1). It is not released yet, so only `pkit visual add neutral --being-built` takes it.
+The capability ships `neutral`, a brand to start from, so a project can draw before it writes a brand of its own. Its released version 1.0.0 lies at `.pkit/capabilities/visual-communication/releases/neutral/1.0.0/` ([The libraries the capability ships](#the-libraries-the-capability-ships)). It is of kind `brand` and needs release 0.3.0. Its version being built stays where it was, at `libraries/neutral/`. It carries 1.1.0, since it gives the sizes of `device` and an order's ends, additions, and takes cooler greys and a larger lead, changes of look, each of which needs a minor (DEC-013 point 3). It gives `projector`, an order's roles, the type of a page's title and the lead type, which only the foundations' version being built declares, so it reads on that version alone, and is released after it (DEC-013 point 1). It is not released yet, so only `pkit visual add neutral --being-built` takes it.
 
 `pkit visual add neutral` copies the released version whole to `libraries/neutral/1.0.0/`. It lists it with `source: {kind: shipped}`, `released: true` and the hash the library's record keeps ([What the location holds](#what-the-location-holds)). A piece then names it as `brand: neutral` ([`piece.yaml`](#pieceyaml)).
 
 - **Its values.** It gives every shared role a value in each of the four combinations of the shared value axes ([Keys of combinations](#keys-of-combinations)), but `picture.logo`. It has no logo, which its version states as a fact ([Picture roles](#picture-roles)). Each pair the foundations declare reaches its level in all four.
 - **An order's ends.** Its version being built gives an order's roles, which the foundations being built add, values of its own (DEC-032 point 1; [The foundations](#the-foundations)): greys, so the steps between them differ in lightness alone, as a sequential scheme shows an order, and in no hue, which would read as kinds ([the design knowledge of colour](design-knowledge/colour.md)). In light, the first end is a mid grey and the last the pale grey of a rule; in dark, the first is a grey well above the page and the last one just above it. The order's text is the primary text, darker than both ends in light and lighter than both in dark. It keeps at least 5 to 1 on each end, so every step between keeps it, and the last end stands at least 1.35 to 1 off the page, so a level on it shows its shape with no edge. High contrast strengthens the text, as it does the rest of the text, and keeps the ends.
-- **Its sizes.** Its version being built gives `desktop`, `tablet`, `phone` and `projector`, each mode but the default from a token file of its own in `tokens/`. Its `size.site` is 1,280 px on a desktop, 768 px on a tablet, 390 px on a phone and 1,280 px on a projector, where a slide keeps a desktop's width. On a projector its body grows half again, to 24 px, and the rest is set from it: code at 22, and the deck's lead and title at 30 and 48. On every other size it gives the deck's title and lead the shared types the deck drew them in before. It gives `type.title`, which the foundations being built add, a value of its own on every size: 36 px on a desktop and a tablet, the next step of its scale over its 24 px heading, 32 px on a phone, so a long word still fits the page's width, and 48 px on a projector, as the deck's title. No other value changes with the size, so a piece that names no size takes the sizes and types it took under 1.0.0, in this version's colours.
+- **Its sizes.** Its version being built gives `desktop`, `tablet`, `phone` and `projector`, each mode but the default from a token file of its own in `tokens/`. Its `size.site` is 1,280 px on a desktop, 768 px on a tablet, 390 px on a phone and 1,280 px on a projector, where a slide keeps a desktop's width. On a projector its body grows half again, to 24 px, and the rest is set from it: code at 22, `type.lead` at 30 and the deck's title at 48. On every other size it gives the deck's title the shared type the deck drew it in before. It gives `type.title`, which the foundations being built add, a value of its own on every size: 36 px on a desktop and a tablet, the next step of its scale over its 24 px heading, 32 px on a phone, so a long word still fits the page's width, and 48 px on a projector, as the deck's title. It gives `type.lead`, which they add too, a value a step above its body on every size, in the body's family and weight: 20 px on a desktop, a tablet and a phone, and 30 px on a projector, each a 1.25 step over the body. It gives the deck's lead no value of its own, on any size, so a slide's lead, the cover's subtitle, the starter's lead under a page's title and any text a piece's own component sets in `type.lead` take one type, larger than the body on every size. No other value changes with the size. So a piece that names no size takes the sizes and types it took under 1.0.0, in this version's colours, but for each text it sets in `type.lead`, such as a slide's lead, which it draws at 20 px rather than at the body's 16: a change of look (DEC-013 point 3).
 - **Its look.** Greys, with a blue accent. Its version being built takes cool greys, each grey of 1.0.0 tilted a touch toward the accent's blue at the same luminance, so the brand reads calm and professional and each contrast stays within 0.3% of what it was. It adds three greys, tilted alike, for an order's ends. The colour families keep their hues in dark and at high contrast.
 - **The libraries it names.** It builds on the foundations alone, so the starter draws at its defaults ([`roles.yaml`](#rolesyaml)), and a project need not hold the starter to use it.
 - **Its open roles.** `open` is empty, so a brand built on it can change no value. A project that wants other values writes its own brand.

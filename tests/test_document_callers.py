@@ -33,6 +33,7 @@ from tests import document_contracts as contracts
 from tests import test_backbone_documents as documents
 from tests import test_backbone_documents_components as component_documents
 from tests import test_backbone_documents_process as process_documents
+from tests import test_backbone_documents_session as session_documents
 from tests import test_doc_examples_documents as doc_examples_documents
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.backbone_documents import JSON_OPTION, document_of, invoke
@@ -804,15 +805,21 @@ PROJECT_MANAGEMENT_AGENT_RUN = Caller(
     untold=lambda outcome: isinstance(outcome, tuple) and outcome[0] is None,
     nothing=lambda: pm_agent_runs._from_document({}),
     readings={
-        f"{way}:{name}": _breached
-        for way, name in (
-            ("missing", "check"),
-            ("missing", "check.verdict"),
-            ("null", "check.verdict"),
-            ("unknown", "check.verdict"),
-            ("missing", "check.changes"),
-            ("null", "check.changes"),
-        )
+        **{
+            f"{way}:{name}": _breached
+            for way, name in (
+                ("missing", "check"),
+                ("missing", "check.verdict"),
+                ("null", "check.verdict"),
+                ("unknown", "check.verdict"),
+                ("missing", "check.changes"),
+                ("null", "check.changes"),
+            )
+        },
+        # A backbone older than the key prints none, and a cause pm does not know is
+        # none it can name a way out for: the contract reads both as no cause.
+        "missing:refusal_cause": same,
+        "unknown:refusal_cause": same,
     },
 )
 
@@ -1132,3 +1139,80 @@ def test_the_claude_code_runner_reads_the_deploy_s_pick_as_its_resolver_writes_i
     )
     for document in (agent, not_shipped):
         check(CLAUDE_CODE_PICK, document)
+
+
+(pm_processes, pm_document_keys) = load("project-management", "processes", "document_keys")
+
+#: Process names as the backbone gives them, which the capability passes whole.
+_P41 = "p1:aaaaaaaaaaaaaaaa:bbbbbbbbbbbbbbbb:-:41:100.0"
+_P42 = "p1:aaaaaaaaaaaaaaaa:bbbbbbbbbbbbbbbb:-:42:200.0"
+
+PROJECT_MANAGEMENT_SESSION = Caller(
+    name="project-management's reading of `pkit harness session --json`",
+    contract=session_documents.SESSION,
+    read=pm_processes.session_of,
+    untold=lambda outcome: (
+        raises(pm_document_keys.Untold)(outcome) or getattr(outcome, "found", True) is False
+    ),
+    nothing=lambda: pm_processes.session(run=_no_document),
+)
+
+
+def test_project_management_reads_the_harness_session_as_its_contract_says() -> None:
+    document = {
+        "schema_version": 1,
+        "adapter": "claude-code",
+        "found": True,
+        "why": None,
+        "messaging": True,
+        "process": _P41,
+        "process_why": None,
+        "address": "/tmp/cc-socks/41.sock",
+        "address_why": None,
+        "replies": [
+            {"given": "uds:/tmp/cc-socks/42.sock", "address": "/tmp/cc-socks/42.sock", "why": None}
+        ],
+    }
+    check(PROJECT_MANAGEMENT_SESSION, document)
+
+
+PROJECT_MANAGEMENT_PROCESS_READ = Caller(
+    name="project-management's reading of `pkit recorded-process read --json`",
+    contract=session_documents.READ,
+    read=lambda document: pm_processes.readings_of(document, 2),
+    untold=lambda outcome: (
+        raises(pm_document_keys.Untold)(outcome)
+        or any(reading.state == pm_processes.CANNOT_TELL for reading in outcome)
+    ),
+    nothing=lambda: pm_processes.read([_P41], run=_no_document),
+)
+
+
+def test_project_management_reads_whether_a_recorded_process_runs_as_its_contract_says() -> None:
+    document = {
+        "schema_version": 1,
+        "answers": [
+            {"name": _P41, "state": "running", "by": "start-time", "why": "it runs"},
+            {"name": _P42, "state": "ended", "by": "start-time", "why": "no process holds it"},
+        ],
+    }
+    check(PROJECT_MANAGEMENT_PROCESS_READ, document)
+
+
+PROJECT_MANAGEMENT_PROCESS_COMPARE = Caller(
+    name="project-management's reading of `pkit recorded-process compare --json`",
+    contract=session_documents.COMPARE,
+    read=pm_processes.answer_of,
+    untold=lambda outcome: (
+        raises(pm_document_keys.Untold)(outcome) or outcome == pm_processes.CANNOT_TELL
+    ),
+    nothing=lambda: pm_processes.compare(_P41, _P42, run=_no_document),
+)
+
+
+def test_project_management_reads_whether_two_names_name_one_process_as_its_contract_says() -> None:
+    document = {
+        "schema_version": 1,
+        "pairs": [{"names": [_P41, _P42], "answer": "two", "why": "they hold two ids"}],
+    }
+    check(PROJECT_MANAGEMENT_PROCESS_COMPARE, document)

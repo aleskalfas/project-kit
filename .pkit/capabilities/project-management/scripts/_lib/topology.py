@@ -39,6 +39,16 @@ instance ownership, which confirms the clone's seat before a command writes
 (DEC-059 point 6) and passes each seat's holder to the ownership fold
 ([pkit:ADR-041] point 7). The time of reading joins it when a claim lapses.
 
+A worker's directing seat
+-------------------------
+A worker's seat may name the one seat that directs it, a planner's or a lead's,
+by ``directed_by`` ([project-management:DEC-081-delegation-between-seats] point
+3). ``Seat.directed_by`` is None where it names none, and
+:meth:`Topology.directing` gives the seat it names. Directing has one level: the
+parse refuses the key on a planner's or a lead's seat, and a worker's seat that
+names a seat the topology does not hold, a retired seat, itself or another
+worker's seat.
+
 Pools of workers
 ----------------
 The topology may declare pools of workers, and each seat that builds names the
@@ -66,7 +76,8 @@ The check
 (``schemas/topology.schema.json``) refuses, a seat name used twice, more than one
 organizer seat, a seat that names no state issue, two seats that name one, a
 seat that names a pool the topology does not declare, a seat that names pools
-where the topology declares none, and a planner's seat that names any pool.
+where the topology declares none, a planner's seat that names any pool, and a
+directing seat the topology does not allow.
 :func:`check` adds what needs more than the file: a scope that names a workstream
 or a type the project does not declare, a topology under the ``label`` ownership
 substrate (point 9), and each seat of the base deleted or moved rather than
@@ -132,9 +143,22 @@ AGENT_PATTERN = re.compile(r"[a-z][a-z0-9-]*")
 #: The roles of the seats that build, and so name the pools they serve (DEC-061 point 1).
 BUILDERS = (WORKER, LEAD)
 
+#: The roles of the seats that may direct a worker by message (DEC-081 point 3).
+DIRECTORS = (PLANNER, LEAD)
+
 _TOP_KEYS = frozenset({"schema_version", "pkit_schema", "binds_to", "settings", "seats", "pools"})
 _SEAT_KEYS = frozenset(
-    {"name", "role", "agent", "scope", "organizer", "state_issue", "retired", "pools"}
+    {
+        "name",
+        "role",
+        "agent",
+        "scope",
+        "organizer",
+        "state_issue",
+        "retired",
+        "pools",
+        "directed_by",
+    }
 )
 _SCOPE_KEYS = frozenset({"workstreams", "types"})
 _SETTINGS_KEYS = frozenset({"release_mode"})
@@ -154,6 +178,11 @@ UNRESOLVED = "unresolved"
 UNDECLARED_POOL = "undeclared-pool"
 NO_POOLS_DECLARED = "no-pools-declared"
 PLANNER_POOLS = "planner-pools"
+UNKNOWN_DIRECTOR = "unknown-directing-seat"
+RETIRED_DIRECTOR = "retired-directing-seat"
+SELF_DIRECTED = "self-directed"
+WORKER_DIRECTOR = "worker-directing-seat"
+DIRECTED_DIRECTOR = "directed-director"
 
 #: Git's environment for a reading that stays in this clone: a partial clone
 #: fetches an object it lacks unless told not to.
@@ -195,7 +224,9 @@ class Scope:
 @dataclass(frozen=True)
 class Seat:
     """One seat of the topology. ``number`` is its place in the list, from one.
-    ``pools`` are the pools it serves, by name, and None where it names none."""
+    ``pools`` are the pools it serves, by name, and None where it names none.
+    ``directed_by`` names the seat that directs a worker's seat, and is None
+    where it names none (DEC-081 point 3)."""
 
     name: str
     number: int
@@ -206,6 +237,7 @@ class Seat:
     state_issue: int | None = None
     retired: bool = False
     pools: tuple[str, ...] | None = None
+    directed_by: str | None = None
 
     @property
     def builds(self) -> bool:
@@ -250,6 +282,23 @@ class Topology:
     def organizer(self) -> Seat | None:
         """The organizer seat that is not retired, the first where several are."""
         return next((s for s in self.active if s.organizer), None)
+
+    def directing(self, seat: Seat) -> Seat | None:
+        """The seat that directs ``seat``: the one it names, where that is a
+        planner's or a lead's seat that is not retired, else None (DEC-081
+        point 3). A topology the check refuses directs no one through a seat
+        it refuses."""
+        if seat.role != WORKER or seat.directed_by is None or seat.directed_by == seat.name:
+            return None
+        named = self.seat(seat.directed_by)
+        if named is None or named.retired or named.role not in DIRECTORS:
+            return None
+        return named
+
+    def directed(self, seat: Seat) -> tuple[Seat, ...]:
+        """The workers' seats, not retired, that ``seat`` directs: those that name
+        it (DEC-081 point 3)."""
+        return tuple(s for s in self.active if self.directing(s) == seat)
 
     def where(self) -> str:
         """Where this topology was read, in words a line can carry."""
@@ -300,6 +349,7 @@ def parse(data: object, *, ref: str | None = None, commit: str | None = None) ->
     seats = [s for s in (_seat(entry, i + 1, problems) for i, entry in enumerate(raw)) if s]
     problems += _across(seats)
     problems += _pools_across(seats, pools)
+    problems += _directing_across(seats)
     return Topology(tuple(seats), release_mode, tuple(problems), ref, commit, pools)
 
 
@@ -356,6 +406,62 @@ def _pools_across(seats: list[Seat], pools: tuple[str, ...] | None) -> list[Prob
                             f"declare ({', '.join(pools) or 'none'}).",
                         )
                     )
+    return problems
+
+
+def _directing_across(seats: list[Seat]) -> list[Problem]:
+    """A directing seat the topology does not allow (DEC-081 point 3): the key on a
+    planner's or a lead's seat, which the person directs, and a worker's seat that
+    names a seat the topology does not hold, a retired seat, itself or another
+    worker's seat. So directing has one level, with no chain and no cycle."""
+    by_name = {seat.name: seat for seat in reversed(seats)}
+    problems: list[Problem] = []
+    for seat in seats:
+        if seat.directed_by is None:
+            continue
+        where = f"seat {seat.number} ({seat.name})"
+        named = by_name.get(seat.directed_by)
+        if seat.role in DIRECTORS:
+            problems.append(
+                Problem(
+                    DIRECTED_DIRECTOR,
+                    f"{where} is a {seat.role}'s and names the seat {seat.directed_by!r} to "
+                    "direct it, and only a worker's seat names one: the person directs a "
+                    "planner and a lead (DEC-081 point 3).",
+                )
+            )
+        elif seat.directed_by == seat.name:
+            problems.append(
+                Problem(
+                    SELF_DIRECTED,
+                    f"{where} names itself to direct it, and a worker is directed by a "
+                    "planner's or a lead's seat (DEC-081 point 3).",
+                )
+            )
+        elif named is None:
+            problems.append(
+                Problem(
+                    UNKNOWN_DIRECTOR,
+                    f"{where} names the seat {seat.directed_by!r} to direct it, which the "
+                    "topology does not hold.",
+                )
+            )
+        elif named.role == WORKER:
+            problems.append(
+                Problem(
+                    WORKER_DIRECTOR,
+                    f"{where} names the seat {named.name}, a worker's, to direct it, and a "
+                    "worker directs no seat: name a planner's or a lead's (DEC-081 point 3).",
+                )
+            )
+        elif named.retired:
+            problems.append(
+                Problem(
+                    RETIRED_DIRECTOR,
+                    f"{where} names the seat {named.name} to direct it, which is retired: name "
+                    "another planner's or lead's seat, or none (DEC-081 point 3).",
+                )
+            )
     return problems
 
 
@@ -458,6 +564,18 @@ def _seat(entry: object, number: int, problems: list[Problem]) -> Seat | None:
             problems.append(Problem(SHAPE, f"{where} has `{key}: {value!r}`, not true or false."))
             value = False
         flags[key] = value
+    directed_by = entry.get("directed_by")
+    if directed_by is not None and (
+        not isinstance(directed_by, str) or not NAME_PATTERN.fullmatch(directed_by)
+    ):
+        problems.append(
+            Problem(
+                SHAPE,
+                f"{where} has `directed_by: {directed_by!r}`, and a directing seat is named "
+                "as a seat is.",
+            )
+        )
+        directed_by = None
     state_issue = entry.get("state_issue")
     if state_issue is not None and (
         isinstance(state_issue, bool) or not isinstance(state_issue, int) or state_issue < 1
@@ -476,6 +594,7 @@ def _seat(entry: object, number: int, problems: list[Problem]) -> Seat | None:
         state_issue=state_issue,
         retired=flags["retired"],
         pools=_pool_names(entry["pools"], where, problems) if "pools" in entry else None,
+        directed_by=directed_by,
     )
 
 
@@ -753,14 +872,17 @@ class SeatState:
     """Who holds one seat, as this run read it from the seat's state issue.
 
     ``state`` is HELD, FREE or UNREAD. ``holder`` is the clone that holds it, and
-    ``read`` the read that found it. ``cause`` says why an unread seat was not
-    read: no state issue named, or a read that did not end."""
+    ``read`` the read that found it. ``session`` is the session the holder last
+    recorded as the one that runs the seat's loop (DEC-081 point 4). ``cause``
+    says why an unread seat was not read: no state issue named, or a read that
+    did not end."""
 
     seat: Seat
     state: str
     holder: state_issues.Holder | None = None
     read: state_issues.StateRead | None = None
     cause: str | None = None
+    session: state_issues.Session | None = None
 
     def held_by(self, clone: state_issues.Clone) -> bool:
         """Whether ``clone``, by its account and key, holds the seat."""
@@ -844,24 +966,35 @@ def _seat_state(seat: Seat, found: state_issues.StateRead) -> SeatState:
         cause = found.cause or found.outcome
         return SeatState(seat, UNREAD, read=found, cause=cause)
     holder = found.fold.holder
-    return SeatState(seat, FREE if holder is None else HELD, holder=holder, read=found)
+    return SeatState(
+        seat,
+        FREE if holder is None else HELD,
+        holder=holder,
+        read=found,
+        session=found.fold.session,
+    )
+
+
+def machine() -> str:
+    """The machine this command runs on, by the name a claim's place and a seat's
+    recorded session give it (DEC-058 point 5, DEC-081 point 4)."""
+    try:
+        return socket.gethostname() or "an unnamed machine"
+    except OSError:
+        return "an unnamed machine"
 
 
 def place(capability_root: Path, *, home: Path | None = None) -> str:
     """Where this clone lies, in words a person reads: its machine and its folder
     (DEC-058 point 5). A folder under the home folder is written from `~`, so
     the claim, which a public repository shows to anyone, names no user."""
-    try:
-        machine = socket.gethostname() or "an unnamed machine"
-    except OSError:
-        machine = "an unnamed machine"
     folder = repo_root(capability_root).resolve()
     try:
         base = (home if home is not None else Path.home()).resolve()
         shown_folder = f"~/{folder.relative_to(base).as_posix()}"
     except (RuntimeError, ValueError, OSError):
         shown_folder = folder.as_posix()
-    return f"{machine}:{shown_folder}"
+    return f"{machine()}:{shown_folder}"
 
 
 def snapshot(

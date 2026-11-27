@@ -1,10 +1,12 @@
 ---
 id: DEC-042
 title: The review grades each rule in words, and a project's bar ends the designer's loop where an accepted calibration reaches
-status: accepted
+status: superseded
 date: 2026-11-14
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
+
+> **Superseded by [visual-communication:DEC-070-ship-call-and-one-round].** Its points 4, 5 and 7 continue there, reworded for findings, as points 5, 6 and 4, and the places of its point 2 as point 7.
 
 > **Partially superseded by [visual-communication:DEC-065-checks-lapse-the-hold].** Overturned: point 9's sentence "None runs before each check the reviewer's body is written to read has landed either (refinement per [visual-communication:DEC-046-faults-lower-grades] point 8)", and, in the Implications' item on a calibration, its words "and each check the reviewer's body is written to read (refinement per [visual-communication:DEC-046-faults-lower-grades] point 8)", so far as each has a calibration wait for those checks. The rest stands, and those passages stay as they stood.
 

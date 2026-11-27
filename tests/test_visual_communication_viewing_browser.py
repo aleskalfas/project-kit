@@ -1021,7 +1021,7 @@ def test_the_span_under_another_text_is_covered_by_that_texts_run_ground() -> No
     assert laid.index(under) < laid.index(over)
     assert over.baseline == under.baseline
     assert all(span.grounded for line in over.lines for span in line)
-    assert ";background:" in viewing_browser._planted_text(over, False)
+    assert f";{viewing_browser.RUN_GROUND}:" in viewing_browser._planted_text(over, False)
 
 
 def test_the_planted_page_is_in_the_renderers_form() -> None:
@@ -2109,6 +2109,36 @@ def test_a_real_browser_reads_the_renderers_reference_file_clean(tmp_path: Path)
         raise
     assert drawing.shown[0].read == viewing_browser.Read((), (), (), (), ())
     assert [each.page for each in drawing.shown[0].images] == [page.id for page in pages]
+
+
+@real_browser
+def test_a_runs_ground_on_a_later_line_leaves_the_line_above_whole(tmp_path: Path) -> None:
+    """Outside forced colours a run's ground lies beneath all the lines of its text (DEC-039
+    point 3). A first line with descenders, over a second line of a run with a ground, at a line
+    step below the run's height: the read names nothing, where it names the first line were
+    the ground drawn with its run."""
+    from tests.test_visual_communication_run_signs import draw_html, said
+
+    result = said("gypj\n", {"text": "xxxx", "style": "named", "concept": "sys/store"})
+    assert result.findings == []
+    scene = result.scene.to_dict()
+    [shown] = scene["children"][0]["children"]
+    # A step of 22 px lets the 24 px run's ground, whose height is its font's ascent and
+    # descent, reach over the first line's descenders, and keeps the run's sign, 24 px high,
+    # under them, so only the ground could cover them.
+    shown["line-height"] = 22.0
+    scene["children"][0]["height"] = 60.0
+    file = tmp_path / "tight.html"
+    file.write_bytes(draw_html(scene).document)
+    browser = found_browser()
+    assert browser is not None
+    try:
+        drawing = viewing_browser.draw(file, scene_pages(scene), 2.0, browser, tmp_path / "local")
+    except viewing_browser.Stopped as stop:
+        if stop.sandbox:
+            pytest.skip(f"a sandbox stopped the browser: {stop}")
+        raise
+    assert drawing.shown[0].read == viewing_browser.Read((), (), (), (), ())
 
 
 @real_browser

@@ -18,6 +18,7 @@ from __future__ import annotations
 import re
 from collections.abc import Callable
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -42,11 +43,27 @@ from tests.test_visual_communication_boxes import (
 from tests.test_visual_communication_checks import COLOURS, colour, page, project_of, run, runs
 from tests.test_visual_communication_checks import box as filled
 from tests.test_visual_communication_checks import text as painted
+from tests.test_visual_communication_letters import (
+    CODE_FAMILY,
+    drawn,
+    element_of,
+    found,
+    touching,
+)
 from tests.test_visual_communication_pipeline import NARROW, add_device, drawing_project, flipping
 from tests.visual_communication_project import project, write, yaml_text
 
-checks, boxes, scene_checks, findings, rendering, pl = load(
-    "visual-communication", "checks", "boxes", "scene_checks", "findings", "rendering", "pipeline"
+checks, boxes, scene_checks, findings, rendering, pl, text_size, layout, formula = load(
+    "visual-communication",
+    "checks",
+    "boxes",
+    "scene_checks",
+    "findings",
+    "rendering",
+    "pipeline",
+    "text_size",
+    "layout",
+    "formula",
 )
 
 CAPABILITY = Path(__file__).parents[1] / ".pkit" / "capabilities" / "visual-communication"
@@ -73,6 +90,8 @@ def test_the_checks_the_reviewer_leans_on_state_a_reach() -> None:
         "contrast-as-drawn",
         "edges-nearly-in-line",
         "boxes-that-overlap",
+        "letters-across-lines",
+        "text-size-by-medium",
     }
     assert len({check.id for check in checks.SCENE_CHECKS if check.id}) == len(REACHING)
 
@@ -358,6 +377,139 @@ def _hidden_not_content() -> None:
     assert _hidden({("en", "default"): at_default, ("en", "device.phone"): set()}) == []
 
 
+#: The top the cases of a text's size declare their smallest sizes in.
+TOP = "lib/top"
+
+
+def run_of(size: float, family: str = "Source Sans Pro") -> dict[str, Any]:
+    return {"font-size": size, "style": "type.body", "font-family": [family]}
+
+
+def sized_text(
+    trace: str, *sizes: float, lines: bool = True, family: str = "Source Sans Pro"
+) -> dict[str, Any]:
+    """A text of one paragraph, a run at each of `sizes`, each drawn on a line of its own
+    unless `lines` is false, so the text draws nothing."""
+    runs = [
+        {**run_of(size, family), "sources": {"text": f"content:{trace}.runs[{index}]"}}
+        for index, size in enumerate(sizes)
+    ]
+    drawn = [{"paragraph": 0, "spans": [{"run": index}]} for index in range(len(sizes))]
+    return {"type": "text", "id": trace, "paragraphs": [runs], "lines": drawn if lines else []}
+
+
+def sized_page(
+    *children: dict[str, Any], width: float = 400, height: float = 300
+) -> dict[str, Any]:
+    """A scene of one page, `children` on it."""
+    page_ = {"type": "group", "id": "page", "width": width, "height": height}
+    return {"pages": ["page"], "children": [{**page_, "children": list(children)}]}
+
+
+def by_medium(
+    scene_: dict[str, Any],
+    *,
+    media: Any = ("screen",),
+    smallest: dict[str, Any] | None = None,
+    asks: bool = True,
+    size: str | None = "desktop",
+) -> list[tuple[str, str]]:
+    """What the check of a text's size gives on `scene_`, the scene of a piece whose `media`
+    are `media`, a list or a mapping, drawn at the size `size`, under a top that declares
+    `smallest`, a fixed 12 px for a screen unless it says otherwise, each value a formula's
+    text or a length; each label with where it lies."""
+    named: dict[str, Any] | None = None
+    if isinstance(media, dict):
+        named = {medium: tuple(sizes) for medium, sizes in media.items()}
+    elif media is not None:
+        named = {medium: None for medium in media}
+    given = {
+        medium: formula.parse(value) if isinstance(value, str) else value
+        for medium, value in (smallest if smallest is not None else {"screen": 12}).items()
+    }
+    project_ = SimpleNamespace(
+        piece=SimpleNamespace(media=named, top=TOP),
+        size_of=lambda _key: size,
+    )
+    result = SimpleNamespace(
+        scene=SimpleNamespace(size_key="default"),
+        smallest=layout.SmallestText(TOP, "lib@1.0.0", given),
+        heights={"page": layout.PageHeight(asks=asks, own=True)},
+    )
+    found = text_size.found(project_, "en", result, scene_, checks.ENGINE)
+    return [(each.finding.code, each.finding.where) for each in found]
+
+
+SMALL = [(text_size.TEXT_TOO_SMALL, "page/t")]
+UNMEASURED_AT_MEDIA = [(text_size.TEXT_SIZE_UNMEASURED, "media")]
+
+
+def _sized_runs() -> None:
+    assert by_medium(sized_page(sized_text("page/t", 11.99))) == SMALL
+    assert by_medium(sized_page(sized_text("page/t", 12, 14))) == []
+    assert by_medium(sized_page(sized_text("page/t", 9, 8))) == SMALL * 2
+
+
+def _sized_pages() -> None:
+    share = {"screen": "=:page-height / 25"}
+    assert by_medium(sized_page(sized_text("page/t", 11.99)), smallest=share) == SMALL
+    smaller = sized_page(sized_text("page/t", 11.99), height=250)
+    assert by_medium(smaller, smallest=share) == []
+
+
+def _sized_pictures() -> None:
+    picture = {"type": "image", "id": "page/picture", "width": 100, "height": 100}
+    assert by_medium(sized_page(picture)) == []
+
+
+def _sized_faces() -> None:
+    narrow = sized_text("page/t", 12, family="A Face Whose Letters Stand Small")
+    assert by_medium(sized_page(narrow)) == []
+
+
+def _sized_viewers() -> None:
+    for width in (320, 2560):
+        assert by_medium(sized_page(sized_text("page/t", 12), width=width)) == []
+
+
+def _sized_no_lines() -> None:
+    assert by_medium(sized_page(sized_text("page/t", 4, lines=False))) == []
+
+
+def _sized_off_pages() -> None:
+    off = {"pages": ["page"], "children": [sized_text("top/t", 4), {"type": "group", "id": "page"}]}
+    assert by_medium(off) == []
+
+
+def _sized_no_medium() -> None:
+    assert by_medium(sized_page(sized_text("page/t", 4)), media=None) == UNMEASURED_AT_MEDIA
+
+
+def _sized_undeclared() -> None:
+    small = sized_page(sized_text("page/t", 4))
+    assert by_medium(small, media=("room",)) == UNMEASURED_AT_MEDIA
+    assert by_medium(small, media={"room": ["desktop"]}) == UNMEASURED_AT_MEDIA
+
+
+def _sized_unshown() -> None:
+    small = sized_page(sized_text("page/t", 4))
+    assert by_medium(small, media={"screen": ["phone"]}) == UNMEASURED_AT_MEDIA
+
+
+def _sized_no_share() -> None:
+    small = sized_page(sized_text("page/t", 4))
+    height = {"screen": "=:page-height / 25"}
+    assert by_medium(small, smallest=height, asks=False) == [
+        ("formula-reach", f"{layout.SMALLEST_TEXT}.screen"),
+        (text_size.TEXT_SIZE_UNMEASURED, "page"),
+    ]
+    zero = {"screen": "=:page-width - :page-width"}
+    assert by_medium(small, smallest=zero) == [
+        ("component-shape", "lock"),
+        (text_size.TEXT_SIZE_UNMEASURED, "page"),
+    ]
+
+
 #: The colours of the contrast cases: `faded` has no colour in the dark, and `haze` is half
 #: of white.
 COLOURED = {
@@ -505,6 +657,49 @@ def _contrast_draws_nothing() -> None:
     assert contrast(PAPER, path("figure/sign", fill="pale", stroke="pale", d="")) == []
 
 
+def _letters_across_lines() -> None:
+    [said] = touching(drawn("a\ng\nÁ"))
+    assert "lines 2 and 3, `g` over `Á`" in said
+    signed = drawn("g\na")
+    assert touching(signed) == []
+    sign = {"d": "M0 0L16 0L16 16L0 16Z", "fill-rule": "nonzero", "size": 16, "top": 0, "gap": 2}
+    element_of(signed)["lines"][1]["spans"][0]["sign"] = sign
+    assert len(touching(signed)) == 1
+
+
+def _letters_of_two_texts() -> None:
+    body = {"text": {"content": "words", "style": "type.body", "fill": "text-primary"}}
+    parts = {
+        "t": {**body, "width": "=:width"},
+        "u": {**body, "y": "=t.bottom - @space.2", "width": "=:width"},
+    }
+    assert touching(drawn("g", parts=parts)) == []
+    assert len(touching(drawn("g\ng\nÁ"))) == 1
+
+
+def _letters_drawn_to_join() -> None:
+    assert touching(drawn("│\n│", 0.5, families=[CODE_FAMILY])) == []
+    assert touching(drawn("▀\n▄", 0.5, families=[CODE_FAMILY])) == []
+    assert touching(drawn("⌠\n⌡", 0.5, families=[CODE_FAMILY])) == []
+    assert len(touching(drawn("g\nÁ", 0.5, families=[CODE_FAMILY]))) == 1
+
+
+def _letters_a_renderer_wraps() -> None:
+    """The engine sets the text on one line, which a renderer that wraps text itself might
+    break between the two letters: the check reads the engine's line alone."""
+    scene = drawn("g Á")
+    assert len(element_of(scene)["lines"]) == 1
+    assert found(scene) == []
+
+
+def _letters_with_no_outline() -> None:
+    scene = drawn("g\nÁ")
+    element_of(scene)["paragraphs"][0][0]["measured"] = "widths"
+    [stated] = found(scene)
+    assert (stated.code, stated.level) == ("letters-touch-unmeasured", findings.FACT)
+    assert "measured nothing at lines 1 and 2" in stated.message
+
+
 #: The planted case of each clause of each reach, by the check's id, the part of its reach
 #: and the clause's place in it.
 PLANTED: dict[tuple[str, str, int], Callable[[], None]] = {
@@ -551,6 +746,22 @@ PLANTED: dict[tuple[str, str, int], Callable[[], None]] = {
     ("contrast-as-drawn", "leaves-out", 4): _contrast_no_opaque_fill,
     ("contrast-as-drawn", "leaves-out", 5): _contrast_off_the_middle,
     ("contrast-as-drawn", "leaves-out", 6): _contrast_draws_nothing,
+    ("letters-across-lines", "measures", 0): _letters_across_lines,
+    ("letters-across-lines", "leaves-out", 0): _letters_of_two_texts,
+    ("letters-across-lines", "leaves-out", 1): _letters_drawn_to_join,
+    ("letters-across-lines", "leaves-out", 2): _letters_a_renderer_wraps,
+    ("letters-across-lines", "states", 0): _letters_with_no_outline,
+    ("text-size-by-medium", "measures", 0): _sized_runs,
+    ("text-size-by-medium", "measures", 1): _sized_pages,
+    ("text-size-by-medium", "leaves-out", 0): _sized_pictures,
+    ("text-size-by-medium", "leaves-out", 1): _sized_faces,
+    ("text-size-by-medium", "leaves-out", 2): _sized_viewers,
+    ("text-size-by-medium", "leaves-out", 3): _sized_no_lines,
+    ("text-size-by-medium", "leaves-out", 4): _sized_off_pages,
+    ("text-size-by-medium", "states", 0): _sized_no_medium,
+    ("text-size-by-medium", "states", 1): _sized_undeclared,
+    ("text-size-by-medium", "states", 2): _sized_unshown,
+    ("text-size-by-medium", "states", 3): _sized_no_share,
 }
 
 
@@ -595,6 +806,12 @@ def _record(root: Path, name: str) -> list[tuple[str, str, str, str]]:
 
 EXPERIMENTAL = "which is experimental: its library may still change it in any release"
 
+#: The statement on a piece that names no medium, once for every language and key.
+NO_MEDIUM = (
+    "the piece names no medium it is shown in under `media`, so no text's size was measured, "
+    "in any language or at any size"
+)
+
 
 def test_the_findings_record_keeps_the_render_s_merges(tmp_path: Path) -> None:
     """The render's merges of the findings given scene by scene, as the findings record kept
@@ -632,6 +849,7 @@ def test_the_findings_record_keeps_the_render_s_merges(tmp_path: Path) -> None:
             "figure/body/down[plan]",
             f"`device.phone`: the piece uses `tests/card`, {EXPERIMENTAL}",
         ),
+        ("text-size-unmeasured", "piece.yaml", "media", NO_MEDIUM),
     ]
     sites = site.site_location(project(tmp_path / "site"))
     portal = sites / "visual/pieces/portal/content.en.yaml"

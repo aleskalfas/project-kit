@@ -13,6 +13,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/formula.py
         - .pkit/capabilities/visual-communication/scripts/_lib/layout.py
         - .pkit/capabilities/visual-communication/scripts/_lib/scene.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/trunks.py
         - .pkit/capabilities/visual-communication/scripts/_lib/boxes.py
         - .pkit/capabilities/visual-communication/scripts/_lib/canvas.py
         - .pkit/capabilities/visual-communication/scripts/_lib/text.py
@@ -121,10 +122,26 @@ pkit:
         - visual-communication:DEC-038#5
         - visual-communication:DEC-038#6
         - visual-communication:DEC-038#7
+        - visual-communication:DEC-043#1
+        - visual-communication:DEC-043#2
+        - visual-communication:DEC-043#3
+        - visual-communication:DEC-043#4
+        - visual-communication:DEC-043#5
+        - visual-communication:DEC-043#6
         - visual-communication:DEC-046#3
+        - visual-communication:DEC-056#1
+        - visual-communication:DEC-056#2
+        - visual-communication:DEC-056#5
         - visual-communication:DEC-066#1
         - visual-communication:DEC-066#2
         - visual-communication:DEC-066#3
+        - visual-communication:DEC-055#2
+        - visual-communication:DEC-055#3
+        - visual-communication:DEC-055#4
+        - visual-communication:DEC-055#6
+        - visual-communication:DEC-055#7
+        - visual-communication:DEC-055#8
+        - visual-communication:DEC-055#10
       artefact:
         - .pkit/capabilities/visual-communication/files.md#what-the-location-holds
         - .pkit/capabilities/visual-communication/files.md#shapes
@@ -220,6 +237,7 @@ The file takes these keys and no other:
 | `ends` | `true` where the component takes ends, so a pattern may draw a tie with it ([Ties and connectors](#ties-and-connectors)). |
 | `tokens` | Its component tokens, by name, each with its type and default ([Tokens](#tokens)). |
 | `physical-size` | On a page alone, or a top whose layouts are its pages' forms: the size its pages print at, `{width, height}` in millimetres ([A physical size](#a-physical-size)). |
+| `smallest-text` | On a top component only: the smallest text size of each medium its pages are made for, by the medium's word, each a fixed length in px or a share of the page ([A smallest text size](#a-smallest-text-size)). |
 | `layouts` | On a top component only: its layouts and their slots, and, where they are its pages' forms, each layout's own drawing. |
 | `draws` | On a brand's component only: `{top: <library>/<component>, layout: <layout>}`, the top and the one layout it draws, which makes the component a drawing ([A brand's drawing](#a-brands-drawing)). A drawing holds none of `fields`, `options`, `states`, `colour`, `lists`, `layouts` and `ends`. |
 
@@ -237,16 +255,24 @@ The status says what the component's library promises (DEC-003 point 7), which a
 - **`description`,** and **`x-pkit-prose: true`,** which marks a field that holds prose. No command reads the mark.
 - **`x-pkit-pages: true`,** which marks the list field of a top that holds its pages, where its layouts are its pages' forms ([Layouts](#layouts)).
 - **`x-pkit-runs: [<word>, ...]`,** which marks a *field of runs*, below.
+- **`x-pkit-paths: true`,** which marks a *field of paths*, below.
 - **`$ref`:** a reference that starts with `#/`, read within the component's own `fields`.
 - **`additionalProperties`:** only `false`. Leaving it out means the same.
 
-A field whose `type` is `array`, or a list of types that holds it, such as `[array, null]`, is a *list field*. A `repeat` part draws its items, and an option may name one of them. How content is judged against `fields` is in *checks*.
+A field whose `type` is `array`, or a list of types that holds it, such as `[array, null]`, is a *list field*. A `repeat` part draws its items, and an option may name one of them. How content is judged against `fields` is in *checks*. A list field whose schema admits entries that are not mappings, such as texts, and that carries neither `x-pkit-runs` nor `x-pkit-paths`, holds no items, runs or paths: content that gives one is read against the field's schema alone, so nothing the format gives a list, such as an item's id or a path's check, reaches it. The check asks the component's owner for attention (`list-unmarked`, DEC-056 point 5).
 
 A *field of runs* is a field of text whose content may give it as *runs*: spans of its text, each set in a style of its own, such as the prompt, the command and the comment of a terminal's line (DEC-012 points 1 and 2). How content gives runs is in [content files](files.md#content-files).
 
 - **The mark** `x-pkit-runs` lists the words of the field's *run styles*, such as `[command, prompt, comment]`. Each word is a name, never `by`, and appears once. The first is the default: a run that names no style takes it, and so does a field given as text. Another field may declare other words.
 - **Only on a field of text.** The mark lies on one of the component's own fields, or on a slot of a layout that is a page's form ([Layouts](#layouts)), never on a schema within a field, such as a list's items, nor on the schema of all the fields. No `$ref` leads to a marked schema. The field's `type` is `string` and no other, and it holds no `enum`, `const` or `$ref`.
 - **Shown by a text part alone.** A text part of the component shows the field, and a `when` may read whether it is filled. No other part reads it: no `slot` places it, no `image` names it, and no `use` part passes it on, for now. At least one text part of a field of more than one word chooses by the words its role, its paint, whether a run draws its sign, its ground, or several of these ([Switches](#switches)).
+
+A *field of paths* holds a path, or a list of paths, each naming one file of the repository, such as the documents a slide's claim rests on (DEC-056 points 1 and 2). How content writes a path, and how the check finds its file, is in [content files](files.md#content-files).
+
+- **The mark** is `x-pkit-paths: true`. It says what the check reads, and gives the field no look of its own: how a path looks is its component's, as for any text.
+- **Only on a path or a list of paths.** The mark lies where a field of runs' mark may lie: on one of the component's own fields, or on a slot of a layout that is a page's form, never below one nor on the schema of all the fields, and no `$ref` leads to a marked schema. The field's `type` is `string` alone, or `array` alone with `items` of `type: string` alone, neither holding `enum`, `const` or `$ref`. A field of paths takes no runs.
+- **A list of paths holds texts, not items.** It carries no ids, so no `repeat` part repeats over it, and no `use` part passes it on to a component it places, for now. A single path is text, which a part may pass on as any text.
+- **Shown by a text part.** A text part that shows a list of paths draws them as one text, a path to a paragraph in the content's order, as a line feed parts a text's paragraphs. The list fills its field, for a `when`, where it holds a path that is not empty. A reader takes it as that text, not as a list.
 
 ### Options
 
@@ -317,7 +343,7 @@ parts:
 | `repeat` | `x y width height draw colour`, and `row` or `column` | `draw`, and one of `row` and `column`, except over a list of ties, which takes neither |
 
 - **Places and sizes** are formulas that give a length, in the component's own frame. A missing `x` or `y` is zero.
-- **`when`** draws the part only while a condition holds. It names a field, and holds while the content fills it: the field is not missing, empty text, an empty list or an empty mapping. A field of runs is filled where one of its runs holds text. Or it is `{<option>: [<word>, ...]}`, and holds while the option takes one of the words. Or it is a switch on a size, or, in a drawing of a layout, on `:as`, each branch `true`, `false` or a `when` of the two forms above ([Switches](#switches)). A part not drawn has zero size, at its place, so a formula that reads its frame holds.
+- **`when`** draws the part only while a condition holds. It names a field, and holds while the content fills it: the field is not missing, empty text, an empty list or an empty mapping. A field of runs is filled where one of its runs holds text, and a list of paths as [Fields](#fields) says. Or it is `{<option>: [<word>, ...]}`, and holds while the option takes one of the words. Or it is a switch on a size, or, in a drawing of a layout, on `:as`, each branch `true`, `false` or a `when` of the two forms above ([Switches](#switches)). A part not drawn has zero size, at its place, so a formula that reads its frame holds.
 - **`lies-over`** names the parts that this one lies over on purpose, such as a badge over a card's box, as a list: `lies-over: [box]` (DEC-066 point 1). Any part may take it, wherever parts are written: a component's `parts`, a layout's drawing and a brand's drawing. It names parts written before it in the same `parts`, and so drawn before it, since the check of overlaps compares only the parts one group holds directly. So it names no part inside a component a part places, and no item of a list: a part that places a component, holds a slot or repeats over a list is named whole. It speaks of the parts' boxes, as the check does, not of what is drawn in them. It takes no switch: wherever the two parts overlap, under any option, at any size and in any language, the overlap is meant. Where they do not overlap, or where the check does not compare them, as where one is a line or holds the other, it changes nothing.
 - **What `lies-over` refuses,** when the component is read: a name that is no part of the same `parts`, the part's own name, the name of a part written after it, and a name written a second time. Each is a finding (*checks*, `lies-over-refused`), and says nothing: at a pair no other writing names, the check asks for attention, as at any pair no one named. A name's first writing names its part.
 - **What `lies-over` gives.** Where a library version the project's list marks released, and whose folder still holds what was released, names a pair so, validation states their overlap as a fact (*checks*, `box-overlap-meant`), which asks no one to act. For a copy of a library the capability ships, the list's hash must also be the one the capability records for that version. Anywhere else, as in a piece's own component or in a version not yet released, the word gives the check nothing: validation asks for attention at the pair, `box-overlap`, as at any pair no one named. The word never reaches the review, save the message of a refusal. The viewing step's report gives every overlap as `box-overlap`, with nothing of the word in its message, and the reviewer judges each on the image (DEC-066 point 2). The check of edges that nearly line up compares a pair named so as it compares any two siblings (DEC-066 point 3).
@@ -490,7 +516,7 @@ fields:
       x-pkit-pages: true
 tokens:
   title: {type: typography, default: '{type.heading}'}
-  lead: {type: typography, default: '{type.body}'}
+  lead: {type: typography, default: '{type.lead}'}
 layouts:
   slide:
     slots:
@@ -595,6 +621,25 @@ physical-size: {width: 594, height: 841}
 - **The width sets the scale.** An export whose format has a physical page, as PDF has, draws each page at the size, so the page's width, a brand's value, sets how large the brand's type and spacing print.
 - **Placed elsewhere,** in another component's slot or as a page of another top, it asks for its size as it does alone, its height in the proportion, and gets what its placer gives. Only the piece's top prints at its size.
 
+### A smallest text size
+
+A top declares the smallest text size of each medium its pages are made for under `smallest-text`, by the medium's word: `screen`, a screen at hand; `room`, a screen read from across a room; `paper`, a printed page (DEC-055 points 1 to 3). A piece names the media it is shown in under `media` ([`piece.yaml`](files.md#pieceyaml)), and a check fails a text drawn smaller than the smallest size of a medium that shows it (DEC-055 points 4 and 6; [What the check reports](checks.md#scenes) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->). A deck shown on a laptop and in a room:
+
+```yaml
+smallest-text:
+  screen: 11
+  room: "=:page-height / 40"
+```
+
+- **A fixed length,** a positive number of px, serves a medium that shows the top's pages at their own size, as a screen at hand shows a web page. On paper, a page with no physical size prints at the px its renderer declares, so a fixed length names a printed size there.
+- **A share of the page,** a formula that gives a length and reads only numbers and the size of the page a run lies on, `:page-width` and `:page-height`, serves a medium that fills what shows it with the page, as a room's screen shows a slide. The smallest size then follows the page's size, whatever width a brand gives the page. No other formula reads those two names, and this one reads neither `:width` nor `:height`, since a page another component places in a slot is not the size the top gets.
+- **A page's height, only where it asks for one.** A page asks for a height where it gets the height its top asks for, as a deck's slides do, or where the component that draws it declares a physical size or asks for a height by a formula that reads none of its parts. A page as tall as its content, as a site's page or a figure is, asks for none, so a share of its height would grow with the text it is held to. A share that reads `:page-height` there gives no smallest size at that page, and is reported where the scene is computed ([What the check reports](checks.md#scenes) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->).
+- **The top's alone,** as its physical size is. No brand gives it a value, no role or component token holds it, and a brand's drawing declares none. Only the piece's top is read for it: a top placed in a slot, or as a page of another top, is shown in the piece's media.
+- **A value, never a switch,** so neither content nor a size chooses its own smallest size.
+- **`paper` takes a share on a top with a physical size,** whose brand's width sets the scale its pages print at, so a fixed length would name no printed size.
+- **A medium it declares nothing for** has no smallest size under that top, and no text is measured in it: the check states so as a fact (DEC-055 point 10; [What the check reports](checks.md#scenes) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->).
+- **Each value names its source** in a comment beside it, with the measure the source states and how it became a font size ([The foundations](files.md#the-foundations)).
+
 ## Formulas
 
 A *formula* is text that starts with `=` and computes one number (DEC-005 point 1). It holds no comparison, condition, loop or text.
@@ -608,9 +653,10 @@ A *formula* is text that starts with `=` and computes one number (DEC-005 point 
 | `@<token path>` | a role, such as `@space.2`: a length or a number |
 | `:width`, `:height` | the size the component gets |
 | `:index`, `:count` | an item's place among the items its list draws, from 1, and how many it draws |
+| `:page-width`, `:page-height` | in a top's `smallest-text` alone, which reads no other name, the size of the page a run lies on ([A smallest text size](#a-smallest-text-size)) |
 | `:place`, `:places` | in a `cross-size` alone, the place of the item it sizes, from 1, and how many items its list draws ([Repeating over a list](#repeating-over-a-list-row-and-column)) |
 | `<value>` | a value of the component, by its name alone, such as `gap` |
-| `<part>.<exposed>….<measure>` | a measure of a part's frame, or of a part exposed below it |
+| `<part>.<exposed>….<measure>` | a measure of a part's frame, or of a part exposed below it, or of a line's own stretch |
 | `{<option>}.….<measure>` | a measure of the item, or the point, an option gives |
 | `{start}.<measure>`, `{end}.<measure>` | in a component that takes ends, a measure of an end it is given as a tie |
 
@@ -620,9 +666,10 @@ A *formula* is text that starts with `=` and computes one number (DEC-005 point 
 
 ### References
 
-A *path* reads one measure of a frame. A *frame* is an element's place and size.
+A *path* reads one measure of a frame, or of a line's own stretch. A *frame* is an element's place and size, and a line's frame is the least box that holds its route.
 
 - **The measures** are `x`, `y`, `width`, `height`, `right` (x plus width), `bottom` (y plus height), `center` (x plus half the width) and `middle` (y plus half the height). Each is in the frame of the component that reads it.
+- **The measures of a line's own stretch** are `own-center` and `own-middle`: across and down, the point halfway along the stretch of the line's route that it alone runs, measured along the route's points as the scene holds them, a round turn taken sharp (DEC-043 point 6). Only a tie's connector that shares a trunk shares a stretch ([Ties that share a trunk](#ties-that-share-a-trunk)). On every other line, its whole route is its own, so they read what `center` and `middle` read. Of what is no line, they are refused.
 - **The last step is always the measure.** `width.x` reads the `x` of a part named `width`. A name alone, with no measure, reads a value.
 - **The first step** is a part of the component itself. Each step below names a part that the component placed there exposes, one name a step. A component placed by `use` or `slot`, and an item, are read this way.
 - **A step into a list** names the `repeat` part, then the item: `<list>:first`, `<list>:last`, or `<list>[<id>]` by the item's id. `steps:first.x` reads the first item's place. A step below a list names an item first. Without one, `steps.height` reads the whole list's frame.
@@ -644,14 +691,14 @@ Each term is a number with no unit or a length (a power of length). The engine c
 A formula is refused with a message that names it and says why, such as "the formula `=:width - 6` subtracts a number with no unit (`6`) from a length (`:width`)". The engine finds these when it reads the component:
 
 - **It cannot be read:** it does not start with `=`, is empty, ends too early, or holds a sign or a term where none belongs. Or it breaks a rule of the grammar: a binary minus without its spaces, an engine name that does not exist, `min` or `max` with fewer than two arguments, `round` with other than one, or a path that ends in no measure.
-- **It reads what it may not:** a value, a part or an option the component lacks, an option that names an item of a list over which not exactly one part repeats, below where a step may reach, or `:place` or `:places` in any formula but a `cross-size`.
+- **It reads what it may not:** a value, a part or an option the component lacks, an option that names an item of a list over which not exactly one part repeats, below where a step may reach, `:place` or `:places` in any formula but a `cross-size`, or `own-center` or `own-middle` of a part of its own that is no line, of an item or of an end.
 - **It reads the size it gives:** a `cross-size` that reads its part's size across the line where the part gives none, itself or through a named value, as a loop (DEC-038 point 7).
 - **Its dimensions disagree,** or it gives another dimension than its key needs.
 - **It reads a role** that has no value under the brand, a length in a unit other than `px`, or a role that is neither a length nor a number. A role has none where no library the piece locks declares it, or where it is a library's role that neither the brand nor its chain of defaults gives a value ([`roles.yaml`](files.md#rolesyaml)). A part reads no value from a picture role, whether the brand gives it a file or not ([Picture roles](files.md#picture-roles)). A library's role with no value, a component token among them, is found at the piece's lock, not in the component. Where the brand, or a base below it, names the library, the part takes no finding: that brand's `library-role-missing`, or its library's own finding where a default does not hold, reports it.
 
 Beside a formula, it refuses then a `cross-size` on a part whose items are pages, and a `stretch` written beside a `cross-size` that gives a size, as a second writer of the size ([Repeating over a list](#repeating-over-a-list-row-and-column)). It judges that loop and that `stretch` for each set of options, sizes and `:as` that holds together, so a pair only some options would draw is found in the library's own check.
 
-It finds these when it computes the scene: a division by zero, `:index` or `:count` in a component that is no item, a path to an exposed part, a point, an item or an end that is missing, and a loop, but for the loop through a `cross-size`'s own part, which it found when it read the component. A value that cannot be computed is zero. The check reports each problem as a finding (*checks*).
+It finds these when it computes the scene: a division by zero, `:index` or `:count` in a component that is no item, a path to an exposed part, a point, an item or an end that is missing, `own-center` or `own-middle` of an exposed part that is no line, and a loop, but for the loop through a `cross-size`'s own part, which it found when it read the component. A value that cannot be computed is zero. The check reports each problem as a finding (*checks*).
 
 ## Layout operators and drawing primitives
 
@@ -671,7 +718,7 @@ A primitive's properties lie in its own mapping, under SVG's names.
 | `sign` | `fill`, `stroke`, `stroke-width` | the sign of the concept whose colour family its instance takes |
 
 - **A paint,** `fill` or `stroke`, is a colour role's token path, `:colour.<member>`, or a switch. `stroke-width` and `rx` are formulas that give a length.
-- **A text** shows the field `content` names, or the fact `fact` names ([Parts](#parts)), in the typography role `style` names. A text that shows a field of runs draws each run in the role and the paint its style chooses ([Switches](#switches)). Such a text alone takes `sign` and `ground`, each a value or a switch on the run styles (DEC-036 point 3). `sign`, `true` or `false`, the default, says whether a run that names a concept with a sign draws it before its text, in the run's paint. `ground`, a paint or `null`, the default, paints a ground behind the run, and is the fill the run is measured against. A text that takes neither draws every run as before. Their lengths come from the foundations' roles `space.sign-gap`, `space.ground-room` and `space.ground-corner` ([The foundations](files.md#the-foundations)). Its height is always its measured text's: a text that gives a `height` is reported as a value with two owners. With a `width`, its lines are broken to that width; without one, each paragraph is one line, and the text is as wide as its widest. `text-anchor` is `start`, the default, `middle` or `end`: where each line stands in the text's width.
+- **A text** shows the field `content` names, or the fact `fact` names ([Parts](#parts)), in the typography role `style` names. A text that shows a field of runs draws each run in the role and the paint its style chooses ([Switches](#switches)). Such a text alone takes `sign` and `ground`, each a value or a switch on the run styles (DEC-036 point 3). `sign`, `true` or `false`, the default, says whether a run that names a concept with a sign draws it before its text, in the run's paint. `ground`, a paint or `null`, the default, paints a ground behind the run, and is the fill the run is measured against. A text that takes neither draws every run as before. Their lengths come from the foundations' roles `space.sign-gap`, `space.ground-room` and `space.ground-corner` ([The foundations](files.md#the-foundations)). How a text shows a list of paths is in [Fields](#fields). Its height is always its measured text's: a text that gives a `height` is reported as a value with two owners. With a `width`, its lines are broken to that width; without one, each paragraph is one line, and the text is as wide as its widest. `text-anchor` is `start`, the default, `middle` or `end`: where each line stands in the text's width.
 - **A line's frame** comes from its ends: it starts at the lesser of the two `x` and of the two `y`, and is as wide and as tall as the distance between them. A connector's frame holds every point of its route.
 - **An arrowhead,** `marker-start` or `marker-end`, is `none`, the default, or `arrow`, or a switch. It is drawn at that end of the line, pointing away from it, in the line's stroke. It is five widths of the line's stroke long, and as wide at its base. The line stops at the head's base, so its tip lies where the line ends, at either end. A head longer than its leg leaves the line a hundredth of a px of the leg, to point along, and its tip then lies past the end. Two heads on a line of one leg share it, each taking at most half.
 - **An image** names exactly one of four properties, each a source of its picture (DEC-025 point 1):
@@ -768,9 +815,9 @@ A *tie* is an item that its pattern draws as a connector between two other items
 - **Reading an end.** A formula reads an end as `{start}` or `{end}`, then a measure, in the tie's own frame. Nothing below an end may be read, since an end names no part.
 - **The connector tool** is a `line` part that gives `connect` in place of its ends: `straight`, or `corners`, or a switch. It runs from the start to the end, and never around anything (DEC-005 point 2).
 - **Where it meets an end.** It leaves each end's frame by the side that faces the other end. That is the left or the right side where the two frames lie further apart across than down, else the top or the bottom.
-- **Several ties on one side** of one item spread evenly along it. They are ordered by where the centres of their other ends lie along that side, then as their lists hold them.
+- **Several ties on one side** of one item spread evenly along it. They are ordered by where the centres of their other ends lie along that side, then as their lists hold them. A group of ties that share a trunk counts as one of them ([Ties that share a trunk](#ties-that-share-a-trunk)).
 - **A point.** A tie that names a point ends at that point, which its item's component exposes ([Exposes](#exposes)). One that names a point its item does not expose, as of a picture file, is left out and reported.
-- **With corners,** the connector leaves and meets each end square to its side, and turns twice, halfway between them. Where the two ends lie in one line, it is straight.
+- **With corners,** the connector leaves and meets each end square to its side, and turns twice, halfway between them, unless it branches off a trunk. Where the two ends lie in one line, it is straight.
 - **Round turns.** A connector's `rx`, a length, is the radius its turns are drawn round at. Each turn is an arc of that radius, which leaves one leg and meets the next where it touches them. With no `rx`, or 0, each turn is a sharp corner, as is a turn that goes straight on.
   - **A radius that does not fit** is reduced to fit, and never refused: a turn takes at most half the shorter of its two legs, so two turns on one leg never cross. A leg that ends in an arrowhead counts to the head's base, where the line stops ([Primitives](#primitives)).
   - **Who fits it.** The scene holds `rx` as the part gives it, and a renderer fits each turn to its legs as it draws the line.
@@ -809,6 +856,29 @@ links:
     to:
       item: steps[note]
 ```
+
+#### Ties that share a trunk
+
+The part that draws a list of ties may name one of the list's end fields its *trunk end*, with `trunk` (DEC-043 point 1). The ties of that list that meet one side of an item there, and draw alike, then meet it at one point. One of them, the *trunk*, runs as any connector with corners does, and each other, a *branch*, runs along the trunk's first leg and leaves it with a turn of its own. Without `trunk`, nothing changes. A pattern whose ties share a trunk where they meet the item they point to:
+
+```yaml
+parts:
+  links:
+    repeat: links
+    draw: piece/arrow
+    trunk: to
+```
+
+- **Fixed in the part.** `trunk` names one of the list's two end fields, never a switch. Each drawing declares its own, so a brand's drawing whose part declares none draws its ties spread. Where `trunk` names neither end field, as after a top renamed them, or the part repeats over no list of ties, it is refused, and the ties spread.
+- **A group.** The ties of the list that meet one side of one item at their trunk end form a *group* where all of them draw alike, each draws with corners, and none reads a line's frame or own stretch in its radius, its stroke width or its arrowheads, as its formulas show. They *draw alike* where they take one component, the same options, the same state, the same stroke widths and arrowheads, and the same paints as the scene holds them, a role or a step of an order. Where a component draws several connector parts, the tie draws with corners only where each of them does, and takes their greatest radius and stroke width and the longest arrowhead at each end. A tie whose trunk end names a point joins no group. Where the ties of a side form no group, each meets the side at a point of its own, and the check states why, unless all of them are straight and alike.
+- **One point.** A group counts as one end among the side's ends, placed by the middle of the range its ties' other ends' centres cover along the side, then by its first tie in the ties' order. Two lists may each have a group on one side.
+- **The trunk and its branches.** A tie *reaches* as far as its meeting point with its other end lies from the group's point, along the side. The tie that reaches least far, the first in the ties' order where two reach as far, is the trunk. Each other is a branch: it leaves the trunk's first leg at its *junction*, turns there, runs its middle leg to the level of its meeting point with its other end, and turns once more into its last leg, which meets that end square to its side. The branch that reaches farthest leaves nearest the item.
+- **The lengths.** A group's *least leg* is twice the greatest radius of its ties, and its *least gap* that radius, neither less than twice their stroke width. The junctions lie on the trunk's first leg, from the arrowhead's length at the group's point plus the least leg, to the least gap short of the trunk's first turn, or of its other end where it turns nowhere. Neighbouring junctions lie at least the least gap apart. A branch's junction lies at least the least leg, plus an arrowhead it ends in there, short of its meeting point with its other end, along the first leg. So each leg beside a branch's turns is at least the least leg long, and each turn takes its radius whole.
+- **Where the junctions lie.** The junctions and the end of the trunk's first leg split that leg into equal parts at the junctions' *even places*. Where every even place keeps the lengths above, the junctions take them. Otherwise they take the one set of places that keeps them whose distances from the even places, squared, add up least: neighbours that would fall out of order are pooled at their even places' mean, held within the lengths, until none does. No junction of that set could come nearer its even place without another going farther from its own. Where no places keep the lengths, the group has no room.
+- **Each tie whole.** Each tie stays a line of its own from end to end, with its own trace, paints, arrowheads, state and concept. Its route is in the scene's points, as every connector's is, so a renderer draws the shared stretch once for each tie, and the scene holds nothing new.
+- **A crossing.** Two ties cross where a leg of one passes across a leg of the other, a touch included, or runs side by side with it nearer than the greater of their least gaps, on one line included. A tie's least gap is its radius, none where it turns nowhere, never less than twice its stroke width; a tie whose radius or stroke width reads a line's frame has none. Legs are read from the route's points as the scene holds them, a round turn taken sharp, and lengths are compared within the scene's resolution, 1/100 px. The stretch two ties of a group share, the junction where one leaves the other, and a point where both end are no crossing. Two other ties of one instance that cross with the groups drawn as declared add their crossing where, with every group spread, they cross nowhere, fewer times, or only pass across where the declared routes run them side by side. Each group on a side either of them meets adds it.
+- **What its component draws beside its line.** A tie's *own stretch* runs from its junction to its other end, the trunk's from its group's last junction; a line that shares nothing has its whole length as its own. A part placed by `own-center` and `own-middle`, its frame centred on the point they read, does not fit where any part of its frame lies on the stretch its tie shares, or its centre lies within half a stroke width of another tie of the group. A part whose frame holds its tie's meeting point with an end is left out where each tie of the group draws the same part there. The engine reads a part's frame in a round from the round's routes, and keeps nothing of it. A part placed otherwise that stands so is its component's fault, and is found (*checks*, `trunk-part`).
+- **Drawn clear, or spread, in rounds.** A group cannot be drawn clear where it has no room, where a branch's middle leg is shorter than the least leg, where two of its ties cross, where it adds a crossing, or where a part placed by the measures does not fit. The engine judges every group an instance draws at once. Each round places the meeting points with the groups still drawn as declared, and lays each group. Where a group has no room or a short middle leg, its routes cannot be drawn, so each such group is drawn spread, and the next round begins. Otherwise the round judges the crossings and the parts. Each group that cannot be drawn clear is drawn spread, its ties meeting the side at points of their own, and stated (*checks*, `trunk-spread`), and is judged no more. The next round judges the rest anew, until a round finds none.
 
 ### What an element asks for, and what it gets
 

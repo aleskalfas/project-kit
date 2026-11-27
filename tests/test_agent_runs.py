@@ -675,6 +675,7 @@ def test_the_command_writes_the_runs_document(
         "check": None,
         "files": None,
         "excluded": [],
+        "refusal_cause": None,
     }
     assert list(json.loads(result.stdout.strip())) == sorted(document)
 

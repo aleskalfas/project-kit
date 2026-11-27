@@ -5,15 +5,15 @@ holds no component, so each top draws its own layouts (DEC-009, Implications). I
 every shared role a value in every combination of its axes, and every pair the foundations
 and the starter declare reaches its level there. So do the shared text roles and each
 family's text on every fill a component lays them on, beyond the pairs declared. It sets a
-page's title larger than its heading in every combination. It gives an order's two ends
-values of its own, its text keeping 5 to 1 on each, and the starter's components, drawn on
-its steps, fall below their contrast only where the starter's README says (DEC-032 points 2
-and 8). The starter's reference renders, drawn under it, pass the
-check, and each of their texts reaches its contrast as drawn in every combination (DEC-004
-point 8). Its fonts and their
-licences are the files their upstream releases ship, unchanged, and each weight its
-typography roles use is a family of its own, whose file has that weight (DEC-012 point 4,
-"A weight's own file").
+page's title larger than its heading, and the lead larger than its body, in every
+combination, and gives the deck's lead no value, so it takes the lead (DEC-072 point 3). It
+gives an order's two ends values of its own, its text keeping 5 to 1 on each, and the
+starter's components, drawn on its steps, fall below their contrast only where the
+starter's README says (DEC-032 points 2 and 8). The starter's reference renders, drawn
+under it, pass the check, and each of their texts reaches its contrast as drawn in every
+combination (DEC-004 point 8). Its fonts and their licences are the files their upstream
+releases ship, unchanged, and each weight its typography roles use is a family of its own,
+whose file has that weight (DEC-012 point 4, "A weight's own file").
 
 The reference renders are the pieces under `tests/fixtures/visual-communication/starter/`,
 pinned here with the neutral brand in place of the test brand. Run in this process
@@ -193,6 +193,35 @@ def test_a_pages_title_is_set_larger_than_its_heading_in_every_combination(brand
         assert title["fontSize"]["unit"] == heading["fontSize"]["unit"], combination
         assert title["fontSize"]["value"] > heading["fontSize"]["value"], combination
         assert title["fontWeight"] >= heading["fontWeight"], combination
+
+
+def test_the_lead_is_set_larger_than_the_body_in_every_combination(brand: Any) -> None:
+    """Running text read before the body, in the body's family and weight and larger than
+    it, on every size the brand gives, a projector's among them, and in every mode, so it
+    stands out from the body and still reads as running text (`files.md`, *The neutral
+    brand*; visual-communication DEC-072, Implications)."""
+    assert brand.combinations()
+    for combination in brand.combinations():
+        lead = brand.resolve("type.lead", combination)
+        body = brand.resolve("type.body", combination)
+        assert lead["fontFamily"] == body["fontFamily"], combination
+        assert lead["fontWeight"] == body["fontWeight"], combination
+        assert lead["fontSize"]["unit"] == body["fontSize"]["unit"], combination
+        assert lead["fontSize"]["value"] > body["fontSize"]["value"], combination
+
+
+def test_the_decks_lead_takes_the_lead_and_its_title_the_value_the_brand_gives_it(
+    brand: Any,
+) -> None:
+    """A value of its own for the deck's lead, pointed at the lead, would only repeat the
+    token's default, so the brand gives none: a slide's lead and the cover's subtitle take
+    the type a piece's own running text read before the body takes, in every combination
+    (visual-communication DEC-072 point 3). It still gives the deck's title a value."""
+    lead, title = "component.foundations.deck.lead", "component.foundations.deck.title"
+    assert lead not in brand.roles
+    assert title in brand.roles
+    for combination in brand.combinations():
+        assert brand.resolve(lead, combination) == brand.resolve("type.lead", combination)
 
 
 # --- its contrast -----------------------------------------------------------------------------
@@ -404,6 +433,7 @@ def test_every_reference_render_passes_the_check_under_it(location: Path) -> Non
         ("fact", "picture-role-unvalued", f"visual/libraries/neutral/{built}/", "picture.logo")
     ]
     assert starter.on_signs(report.judged) == starter.UNSIGNED
+    assert starter.unmeasured(report.judged) == starter.no_medium(starter.COMPONENTS)
     assert starter.box_levels(report.judged) <= {"attention"}
     assert not report.failed()
 
@@ -419,6 +449,12 @@ COMPARED = "card"
 #: order's two ends (DEC-032 point 1) and the type of a page's title. Its order's text is its
 #: primary text, as the neutral family's is.
 GIVEN = ["size.line", "family.order.first", "family.order.last", "type.title"]
+#: The roles the foundations being built add that the brand being built gives a value of its
+#: own, and that a component of theirs reads where their release read another role, each by
+#: that role: the lead, which their deck's lead takes by default, where their release draws
+#: it in the body (DEC-072 point 3). A comparison takes each back to that role, since the
+#: value is a change of the brand's look.
+TAKEN_BACK = {"type.lead": "type.body"}
 
 
 def read_json(path: Path) -> Any:
@@ -436,9 +472,9 @@ def taken_back(built: Any, released: Any) -> Any:
 def with_the_releases_look(root: Path) -> None:
     """The copy of the neutral brand being built in the location at `root`, each token its
     release gives taken back to the value it gives there, in each token file of that
-    release: so a comparison with the release finds what the version being built adds,
-    such as its sizes, and not a change of its look, which breaks nothing (DEC-003 point
-    6)."""
+    release, and the lead taken back to the body (`TAKEN_BACK`): so a comparison with the
+    release finds what the version being built adds, such as its sizes, and not a change
+    of its look, which breaks nothing (DEC-003 point 6)."""
     built = version_folder(root, "neutral", BUILT_BRAND)
     released = version_folder(root, "neutral", RELEASED_BRAND)
     for path in sorted((released / "tokens").glob("*.tokens.json")):
@@ -447,6 +483,15 @@ def with_the_releases_look(root: Path) -> None:
         target.write_text(
             json.dumps(taken_back(read_json(target), read_json(path))), encoding="utf-8"
         )
+    for path in sorted((built / "tokens").glob("*.tokens.json")):
+        tree = read_json(path)
+        for role, aliased in TAKEN_BACK.items():
+            group, name = role.split(".")
+            if name in tree.get(group, {}):
+                del tree[group][name]
+            if path.name == "base.tokens.json":
+                tree[group][name] = {"$value": f"{{{aliased}}}"}
+        path.write_text(json.dumps(tree), encoding="utf-8")
 
 
 def comparison_location(root: Path, only: str | None = None) -> Path:
@@ -476,7 +521,8 @@ def compared(root: Path) -> dict[str, tuple[Any, Any]]:
     release on theirs. Each drawing is a document of values and the previews. The brand
     being built gives `size.line`, which no piece that names no size reads, an order's ends,
     which no piece the starter's release draws takes a step of, and the type of a page's
-    title, which no component of the starter's release reads (`GIVEN`)."""
+    title, which no component of the starter's release reads (`GIVEN`). Its lead is taken
+    back to its body (`TAKEN_BACK`)."""
     with_the_releases_look(root)
     released, built = starter.on_each_foundations(root, brand={"neutral": RELEASED_BRAND}).values()
     return {
@@ -500,9 +546,10 @@ def test_each_reference_render_draws_on_the_foundations_being_built_as_on_their_
     brand gives as wide as its slide on a desktop, `size.line`, which no piece that names
     no size reads, those of a run's sign and ground, at its smallest space, an order's,
     whose ends it gives greys of their own and whose text is its neutral family's, the type
-    of a page's title, which no component of the starter's release reads, and their deck's
-    title and lead, which the brand gives on a desktop in the types the deck drew them in
-    before. The starter being built reads roles the foundations' release does not declare,
+    of a page's title, which no component of the starter's release reads, the lead, which
+    their deck's lead takes and the comparison takes back to the body, and their deck's
+    title, which the brand gives on a desktop in the type the deck drew it in before. The
+    starter being built reads roles the foundations' release does not declare,
     and its web parts name the sizes, which that release does not declare either."""
     importable(monkeypatch, starter.svg)
     assert BUILT_BRAND != RELEASED_BRAND

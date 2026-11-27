@@ -1,0 +1,39 @@
+component: project-management
+kind: minor
+custom:
+  category: Added
+requires_backbone: release
+body: >
+  A worker's seat in the topology may name the seat that directs it, by
+  `directed_by`: one planner's or lead's seat, not retired (DEC-081 point 3).
+  `check-topology` refuses the key on a planner's or a lead's seat, and on a
+  worker's seat a name the topology does not hold, a retired seat, the seat
+  itself or another worker's seat. `pkit pm seats` shows each worker's
+  directing seat, or `directed by no seat`, and for each held seat the
+  session its holder recorded as running the seat's loop, by its name,
+  machine, messaging address and process, or `no session recorded`. A seat's
+  state issue reads a new event, `state-session`, that records that session
+  (DEC-081 point 4, DEC-084 point 1), its process by the name the backbone's
+  `pkit harness session` gives it, stored whole. `pkit pm take-seat --loop
+  --session-name <name>` (or `$PKIT_SESSION_NAME`) records it once the clone
+  holds the seat: without asking where the seat records no session, or the
+  backbone reads the recorded process as ended or as this session's own;
+  otherwise only on the person's word, at a terminal or with `--yes`, the
+  loop running unrecorded without it (DEC-084 point 3). A new verb, `pkit pm
+  check-message`, reads a message's reply address, sender name and the seat
+  it names as JSON on standard input, and says whether it is a directive,
+  information, or cannot be checked (DEC-084 points 2 and 4). The capability
+  reads no process itself: each reading comes from the backbone's
+  `recorded-process` commands, which this release's backbone brings. Add the key only once every
+  clone that may take a seat runs this release: an older one reads a
+  topology that holds it as one it cannot read in full, and takes nothing.
+  `pkit pm next-task --task N` takes the Task a directive names, and only
+  where it is among the Tasks the run would offer the clone: ready, in its
+  seat's scope, in its pools where the topology declares them, and neither
+  assigned to another account nor held by another instance (DEC-081 point
+  6). Otherwise, or where another instance claims it first, it starts
+  nothing and exits 6, saying why. `pkit pm create-issue --for-workers`,
+  from a lead's seat, files with no owner the work the lead leaves to its
+  workers, so it becomes ready for them, and claims none of it at creation
+  (DEC-081 point 3); from a worker's seat, or from no seat, it is refused
+  before anything is filed.

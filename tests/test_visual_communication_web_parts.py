@@ -710,6 +710,7 @@ def test_a_site_of_every_part_draws_under_both_brands_from_one_set_of_content_fi
     ]
     assert [code for code, _ in found] == ["picture-role-unvalued"]
     assert starter.on_signs(report.judged) == starter.UNSIGNED
+    assert ("fact", "visual/pieces/site/piece.yaml", "media") in starter.unmeasured(report.judged)
     assert starter.box_levels(report.judged) <= {"attention"}
     in_the_site = {
         finding.code
@@ -787,3 +788,57 @@ def test_each_page_of_the_site_draws_its_title_larger_than_every_other_text(
             other = resolved[style][key]["fontSize"]
             assert other["unit"] == title["unit"], (key, style)
             assert other["value"] < title["value"], (key, style)
+
+
+# --- a page's lead, in the lead type ---------------------------------------------------------
+
+#: The starter's type of the lead under a page's title, which its `title` alone sets
+#: (visual-communication DEC-072 point 3).
+LEAD_TYPE = "starter.type.lead"
+
+
+def test_a_pages_lead_takes_a_type_of_its_own_which_no_other_component_reads() -> None:
+    """The starter gives the lead under a page's title a type of its own, which only its
+    `title` reads. Its default is the shared type of running text read before the body,
+    which a brand released before it owes no value, since it defaults to the body
+    (visual-communication DEC-072 points 1 and 3)."""
+    components = starter.COMPONENTS.items()
+    readers = sorted(name for name, component in components if LEAD_TYPE in json.dumps(component))
+    assert readers == ["title"]
+    assert starter.OWN[LEAD_TYPE] == {"type": "typography", "default": "{type.lead}"}
+    assert starter.SHARED["type.lead"] == {"type": "typography", "default": "{type.body}"}
+
+
+def test_each_page_of_the_site_sets_its_lead_alone_in_the_lead_type(
+    under: Path, scenes: Mapping[tuple[str, str, str], Mapping[str, Any]]
+) -> None:
+    """Each page of the site sets the lead under its title, and no other text, in the
+    starter's type of the lead, at each size and in each language. The neutral brand gives
+    the lead type a size above its body's, so it draws the lead larger than a section's
+    text, set in the body, in every combination. The test brand gives it none, so it sets
+    the lead as the body (`files.md`, *The neutral brand*; visual-communication DEC-072
+    point 3)."""
+    checked = 0
+    for (name, language, size), scene in scenes.items():
+        if name != "site":
+            continue
+        for page in pages(scene):
+            leads = [
+                text for text in texts(page) if any(r["style"] == LEAD_TYPE for r in runs(text))
+            ]
+            assert [text["id"] for text in leads] == [f"{page['id']}/main/sections[head]/lead"], (
+                language,
+                size,
+            )
+            checked += 1
+    assert checked == 3 * len(starter.LANGUAGES) * 3
+    drawn = drawn_piece(under, "site")
+    values = drawn.values()
+    resolved = {path: token["values"] for path, token in values["tokens"].items()}
+    for key in values["keys"]:
+        lead, body = resolved[LEAD_TYPE][key], resolved["type.body"][key]
+        if drawn.piece.data["brand"] == "neutral":
+            assert lead["fontSize"]["unit"] == body["fontSize"]["unit"], key
+            assert lead["fontSize"]["value"] > body["fontSize"]["value"], key
+        else:
+            assert lead == body, key

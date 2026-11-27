@@ -13,6 +13,7 @@ pkit:
         - .pkit/schemas/tool-access.yaml
         - .pkit/schemas/tool-access.schema.json
         - .pkit/adapters/claude-code/permission-enforcement.yaml
+        - .pkit/adapters/claude-code/session.yaml
         - .pkit/agents/tool_access.py
         - .pkit/agents/definition_source.py
         - .pkit/lifecycle/ownership.py
@@ -21,6 +22,7 @@ pkit:
         - src/project_kit/agent_tool_access.py
         - src/project_kit/capabilities.py
         - src/project_kit/cli.py
+        - src/project_kit/harness_session.py
         - src/project_kit/harness_support.py
         - src/project_kit/install.py
         - src/project_kit/loaded_rules.py
@@ -28,7 +30,7 @@ pkit:
         - src/project_kit/schemas_validate.py
         - src/project_kit/sync.py
         - src/project_kit/upgrade.py
-      record: [COR-001, COR-002, COR-005, COR-006, "COR-013#1", "COR-013#7", "COR-013#8", COR-028, COR-047, COR-070, ADR-066, ADR-073, ADR-076, ADR-083, ADR-085, ADR-086, ADR-087]
+      record: [COR-001, COR-002, COR-005, COR-006, "COR-013#1", "COR-013#7", "COR-013#8", COR-028, COR-047, COR-070, ADR-066, ADR-073, ADR-076, ADR-083, ADR-085, ADR-086, ADR-087, "ADR-100#9", "ADR-103#4", "ADR-103#5", ADR-102, "ADR-095#3", "project-management:DEC-084#1"]
       artefact:
         - .pkit/adapters/claude-code/README.md
         - .pkit/adapters/claude-code/README.md#what-this-adapter-ships
@@ -134,6 +136,7 @@ Beside its scripts, an adapter states what its harness does in declarations, fil
   - **Its form:** no schema shapes it, so it follows the Claude Code adapter's file. Under `dimensions`, each dimension names its `layer` and its `enforcement`, which is `native`, `runtime` or `none`.
   - **Who reads it:** `pkit permissions diff` reads the declaration of each adapter the backbone manifest registers, in that adapter's folder, and names each dimension one declares enforced `none`. Where more than one adapter is registered, it names each such dimension under its adapter's name. It names a registered adapter that has no declaration, or one that declares no dimension, as declaring nothing, never as enforcing every dimension.
 - **Its declaration of tool access,** `tool-access.json`: its harness's terms for an agent's tool access. An adapter that deploys agents declares it ("The declaration of tool access" below).
+- **Its declaration of a session,** `session.yaml`: how a command finds its session, with that session's process and address ("The declaration of a session" below).
 - **How its harness reaches a capability's rules:** `loaded_rules:`, a key of its `package.yaml` ("How a capability's rules reach a session" below).
 - **Its agent runner:** the command its `package.yaml` registers as `run-agent` ("The agent runner" below).
 
@@ -169,6 +172,32 @@ How the fields are read:
 
 What the Claude Code adapter declares, and what it refuses, are in [its README](claude-code/README.md), "Tool access" under `deploy-agents.sh`.
 
+### The declaration of a session
+
+A command of a capability learns from the backbone the harness session whose shell runs it, so the command names no harness. An adapter whose harness gives a command its session declares how in `session.yaml`. The backbone reads it as data, and runs none of it.
+
+Its keys:
+
+- `schema_version`: `1`. The backbone refuses a version it does not read, and a key it does not know.
+- `process.variable`: the environment variable that holds the id of the session's process, in a command the session's shell runs. That process ends when the session ends. A command whose environment does not set the variable runs in no session.
+- `messaging`, left out where the harness gives no messaging between sessions:
+  - `variable`: the environment variable that holds the session's messaging address. The harness delivers messages to the session at that address.
+  - `reply_prefix`: what a message's reply address carries before that address. So the backbone brings both into one form.
+  - `names_process`: a pattern in Python's dialect that matches a whole address. Its group `pid` names the process the harness names the address after.
+  - **No user in an address.** The backbone gives no address of any other form. A part that records a session may put its address where every reader of the tracker sees it. So the pattern admits only a form that names no user.
+- `id_alone_platforms`: each platform where a null signal was measured to tell a running process id from a free one, as Python names it (`darwin`, `linux`). The backbone may read a process by its id alone there. The list names a platform only once that was measured there, and never makes a command read by less than it can.
+
+How it is read:
+
+- **One declaration.** The backbone reads the one registered adapter's that ships one. No command finds its session in these cases:
+  - no registered adapter ships one
+  - more than one does
+  - the declaration cannot be read
+- **What a command gets from it.** `pkit harness session` gives the session's process and its address, each only where its checks pass ([the CLI reference](../cli/README.md#harness-session---reply-address---json) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->).
+- **A guard, not a boundary.** The declaration lies in the checkout, which a sandboxed command can write. Rewritten, it could name another process as the session's, or a platform never measured. So it loosens a guard.
+
+What the Claude Code adapter declares, and what it was measured on, are in [its README](claude-code/README.md#the-declaration-of-a-session-sessionyaml).
+
 ## How a capability's rules reach a session
 
 A capability may ship operational rules of its own, as a loaded file at `.pkit/capabilities/<name>/rules.md` ([COR-070](../decisions/core/COR-070-capability-loaded-rules.md)). Each adapter delivers every installed capability's loaded file to the sessions its harness starts. It takes the route that carries core's rules, where the harness offers one, so every session that loads core's rules loads them too.
@@ -198,7 +227,7 @@ A command that starts an agent nobody can answer during its run never calls a ha
 
 - **A registered command.** The adapter registers it in its package's `commands:` tree, under the one reference `run-agent`. The backbone finds it through its one lookup of that tree ([the lifecycle reference's manifest schema, "How a registered command is run"](../lifecycle/manifest.md#how-a-registered-command-is-run)). A capability's command of that name is no runner.
 - **Run once for each run.** Each call starts one agent, so a runner is not idempotent. The backbone runs it under the agent-run policy that the manifest schema states, with no arguments and the request on standard input.
-- **Where it runs:** from the project's root. A confined run's runner is the one its clone registers, run from the clone's root. Where an unconfined run's folder is a project's root, its runner is the one that project registers, run from that folder. So a run in a clone at a commit gets the runner that commit registers.
+- **Where it runs:** from the project's root. A confined run's runner, and a run's in a reviewer's clone, is the one its clone registers, run from the clone's root. Where an unconfined run's folder is a project's root, its runner is the one that project registers, run from that folder. So a run in a clone at a commit gets the runner that commit registers.
 - **One runner for a project.** Where no registered adapter registers one, the run is refused, and the command that asked starts no agent and says why. Where more than one does, the run is refused too, until a record says how a project names its harness.
 
 **The request** is one JSON document on standard input: `schema_version` (`1`), `agent`, `brief`, `limit_seconds` and `effort`, a level or `null`. A runner refuses a request with any other key, rather than run it without that key. So a runner that does not know the confined form refuses it.
@@ -213,6 +242,12 @@ The request then takes one of two forms:
 An unconfined request may also hold this key:
 
 - `local_settings_from`: the absolute path of the person's checkout. The runner then copies the file its harness keeps for one checkout, out of git, from there into `folder` before the harness starts. It copies nothing where `folder` already holds that file, and refuses the run where a link lies on the way. Only the runner knows which file it is, so no capability names a harness's file.
+- `seat_permissions`: for a run in a reviewer's clone, an object of two absolute folders.
+  - `seat_clone`: the seat's clone, the checkout the review command runs in.
+  - `settings_folder`: a folder beside the reviewer's clone that the run does not work in.
+  - The runner reads the allow, ask and deny rules of the settings file the seat's clone keeps in git. It passes them to the harness as the run's settings, and nothing else of that file: no mode, sandbox setting, added folder, hook or server. It writes them in `settings_folder`.
+  - It refuses the run where it cannot read that file, or where `settings_folder` is a link or lies in or around `folder`.
+  - Where a snapshot of a realized model binds the seat's clone, the runner also registers the hook from the copy. The runner names that snapshot as the hook's bound. Realizing keeps no snapshot yet, so none binds. The runner names none, and the reviewer is held as it would be in the seat's clone.
 
 When the drift command starts a fixer, and in which form, is project-management's ([its README, "Starting the fixers"](../capabilities/project-management/README.md#starting-the-fixers--fix-drift)).
 
@@ -337,7 +372,7 @@ The methodology depends on properties of the harness that hosts it, which it can
 
 **The permission dimensions stay apart.** Where an adapter's harness enforces each dimension of the permission model is its enforcement declaration's, the permission domain's case of COR-047's rule (COR-028 point 3). The support declaration does not repeat it ([the Claude Code adapter's README, "`permission-enforcement.yaml`"](claude-code/README.md#permission-enforcementyaml)).
 
-**Status.** The core declares seven requirements:
+**Status.** The core declares eight requirements:
 
 - `delegated-result-complete`: a delegated helper's full result reaches the agent that delegated to it.
 - `unattended-confined-run`: a process can start an agent unattended, confined for that one run. A drift command's confined run depends on it.
@@ -346,5 +381,6 @@ The methodology depends on properties of the harness that hosts it, which it can
 - `session-agent-withheld-tools`: a whole session's agent withheld named tools has none of them, and keeps every other tool its session holds. It is observed from outside a session.
 - `helper-withheld-tools`: a helper withheld named tools has none of them. It is observed only inside a session.
 - `ask-reaches-person`: an ask the harness puts to a person reaches a person who can answer it. It is observed only inside a session, where the answer arrives, and only where the harness tells the session who gave the answer. Until it does, even a pass there would resolve the requirement `indeterminate` (COR-047 point 4).
+- `session-messaging-address`: a session reads its own messaging address, which its messages carry as the address to reply to. No other session holds it while the session's process runs. project-management's check of a message between seats depends on it. It is observed inside a session.
 
-The Claude Code adapter answers the first five and the seventh. It leaves `helper-withheld-tools` unanswered until Claude Code is measured against that requirement, so the report resolves the requirement `indeterminate`. The report surfaces at no lifecycle boundary yet, such as install or upgrade (COR-047 point 8), and runs only when asked.
+The Claude Code adapter answers the first five, the seventh and the eighth. It leaves `helper-withheld-tools` unanswered until Claude Code is measured against that requirement, so the report resolves the requirement `indeterminate`. The report surfaces at no lifecycle boundary yet, such as install or upgrade (COR-047 point 8), and runs only when asked.

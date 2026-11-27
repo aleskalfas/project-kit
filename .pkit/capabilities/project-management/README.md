@@ -15,7 +15,7 @@ pkit:
         - .pkit/capabilities/project-management/decisions/**
         - .pkit/capabilities/project-management/package.yaml
         - .pkit/capabilities/project-management/rule-sets/pm.md
-      record: [COR-008, COR-017, ADR-076, COR-020, COR-021, COR-023, COR-030, COR-039, "COR-050#16", COR-053, COR-057, COR-061, COR-064, COR-070, ADR-004, ADR-016, ADR-019, "ADR-025#5", ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050, ADR-066, ADR-096, ADR-097, ADR-098]
+      record: [COR-008, COR-017, ADR-076, COR-020, COR-021, COR-023, COR-030, COR-039, "COR-050#16", COR-053, COR-057, COR-061, COR-064, COR-070, ADR-004, ADR-016, ADR-019, "ADR-025#5", ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050, ADR-066, ADR-096, ADR-097, ADR-098, ADR-102, ADR-103]
       artefact:
         - .pkit/decisions/README.md#checking-a-changes-numbering
 ---
@@ -804,7 +804,7 @@ The owner is the assignee paired with an instance number. So a clone claims only
 
 **Two clones can claim one issue in the same instant.** GitHub has no atomic claim, so a claim reads the issue again after writing. Where a lower-numbered instance claimed too, the higher one withdraws its claim. `start-work` then stops before the move with exit code 2, as it does where its claim finds another instance's claim made after the clash guard passed. This catches a clash rather than preventing it: a clone whose re-read came first keeps its claim, and both claims stay on the issue.
 
-**In a project with a topology of seats** ([project-management:DEC-059-topology-of-seats]), a clone takes part by holding a seat, and its instance number is the seat's. A clone in a planner's seat files with no owner, so its work enters the shared pool, and every other seat claims what it files.
+**In a project with a topology of seats** ([project-management:DEC-059-topology-of-seats]), a clone takes part by holding a seat, and its instance number is the seat's. A clone in a planner's seat files with no owner, so its work enters the shared pool, and every other seat claims what it files. A lead files with no owner the work it leaves to its workers, with `create-issue --for-workers`, so the work becomes ready for them, and claims only what it files for itself to build ([project-management:DEC-081-delegation-between-seats] point 3). `--for-workers` from a worker's seat, or from no seat, is refused before anything is filed.
 
 **A claim counts only after the current take of the seat its stamp names,** and only while the clone the stamp names holds that seat. A clone's take of a seat is the claim, on the seat's state issue, that made the clone the seat's holder. GitHub numbers the comments of every issue from one sequence, so a claim made after the take has the higher id. A seat's release thus frees its clone's work for good, with no write to the issues, even where the same clone takes the seat again.
 
@@ -857,6 +857,7 @@ seats:
   - name: tester
     role: worker
     agent: project-manager    # the default
+    directed_by: planner      # optional: the seat that directs it by message
     pools: [alpha]            # the pools a seat that builds serves
     scope:
       types: [test]           # workstreams, types of the type axis, or both
@@ -872,6 +873,7 @@ seats:
 - **The organizer seat's clone** may release another seat by force. At most one seat is the organizer seat
 - **Each seat names its state issue,** which says who holds the seat. The topology never says who holds a seat
 - **Pools of workers are optional.** Where the topology declares `pools`, each seat that builds names the pools it serves, and takes its work only from them. A planner names no pool ("Pools of workers" below)
+- **A worker's seat may name the seat that directs it,** by `directed_by`: one planner's or lead's seat, not retired ([project-management:DEC-081-delegation-between-seats] point 3). A directing seat directs only the workers whose seats name it, and a planner's or a lead's seat names none, since the person directs it. So directing has one level. A worker that names none counts no message as a directive, and works from the Tasks it may take alone. A change of who directs a worker binds once it merges, as the rest of the topology does, so no message can name another directing seat
 
 **Adding seats.** Add the seats at the end of the file on a branch, and run `pkit pm create-seats` there. The command creates a state issue for each seat that names none and is not retired. It writes each issue's number into that seat's entry. Commit the file with the change, so the change lands with its state issues.
 
@@ -887,6 +889,7 @@ seats:
 - a seat that is not retired and names no state issue, or two seats that name one
 - a scope that names a workstream or a type the project does not declare
 - a seat that names a pool the topology does not declare, a seat that names pools where none are declared, or a planner's seat that names a pool
+- a planner's or a lead's seat that names a directing seat, or a worker's seat that names, to direct it, a seat the topology does not hold, a retired seat, itself or another worker's seat
 - the `label` substrate in `project/instance-ownership.yaml`, since a label cannot carry what a claim names
 - a seat of the base deleted or moved rather than retired
 - a base that cannot be resolved, while the working tree holds a topology
@@ -900,6 +903,7 @@ The check compares a change with a base, so it is no member of `pkit validate`, 
 - **One seat for each clone.** A clone that holds a seat takes it up again, as a new session in the clone does, since the key outlives every session. It takes no second seat, and releases a retired seat it holds first
 - **No seat is taken** where the default branch cannot be resolved, where a seat names no state issue or its state issue cannot be read, or where another clone holds the seat
 - **Code that cannot read the topology in full takes no seat.** It exits 2, and says what it did not understand ("Code that cannot read the topology in full" below)
+- **A take for the seat's loop,** `--loop`, also records the session that runs the loop ("The session that runs a seat's loop" below). A take without it records nothing, so a session the person opens in the clone to look at something takes up the seat and messages nobody as it
 
 **Releasing a seat.** A seat stays taken until it is released: the tolerant mode is the only one built, so no seat is freed for its clone's silence. `pkit pm release-seat` releases the seat this clone holds, and the clone then forgets it. `pkit pm release-seat <name> --force --reason "<why>"` releases a seat whoever holds it, and the seat's state issue logs the reason.
 
@@ -907,7 +911,7 @@ The check compares a change with a base, so it is no member of `pkit validate`, 
 - **What a release frees:** every claim that the seat's clone made as that seat stops counting, with no write to those issues. A dead clone's Tasks in Backlog and In Progress are then free for another clone to take. A clone that takes the seat again, the same clone included, revives none of those claims
 - **What a release leaves in Review:** a Task in Review waits on its reviewers and a person, so no worker takes it up ([project-management:DEC-059-topology-of-seats] point 9). `seats` names each such Task with its pull request, and the person lands it or hands it over to a worker
 
-**Listing the seats.** `pkit pm seats` lists each seat, read from the default branch, with its number, its role, its agent definition, its scope and its pools. It also shows whether the seat is the organizer seat or retired, its state issue and its holder, and marks the seat this clone holds. It then names each open state issue of a seat that no seat names, such as one a change closed unmerged left, for a person to close on GitHub. Where the topology declares pools, it shows each pool's open milestones too ("Pools of workers" below).
+**Listing the seats.** `pkit pm seats` lists each seat, read from the default branch, with its number, its role, its agent definition, its scope and its pools, and for each worker that is not retired the seat that directs it, or `directed by no seat`. It also shows whether the seat is the organizer seat or retired, its state issue and its holder, with the session its holder recorded as the one that runs its loop, or `no session recorded`, and marks the seat this clone holds. It then names each open state issue of a seat that no seat names, such as one a change closed unmerged left, for a person to close on GitHub. Where the topology declares pools, it shows each pool's open milestones too ("Pools of workers" below).
 
 **The Tasks in Review a released seat left.** Last, `seats` names each Task in Review whose claim stopped counting because its seat was released, by its clone or by force. It lists them under the seat and the clone that made the claim, each with the open pull request from the Task's branch, `<type>/<N>-<slug>`:
 
@@ -922,6 +926,32 @@ Tasks in Review that a released seat left, each for a person to land or to hand 
 - **What it reads:** the comments of each Task in Review, once some seat's state issue logs a release, and the open pull requests in one listing, once a Task is found. It writes nothing to them
 - **Exit 3** where a Task's comments or the open pull requests could not be read, as where a seat's state issue or the open issues could not be. The listing says which
 
+**The session that runs a seat's loop.** `pkit pm take-seat --loop --session-name <name>` records on the seat's state issue the session that runs its loop, once the clone holds the seat ([project-management:DEC-081-delegation-between-seats] point 4, [project-management:DEC-084-seat-session-address] point 1). `PKIT_SESSION_NAME` in the session's environment stands in for `--session-name`. The record holds:
+
+- **the session's name:** the one the harness puts on its messages, which its agent reads from the first line of the listing of sessions, or which whoever starts the session gives it. Every reader of the tracker sees it, so give a name fit to post, such as the seat's
+- **its machine,** by the name a claim's place gives it, and no folder
+- **its messaging address and its process,** as the backbone's [`harness session`](../../cli/README.md#harness-session---reply-address---json) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle --> gives them for the harness session whose shell runs the command. The capability stores the process's name whole and reads no process itself. A session whose address the backbone does not give records its name and machine only. Then no message to or from it counts as a directive, and the command says so
+
+**When a loop records itself** ([project-management:DEC-084-seat-session-address] point 3). At each take for the loop, and at each round of the loop, the same rule applies:
+
+- **without asking,** where the seat records no session, or the backbone reads the recorded process as ended, or answers that it is this session's own process ([`recorded-process`](../../cli/README.md#recorded-process-commands) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->)
+- **only on the person's word,** given in this session, otherwise: at a terminal, or with `--yes`. The record is then another live session's, or one no one can tell of, and which of two live loops keeps the seat is the person's to settle. An agent passes `--yes` only on the person's word in its own session, never on a message's or a Task's
+- **without that word,** the loop runs unrecorded, and is told so. It takes its work from the tracker, counts no message as a directive and sends none, and asks again at its next round
+- **a record that already holds the session** posts nothing, so the seat's log grows by one comment only when its session changes. Only the holding clone's record counts, and the seat's release clears it
+
+**Checking a message.** `pkit pm check-message` says whether a message this session received is a directive, information, or cannot be checked, with why ([project-management:DEC-084-seat-session-address] points 2 and 4). The agent gives it what the message carries, as JSON on standard input:
+
+```
+{"reply_address": "uds:/tmp/cc-socks/41.sock", "sender_name": "planner", "seat": "worker-1"}
+```
+
+The command reads the rest itself, and reads no listing of sessions. It reads the seat this clone took, and the seat the message must come from: a worker's directing seat, or, for a directing seat, the worker whose record holds the message's sender name. It reads both records, this session's address and the message's reply address in that address's form, and whether the sender's recorded process runs here, from the backbone. It prints one line, `[directive]`, `[information]` or `[cannot-check]`, and why, and exits 0.
+
+- **A directive,** or a worker's report, only where all hold: the message names this seat; the sender's record names this machine, and its recorded process runs; the reply address and the sender name are the recorded ones; and this session is its own seat's recorded session
+- **Information** where the message itself fails one of those, such as a reply address or a sender name that is not the recorded one, or another seat named
+- **Cannot be checked** where anything the check needs cannot be read: no directing seat, a free or unrecorded sender, another machine, a process no one can tell of or that does not run, no reply address, a session that is not its seat's recorded one, or no messaging. No message is then a directive, and the tracker carries the work
+- **A guard, not a boundary.** It catches the mistakes of sessions that follow the procedure, such as a second session in a clone that shares the seat's name, and stops no one who means to pass as another
+
 **The commit read.** Each command that reads the topology names the commit of the default branch that the command read. A clone that has not fetched the default branch thus shows which commit the clone last fetched.
 
 - `take-seat`, `release-seat` and `seats` name the commit in their output
@@ -933,7 +963,7 @@ Tasks in Review that a released seat left, each for a person to land or to hand 
 
 **Code that cannot read the topology in full.** The parse marks a topology with a key this code does not know, at any depth ([project-management:DEC-061-pools-of-workers] point 9). It marks too a value it cannot read, such as an unknown role, release mode or schema version, or a list written as a string. On the mark, `next-task`, `start-work`, `take-seat` and `release-seat --force` refuse with exit 2, and say what was not understood. `seats` warns and lists the rest, and work in flight goes on, such as `review-work` and `done-work`.
 
-**The order of work.** The guard protects only the commands run from a checkout that holds it. So a project adds pools, or any later key, to its topology only once every clone that may take a seat runs this code. No check enforces this order yet: it is the operator's discipline.
+**The order of work.** The guard protects only the commands run from a checkout that holds it. So a project adds pools, a worker's `directed_by`, or any later key, to its topology only once every clone that may take a seat runs this code. No check enforces this order yet: it is the operator's discipline.
 
 #### Pools of workers — the `Pool:` line and `set-pool` (per [project-management:DEC-061-pools-of-workers])
 
@@ -958,7 +988,7 @@ A ready Task is one of two kinds:
 - **An open Task in Backlog with no owner,** whose `## Dependencies` section names no open issue
 - **A Task In Progress whose claim no longer counts,** in a project with a topology, since the seat that claimed it was released. No claim lapses yet
 
-**This clone's own Tasks.** A Task in Backlog that this clone's instance owns is this clone's own work, outside the pool, as a lead owns what it files. Such a Task comes first where its `## Dependencies` section names no open issue and it falls in the seat's scope.
+**This clone's own Tasks.** A Task in Backlog that this clone's instance owns is this clone's own work, outside the pool, as a lead owns what it files for itself to build. Such a Task comes first where its `## Dependencies` section names no open issue and it falls in the seat's scope.
 
 **The pools.** Where the topology declares pools of workers, `next-task` reads the open milestones once and maps each `Pool:` line to its pool. It keeps only a Task whose native milestone is an open milestone of a pool the seat serves, this clone's own Tasks among them. The seat's scope then narrows what its pools hold, and a seat that names no pool takes nothing. Where no pool is declared, it reads no milestone ([project-management:DEC-061-pools-of-workers] points 5 and 8).
 
@@ -979,6 +1009,12 @@ What else holds a Task back:
 
 **Two clones at once never both start one Task.** Where `start-work` fails and the Task is now another instance's, the first claim held. This clone then takes the next ready Task. Any other failure of `start-work` stops the run, with its exit code.
 
+**A Task a directive names.** `next-task --task <N>` takes the Task a directive from the worker's directing seat names ([project-management:DEC-081-delegation-between-seats] point 6). It takes N only where N is among the Tasks this run would offer the clone: ready, in its seat's scope, in its pools where the topology declares them, and neither assigned to another account nor held by another instance. It starts N claimed, through the same `start-work`, so the clash guard keeps a second agent off it whichever seat named it.
+
+- **Otherwise it starts nothing,** and exits 6 with why, such as `it is in no open Milestone of the pools this seat serves`. A directive widens nothing: scheduling the Task, or putting it into a pool, stays the person's act
+- **A lost claim** also exits 6, and takes no other Task. The worker reports the loss to its directing seat, and runs `next-task` again for its next ready Task
+- **What a person directs** stays as it was: a person who directs a seat to a Task outside its pools does so with `start-work`, in the worker's own session, which warns of it
+
 **Who takes.** Outside a topology, a clone takes with no scope, and a clone with no instance id reads no owner. In a project with a topology, a clone that holds no seat takes nothing, and nor does a planner's seat, which builds none of the work. The seat's scope is the one the topology on the default branch gives the seat. A clone whose seat cannot be confirmed on its state issue takes nothing either.
 
 `--dry-run` says which Task it would start, and runs `start-work --dry-run` on it. The command asks before it starts a Task, unless `--yes` is given. A listing that reaches `--limit`, 1000 open issues by default, refuses, since a dependency it did not return could be open.
@@ -990,6 +1026,7 @@ What else holds a Task back:
 | 2 | A clone that holds no seat, a planner's seat or a seat that cannot be confirmed, a listing that reached `--limit`, or code that cannot read the topology in full |
 | 3 | The open issues could not be read, or where pools are declared the open milestones, or where the board carries the state its Status, or a ready Task's owner could not be read and no other Task was free |
 | 5 | No Task is ready for this clone, so nothing was started. Where pools are declared, the line says why in terms of the seat's pools |
+| 6 | The Task `--task` names is not among those this clone may take, or another instance claimed it first, so nothing was started. The line says why |
 | other | `start-work`'s own exit code, where it failed for a cause other than a lost claim |
 
 `scripts/_lib/task_pool.py` reckons which Tasks are ready, once for every command that needs it ([project-management:DEC-025-parallelization-primitive]).
@@ -1005,7 +1042,7 @@ At the start of each session, the project-manager agent lists the seats with `se
 - **A comment that reports the person's decision** names the seat or the session the person gave it in. The comment verbs name only the seat that posts, and the person may have given the decision in another session ("Freeform comments" below)
 - **A lead's loop,** with helpers of its own, is not in the sub-procedure yet
 
-Where the Tasks of new work would share a choice that nothing settles yet, batch planning plans in two stages ([project-management:DEC-060-foundation-before-slices]). The first plan files the EPIC, with the intent and an outline of the slices, and only the Feature of the work's foundation: a Task for the records of the shared choices, then a walking skeleton built on them. The slices are planned in a second plan, once the person closes that Feature. The agent's storyboard walks one round of each role's loop, and a worker's later round that meets each of these situations.
+Where the Tasks of new work would share a choice that nothing settles yet, batch planning plans in two stages ([project-management:DEC-060-foundation-before-slices]). The first plan files the EPIC, with the intent and an outline of the slices, and only the Feature of the work's foundation: a Task for the records of the shared choices, then a walking skeleton built on them. The slices are planned in a second plan, once the person closes that Feature. Where software-engineering is installed, and the conventions corpus it reads offers a location the project owns, the skeleton's change also writes the conventions it settles into that corpus. The person accepts the entries with that change, as an act of their own beside authorising its merge, and the change merges only once they have, so its pull request waits in Review until then ([project-management:DEC-060-foundation-before-slices] point 2). A Task in Review keeps its claim, so the Task stays the worker's while it waits ([project-management:DEC-059-topology-of-seats] point 9). The agent's storyboard walks one round of each role's loop, and a worker's later round that meets each of these situations.
 
 #### Closing, reopening and editing an issue — `close-issue` / `reopen-issue` / `edit-issue`
 
@@ -1417,12 +1454,24 @@ For the local-agent path, run `pkit project-management review-pr <N>` after `rev
 `review-pr` skips a required reviewer whose latest verdict is **fresh** (see "When a verdict stays fresh" below). It decides this the same way `done-work`'s gate reads verdicts, so a skipped reviewer is one the gate counts as it stands: a fresh `APPROVED` satisfies it, and a fresh `CHANGES_REQUESTED` blocks it until you push a change. For each skipped reviewer it prints `[<name>] fresh verdict <APPROVED|CHANGES_REQUESTED> — not re-run`. After a push, the next run invokes exactly the reviewers whose verdicts the push made stale, and says why for each: `[<name>] stale verdict <APPROVED|CHANGES_REQUESTED> (<reason>) — re-run`. Pass `--force` to re-run fresh reviewers too — to have a reviewer re-review a PR it rejected without a further push, or after changing a reviewer agent; `done-work`'s refusal names `review-pr <N> --force` when a fresh `CHANGES_REQUESTED` is what blocks. If the PR's verdicts cannot be read, `review-pr` runs every required reviewer and says so.
 
 
-**How a reviewer runs** ([ADR-066](../../../tech-docs/architecture/decisions/ADR-066-unattended-agent-runner.md) point 10). `review-pr` calls no harness. For each reviewer it asks the backbone's run command, `pkit agents run`, through `scripts/_lib/agent_runs.py`. The backbone starts the runner the project's adapter registers, and the runner starts the harness: for Claude Code, `claude -p --agent <name>`, with `--effort` where one is set ([the Claude Code adapter's README, "The agent runner"](../../adapters/claude-code/README.md#the-agent-runner-run-agentpy)). A reviewer runs as it ran before: in your checkout, under your settings and the project's, in the mode they or the harness choose. It starts in the project's root, whichever folder of the project you run `review-pr` in (#2255). What changes around it:
+**How a reviewer runs** ([ADR-066](../../../tech-docs/architecture/decisions/ADR-066-unattended-agent-runner.md) point 10). `review-pr` calls no harness. For each reviewer it asks the backbone's run command, `pkit agents run`, through `scripts/_lib/agent_runs.py`. The backbone starts the runner the project's adapter registers, and the runner starts the harness: for Claude Code, `claude -p --agent <name>`, with `--effort` where one is set ([the Claude Code adapter's README, "The agent runner"](../../adapters/claude-code/README.md#the-agent-runner-run-agentpy)). A reviewer runs as it ran before: in your checkout, under your settings and the project's, in the mode they or the harness choose. It starts in the project's root, whichever folder of the project you run `review-pr` in (#2255). In a seat's clone, it works in a clone of its own instead ("Where reviewers work in a seat's clone" below). What changes around it:
 
 - **No runner, no review.** Where no registered adapter registers a runner, no reviewer runs. Each reviewer's line says why (`[<name>] invocation refused: …`), and `review-pr` exits 3, as it did when `claude` was not on `PATH`.
 - **Another harness.** A project with another harness answers through its own adapter's runner, not by editing `review-pr`.
 - **A head from elsewhere.** `review-pr` runs the change check from git objects, and each reviewer's brief tells it to start nothing of the head and check it out nowhere, unless a person named the head ("Which heads may start programs" above). That is an instruction to an agent, not a boundary.
 - **The backbone.** The run command is new in the backbone, so project-management needs a backbone that has it. With an older one, each reviewer's line says the backbone is older than project-management needs, and names the upgrade.
+
+**Where reviewers work in a seat's clone** ([ADR-102](../../../tech-docs/architecture/decisions/ADR-102-reviews-in-own-clone.md)). A seat's working tree stays on the default branch while the seat works (DEC-059), so in a seat's clone `review-pr` runs no reviewer in it:
+
+- **A seat's clone** is one whose runtime folder names the seat it took, as `take-seat` writes it. A linked worktree of one is none, until a record decides how it reads its clone's identity (DEC-059 point 6). Elsewhere, reviewers run in your checkout, as above.
+- **A clone of its own for each reviewer.** The backbone's run command makes it from the code host, never from your repository, in a folder of the backbone's only your account writes, and removes it once the reviewer's run ends (`pkit agents run`'s reviewer's clone form, [the CLI reference, "Agent runs"](../../cli/README.md#agent-runs) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->). It shares no object with your repository, holds no hook, and has one remote, named as the remote the default branch resolves through, that cannot push. So no reviewer works where another does, and your working tree stays where you left it.
+- **What it holds.** The default branch's head as the code host holds it when the review starts, checked out with no branch. It fetches the change's base and the change's head, through the code host's reference for the pull request, `refs/pull/<N>/head`, which serves a fork's head too. A head that does not resolve to the head the review stamps in each verdict's marker refuses the reviewer, so no other commit is reviewed.
+- **The brief** tells the reviewer that its working tree holds the default branch's head, not the change, and to read the change by its diff and by its files at the head's commit, as `git show <head>:<path>` reads one. It names the base through the clone's remote. The contract lives in the brief, so no reviewer's definition changes.
+- **Its settings.** Your local settings are carried into the clone, and the adapter's runner gives the run the allow, ask and deny rules of your clone's project settings ([the Claude Code adapter's README, "The unconfined form"](../../adapters/claude-code/README.md#the-unconfined-form) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->). The reviewer's definition is the one the clone's commit deploys, so a reviewer the project keeps only in an uncommitted copy is refused.
+- **The line.** `review-pr` prints `working folder: a clone of its own for each reviewer, at <default>'s head <sha>` before the reviewers start.
+- **Where no clone can be had,** such as where the code host does not give the base repository's address or the default branch's head, or the PR's head cannot be read, no reviewer runs. Each reviewer's line says why, and `review-pr` exits 2.
+- **On Linux,** inside the sandbox an agent's review in a seat's clone is refused, as its build is, until [project-kit#3427](https://github.com/aleskalfas/project-kit/issues/3427) places the run's folders there: the backbone cannot write its folder for the clone. Each reviewer's line names the way out, `pkit pm review-pr <N>` run at your own terminal, outside the sandbox.
+- **The cost.** A fetch from the code host and one checkout's files for each reviewer, for as long as it runs. A reviewer that runs the change's tests prepares what they need in its clone, and its working files go with the clone.
 
 **The reviewers run at the same time** (#1594). `review-pr` starts every required reviewer whose verdict is not fresh at once. A run waits for the slowest reviewer, not for all of them in a row:
 

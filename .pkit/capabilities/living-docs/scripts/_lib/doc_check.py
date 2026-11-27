@@ -5,7 +5,9 @@
 request may owe (project-management DEC-053). This capability contributes the
 two kinds a documentation capability owes it (DEC-053 point 4), read from the
 backbone's whole-repository friction check, `pkit friction check --all --json`,
-which judges HEAD against its history (COR-050):
+which judges HEAD against its history (COR-050). The check is asked to judge the
+pages alone (`Pages`): the obligations read no other artefact's judgement, and
+its measures stay the whole repository's.
 
 - **`page-stale`** — one per page of the spaces the check reports `stale`. Its
   `document` is the page, whose answer in the diff — updated, unchanged with
@@ -57,7 +59,9 @@ module's.
 
 from __future__ import annotations
 
+import contextlib
 import json
+import os
 import subprocess
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
@@ -115,6 +119,9 @@ FINDING_KINDS = frozenset(
 #: settled state for whether HEAD names a commit (`head`).
 CHECK_ARGV = ("pkit", "friction", "check", "--all", "--json")
 BASE_ARGV = ("pkit", "repository", "base", "--json")
+
+#: What has the check judge only the artefacts listed on its standard input: the pages.
+SELECTION_ARGV = ("--artefacts-from", "-")
 
 #: The version of each reading this capability understands. A check's document
 #: without `schema_version` comes from a backbone that predates the key: version 1.
@@ -180,11 +187,72 @@ def commit_named(document: Mapping[str, Any]) -> bool:
     )
 
 
-def read_friction(root: str, run: Runner = backbone.run) -> Mapping[str, Any]:
-    """The whole-repository check's machine-readable document, through `pkit`.
-    Raises NoAnswer when it gives none, or one of a version this reading does not
-    understand."""
-    return friction_of(_document(CHECK_ARGV, root, run))
+class Pages:
+    """The pages, handed to a check started before they are known: the check reads them
+    from its standard input (`SELECTION_ARGV`), as late as just before it judges any
+    artefact, so telling the pages adds little to its time or none.
+
+    `give` writes them, one a line, and ends the list: given none, the check judges
+    none. `close` lets go of both ends, so a `give` still writing to a check that has
+    ended stops rather than waits on a reader that is gone."""
+
+    def __init__(self) -> None:
+        read, write = os.pipe()
+        self.reader = os.fdopen(read, "r", encoding="utf-8")
+        self._writer = os.fdopen(write, "w", encoding="utf-8")
+
+    def give(self, pages: Iterable[str]) -> None:
+        try:
+            self._writer.writelines(f"{page}\n" for page in pages)
+        except (BrokenPipeError, ValueError):
+            pass  # the check has ended and been let go of: it reads no more
+        finally:
+            _quietly_closed(self._writer)
+
+    def close(self) -> None:
+        _quietly_closed(self.reader)
+        _quietly_closed(self._writer)
+
+
+def _quietly_closed(end: Any) -> None:
+    """Close one end of the pipe; a write the close flushes that finds no reader is owed
+    nothing."""
+    with contextlib.suppress(OSError):
+        end.close()
+
+
+def read_friction(
+    root: str, run: Runner = backbone.run, *, pages: Pages | None = None
+) -> Mapping[str, Any]:
+    """The whole-repository check's machine-readable document, through `pkit`: with
+    `pages`, judging the pages alone, each as the whole check judges it, the measures
+    still the whole repository's. The obligations read no other artefact's judgement,
+    so the check does not pay for every one. Raises NoAnswer when it gives none, or one
+    of a version this reading does not understand."""
+    if pages is None:
+        return friction_of(_document(CHECK_ARGV, root, run))
+    called = (*CHECK_ARGV, *SELECTION_ARGV)
+    return friction_of(_document(CHECK_ARGV, root, run, called, stdin=pages.reader))
+
+
+def judged_as_handed(report: Mapping[str, Any], pages: Iterable[str]) -> None:
+    """Raise NoAnswer unless the check judged the pages it was handed, as its `selection`
+    names them: a list cut short on its way reads like a whole one, and a page the check
+    was never handed would owe nothing, unread. A dormant check judges nothing, so it
+    names none."""
+    try:
+        if keys.flag(report, "dormant", ""):
+            return
+        selection = keys.mapping_or_null(report, "selection", "")
+        named = None if selection is None else keys.texts(selection, "named", "selection")
+    except keys.Untold as exc:
+        raise _unreadable(CHECK_ARGV, exc) from exc
+    handed = sorted(set(pages))
+    if named is None or sorted(set(named)) != handed:
+        judged = "every artefact" if named is None else f"{len(set(named))} artefact(s)"
+        raise NoAnswer(
+            f"`{' '.join(CHECK_ARGV)}` judged {judged}, not the {len(handed)} page(s) handed to it"
+        )
 
 
 def friction_of(document: Mapping[str, Any]) -> Mapping[str, Any]:
@@ -193,10 +261,20 @@ def friction_of(document: Mapping[str, Any]) -> Mapping[str, Any]:
     return _versioned(CHECK_ARGV, document, "artefacts", absent=READING_VERSION)
 
 
-def _document(argv: Sequence[str], root: str, run: Runner) -> Mapping[str, Any]:
-    """The document a backbone reading prints. Raises NoAnswer when it gives none."""
+def _document(
+    argv: Sequence[str],
+    root: str,
+    run: Runner,
+    called: Sequence[str] | None = None,
+    **options: Any,
+) -> Mapping[str, Any]:
+    """The document a backbone reading prints: `argv` names the reading, and `called`,
+    where given, is the argument list it runs with, what it is asked of added, with
+    `subprocess.run`'s `options`. Raises NoAnswer when it gives none."""
     try:
-        proc = run(list(argv), cwd=root, capture_output=True, text=True, check=False)
+        proc = run(
+            list(called or argv), cwd=root, capture_output=True, text=True, check=False, **options
+        )
     except OSError as exc:
         raise NoAnswer(f"`pkit` could not be run ({exc})") from exc
     try:

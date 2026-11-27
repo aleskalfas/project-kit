@@ -10,7 +10,8 @@ same change updates the pin, beside the changeset that declares the break.
 Every backbone command that prints a document for a program has its contracts here, or in
 a module this one gathers: `tests/test_backbone_documents_account.py`,
 `tests/test_backbone_documents_pull_request.py`,
-`tests/test_backbone_documents_process.py` and `tests/test_backbone_documents_components.py`.
+`tests/test_backbone_documents_process.py`, `tests/test_backbone_documents_components.py`
+and `tests/test_backbone_documents_session.py`.
 `tests/backbone_documents_baseline.txt` names the commands no contract pins yet, and is
 empty; nothing is ever added to it. Each way a command prints for a program other than
 `--json` is named here, with why no contract pins it (`OTHER_OUTPUT`).
@@ -51,6 +52,7 @@ from tests import test_backbone_documents_account as account_documents
 from tests import test_backbone_documents_components as component_documents
 from tests import test_backbone_documents_process as process_documents
 from tests import test_backbone_documents_pull_request as pull_request_documents
+from tests import test_backbone_documents_session as session_documents
 from tests import test_friction_artefacts as artefacts_tests
 from tests import test_friction_revisit as revisit_tests
 from tests import test_rule_reach as reach
@@ -1748,51 +1750,70 @@ _ACCEPTED_UNANCHORED = {
     "accepted_unanchored[].reason": "str",
 }
 
+#: The keys the whole-repository check's document holds in each of its forms.
+_REPOSITORY_KEYS = {
+    "schema_version": "int",
+    "check": "str",
+    "mode": "str",
+    "dormant": "bool",
+    "failed": "bool",
+    **_HEAD,
+    **_HISTORY,
+    "counts": "object",
+    **{
+        f"counts.{key}": "int"
+        for key in (
+            "places",
+            "artefacts",
+            "carrying",
+            "checked",
+            "excluded",
+            "surface",
+            *sorted(_REPOSITORY_KINDS),
+        )
+    },
+    "states": "object",
+    **{f"states.{state}": "int" for state in sorted(_ARTEFACT_STATES)},
+    "artefacts": "list",
+    "artefacts[]": "object",
+    "findings": "list",
+    "findings[]": "object",
+    "measures": "object",
+    "measures.unanchored": "list",
+    "measures.unanchored[]": "str",
+    **{f"measures.{key}": kind for key, kind in _ACCEPTED_UNANCHORED.items()},
+    "measures.uncovered_surface": "list",
+    "measures.uncovered_surface[]": "str",
+    "answers": "object",
+    "answers.folder": "str",
+    "answers.files": "int",
+}
+
 REPOSITORY_CHECK = Contract(
     name="pkit friction check --all --json",
     version=1,
     forms={
         "answer": Form(
             keys={
-                "schema_version": "int",
-                "check": "str",
-                "mode": "str",
-                "dormant": "bool",
-                "failed": "bool",
-                **_HEAD,
-                **_HISTORY,
-                "counts": "object",
-                **{
-                    f"counts.{key}": "int"
-                    for key in (
-                        "places",
-                        "artefacts",
-                        "carrying",
-                        "checked",
-                        "excluded",
-                        "surface",
-                        *sorted(_REPOSITORY_KINDS),
-                    )
-                },
-                "states": "object",
-                **{f"states.{state}": "int" for state in sorted(_ARTEFACT_STATES)},
-                "artefacts": "list",
-                "artefacts[]": "object",
-                "findings": "list",
-                "findings[]": "object",
-                "measures": "object",
-                "measures.unanchored": "list",
-                "measures.unanchored[]": "str",
-                **{f"measures.{key}": kind for key, kind in _ACCEPTED_UNANCHORED.items()},
-                "measures.uncovered_surface": "list",
-                "measures.uncovered_surface[]": "str",
-                "answers": "object",
-                "answers.folder": "str",
-                "answers.files": "int",
+                **_REPOSITORY_KEYS,
                 "answers.prunable": "list",
                 "answers.prunable[]": "str",
+                "selection": "null",
             }
-        )
+        ),
+        # Under a selection, which answer files a prune would remove is not read
+        # (ADR-079 point 2).
+        "selection": Form(
+            keys={
+                **_REPOSITORY_KEYS,
+                "answers.prunable": "null",
+                "selection": "object",
+                "selection.named": "list",
+                "selection.named[]": "str",
+                "selection.absent": "list",
+                "selection.absent[]": "str",
+            }
+        ),
     },
     shapes=_REPORT_SHAPES,
     refs={"artefacts[]": "report", "findings[]": "finding", **_REPORT_REFS},
@@ -2029,6 +2050,23 @@ def _repository_documents(root: Path) -> list[dict[str, Any]]:
     return [json.loads(fr.render_json(result)) for result in (found, every, dormant)]
 
 
+def _selection_documents(root: Path) -> list[dict[str, Any]]:
+    """The check's document under a selection, as a run prints it, then with every finding
+    and state and a location HEAD holds no artefact at."""
+    named = fr.run_repository_check(root, judging=["docs/guide.md"])
+    (report,) = named.artefact_reports
+    assert report.revalidation_point is not None
+    every = replace(
+        named,
+        findings=_every_finding(report.revalidation_point),
+        unanchored=("docs/bare.md",),
+        accepted_unanchored=(fr.AcceptedUnanchored("bare", "docs/bare.md", "nothing to stand on"),),
+        uncovered=("src/stray.py",),
+        selection=fr.Selection(("docs/gone.md", "docs/guide.md"), ("docs/gone.md",)),
+    )
+    return [json.loads(fr.render_json(result)) for result in (named, every)]
+
+
 def _debt_documents(root: Path) -> list[dict[str, Any]]:
     listing = frep.run_debt(root)
     report = fr.run_repository_check(root).artefact_reports[0]
@@ -2082,7 +2120,13 @@ def test_the_friction_report_documents_hold_their_contracts(
             "answer": [
                 document_of(invoke("friction", "check", "--all", JSON_OPTION)),
                 *_repository_documents(root),
-            ]
+            ],
+            "selection": [
+                document_of(
+                    invoke("friction", "check", "--all", "--artefact", "docs/guide.md", JSON_OPTION)
+                ),
+                *_selection_documents(root),
+            ],
         },
         enumerations={
             "finding:kind": kinds,
@@ -2273,6 +2317,7 @@ _MODULES: tuple[Mapping[str, tuple[Contract, ...]], ...] = (
     pull_request_documents.CONTRACTS,
     process_documents.CONTRACTS,
     component_documents.CONTRACTS,
+    session_documents.CONTRACTS,
 )
 
 #: The contracts of each backbone command that prints a document for a program, by the

@@ -330,6 +330,7 @@ GROUND = """(marks, ground, alone) => {
     [${marks.layer}], [${marks.ground}], [${marks.sign}], [${marks.span}]:not([${alone}]) {
       visibility: hidden !important}
     [${marks.span}] {background: none !important}
+    [${marks.span}]::before {display: none !important}
     html, body, [${marks.page}] {background: ${ground} !important}`;
   document.head.append(style);
 }"""
@@ -988,6 +989,7 @@ def _strength_draws() -> tuple[str, ...]:
         f"{page} *{{visibility:hidden!important}}{marked}{{visibility:visible!important}}"
         f"{marked} [{MARKS['sign']}]{{visibility:hidden!important}}"
         f"[{MARKS['span']}]{{background:none!important}}"
+        f"[{MARKS['span']}]::before{{display:none!important}}"
         f"html,body,{page}{{background:{STRENGTH[1]}!important}}"
     )
     return tuple(
@@ -1366,6 +1368,9 @@ STRUT = 32
 TEXT_WIDTH = 464
 SIZE = 14
 
+#: The custom property that holds a run's ground on its span, as the renderer's (DEC-039 point 3).
+RUN_GROUND = "--_ground"
+
 #: The rules of the planted file, which a test holds to the renderer's.
 PLANTED_SHEET = "".join(
     (
@@ -1375,11 +1380,14 @@ PLANTED_SHEET = "".join(
         f"{{margin-top:{html_declaration.DECLARATION['pages']['gap']}px}}",
         f"[{MARKS['layer']}]{{position:absolute;left:0;top:0;width:100%;height:100%;"
         "pointer-events:none}",
-        f"[{MARKS['text']}]{{position:absolute}}",
+        f"[{MARKS['text']}]{{position:absolute;top:0;isolation:isolate}}",
         f"[{MARKS['line']}]{{position:absolute;left:0;width:100%;font-size:0;line-height:0;"
         "white-space:pre}",
         f"[{MARKS['strut']}]{{display:inline-block;width:0}}",
-        f"[{MARKS['ground']}]{{position:absolute;display:none;pointer-events:none}}",
+        f"[{MARKS['span']}]{{position:relative}}",
+        f"[{MARKS['span']}]::before{{content:'';position:absolute;inset:0;z-index:-1;"
+        f"border-radius:inherit;background:var({RUN_GROUND})}}",
+        f"[{MARKS['ground']}]{{position:absolute;top:0;display:none;pointer-events:none}}",
         "[data-inset]{display:none}",
     )
 )
@@ -1397,6 +1405,7 @@ PLANTED_FORCED_SHEET = "".join(
         f"[{MARKS['ground']}]{{display:block;background:{FORCED_COLOURS['grounds']['colour']}}}",
         f"[{MARKS['line']}]{{forced-color-adjust:none}}",
         f"[{MARKS['span']}]{{forced-color-adjust:auto;background:none!important}}",
+        f"[{MARKS['span']}]::before{{display:none}}",
         f"[data-inset]{{display:inline;fill:{FORCED_COLOURS['opaque-fills']}}}",
     )
 )
@@ -1976,9 +1985,10 @@ def _planted_page(
 
 
 def _planted_text(laid: _Laid, forced: bool) -> str:
-    """A text of the planted file at its place, each line opened by its strut."""
-    left, top = _share(laid.lines[0][0].left), _share(laid.baseline - ROW)
-    place = f"left:{left};top:{top};width:{_share(TEXT_WIDTH)}"
+    """A text of the planted file at its place, as the renderer lays a frame on its page, each
+    line opened by its strut."""
+    left, top = _percent(laid.lines[0][0].left), _percent(laid.baseline - ROW)
+    place = f"left:{left};margin-top:{top};width:{_percent(TEXT_WIDTH)}"
     drawn = "".join(
         _planted_line(line, index * laid.step, laid.size, forced)
         for index, line in enumerate(laid.lines)
@@ -1997,9 +2007,9 @@ def _planted_grounds(laid: _Laid) -> str:
         if any(span.marked for span in line):
             high = min(high, baseline - SIZE)
         place = (
-            f"left:{_share(line[0].left - MARGIN)};top:{_share(high)};"
-            f"width:{_share(TEXT_WIDTH + 2 * MARGIN)};"
-            f"height:{_share(baseline + DESCENT * laid.size - high)}"
+            f"left:{_percent(line[0].left - MARGIN)};margin-top:{_percent(high)};"
+            f"width:{_percent(TEXT_WIDTH + 2 * MARGIN)};"
+            f"padding-top:{_percent(baseline + DESCENT * laid.size - high)}"
         )
         grounds.append(f'<div {MARKS["ground"]}="{laid.element}" style="{place}"></div>')
     return "".join(grounds)
@@ -2010,6 +2020,13 @@ def _share(length: float) -> str:
     return f"{length / PLANTED_WIDTH * 100:.5f}cqw"
 
 
+def _percent(length: float, whole: float = PLANTED_WIDTH) -> str:
+    """A length in px of the planted file's pages, as a percentage of `whole`, the width of
+    the box it lies in: a page's for a text's frame and a line's ground, as the renderer
+    writes them."""
+    return f"{length / whole * 100:.5f}%"
+
+
 def _planted_line(spans: Sequence[_Planted], top: float, size: float, forced: bool = False) -> str:
     """A line `top` below its text's first line, opened by its strut, its spans at `size`.
     Where `forced`, a span with no paint is kept out of forcing, but for one left to it."""
@@ -2017,7 +2034,7 @@ def _planted_line(spans: Sequence[_Planted], top: float, size: float, forced: bo
     def style(span: _Planted) -> str:
         kept = forced and span.colour == UNPAINTED and not span.forced
         ground = (
-            f";background:#000000;padding:0 {_share(2)}" if span.marked or span.grounded else ""
+            f";{RUN_GROUND}:#000000;padding:0 {_share(2)}" if span.marked or span.grounded else ""
         )
         return (
             f"font-family:{span.family};font-size:{_share(size)};font-weight:{span.weight};"
@@ -2039,7 +2056,7 @@ def _planted_line(spans: Sequence[_Planted], top: float, size: float, forced: bo
         for span in spans
     )
     place = f"top:{_share(top + ROW - STRUT)}"
-    strut = f'<span {MARKS["strut"]} style="height:{_share(STRUT)}"></span>'
+    strut = f'<span {MARKS["strut"]} style="padding-top:{_percent(STRUT, TEXT_WIDTH)}"></span>'
     return f'<div {MARKS["line"]} style="{place}">{strut}{drawn}</div>'
 
 

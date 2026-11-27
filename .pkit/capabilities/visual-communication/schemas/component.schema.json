@@ -180,6 +180,23 @@
         }
       }
     },
+    "smallest-text": {
+      "description": "The smallest text size a top declares for each medium its pages are made for, by the medium's word (DEC-055 points 2 and 3): `screen`, a screen at hand; `room`, a screen read from across a room; `paper`, a printed page. The piece's top alone declares it, and no brand gives it. Each value is a fixed length, a positive number of px, for a medium that shows the top's pages at their own size; or a share of the page, a formula that gives a length and reads only numbers and the size of the page a run lies on, `:page-width` and `:page-height`, for a medium that fills what shows it with the page. It reads `:page-height` only at a page that asks for a height. A top that declares a physical size gives `paper` a share. A value never switches.",
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": false,
+      "properties": {
+        "screen": {
+          "$ref": "#/$defs/smallest-size"
+        },
+        "room": {
+          "$ref": "#/$defs/smallest-size"
+        },
+        "paper": {
+          "$ref": "#/$defs/smallest-size"
+        }
+      }
+    },
     "layouts": {
       "description": "A top component's layouts, by name: one, whose slots name the top's fields; or, where the layouts are the forms its pages take, one or more, each drawing a page with its own parts.",
       "type": "object",
@@ -279,7 +296,7 @@
   },
   "$defs": {
     "field-schema": {
-      "description": "The subset of JSON Schema 2020-12 a component's `fields` takes in format 1 (v3 of the walking skeleton's design): `type`, `properties`, `required`, `items`, `minItems`, `maxItems`, `enum`, `const`, `description`, `x-pkit-prose`, `x-pkit-pages`, `x-pkit-runs`, a local `$ref`, and `additionalProperties` only as `false`, which its absence means too. No property takes a reserved key's name.",
+      "description": "The subset of JSON Schema 2020-12 a component's `fields` takes in format 1 (v3 of the walking skeleton's design): `type`, `properties`, `required`, `items`, `minItems`, `maxItems`, `enum`, `const`, `description`, `x-pkit-prose`, `x-pkit-pages`, `x-pkit-runs`, `x-pkit-paths`, a local `$ref`, and `additionalProperties` only as `false`, which its absence means too. No property takes a reserved key's name.",
       "type": "object",
       "additionalProperties": false,
       "properties": {
@@ -406,6 +423,10 @@
             ]
           }
         },
+        "x-pkit-paths": {
+          "description": "The field holds a path, or a list of paths, each naming one file of the repository from its root, which the check finds (visual-communication DEC-056 points 1 and 2). Only one of the component's own fields, or a slot of a layout that draws a page, takes it, and only where its `type` is `string` alone, or `array` alone with `items` of `type: string` alone, neither holding `enum`, `const` or `$ref`, and it takes no runs.",
+          "const": true
+        },
         "$ref": {
           "type": "string",
           "pattern": "^#/"
@@ -416,9 +437,21 @@
       }
     },
     "formula": {
-      "description": "A formula: text that starts with `=` and computes one number from numbers, `+ - * /`, parentheses, `min max round`, roles (`@<token path>`), the engine's names (`:width :height :index :count`, and in a `cross-size` alone `:place :places`), the component's values and the frames it may reach (DEC-005 points 1 and 3). The engine checks what it reads and its dimensions.",
+      "description": "A formula: text that starts with `=` and computes one number from numbers, `+ - * /`, parentheses, `min max round`, roles (`@<token path>`), the engine's names (`:width :height :index :count`, in a `cross-size` alone `:place :places`, and in a top's `smallest-text` alone `:page-width :page-height`, which reads no other), the component's values and the frames it may reach (DEC-005 points 1 and 3). The engine checks what it reads and its dimensions.",
       "type": "string",
       "pattern": "^="
+    },
+    "smallest-size": {
+      "description": "A medium's smallest text size (DEC-055 point 3): a positive number of px, or a formula of the page's size, `:page-width` and `:page-height`, which no other formula reads.",
+      "anyOf": [
+        {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        {
+          "$ref": "#/$defs/formula"
+        }
+      ]
     },
     "chooser": {
       "description": "What a switch chooses by: an option of words, a field of runs where a text's style, fill, sign or ground switches, or a size axis a piece can name by its marked name, `:<axis>`, which the switch names the default mode of (DEC-021 point 3); or, in a drawing of a layout, `:as`, whose values are `page`, the default, and `part` (DEC-034 point 7).",
@@ -1134,7 +1167,7 @@
       }
     },
     "layout": {
-      "description": "A layout of a top component. In format 1 its slots name the top's fields. In a layout that is a page's form, each slot is the schema of a field the page fills, which `x-pkit-runs` may mark as a field of runs, `required` names the slots a page must fill, `preferred` the height of its page by a formula on its parts, which it says where the top asks for no height and never a width (DEC-022 point 3), `lists` declares the fields of each list among its slots that its parts repeat over, as a pattern does, and `parts` draw the page.",
+      "description": "A layout of a top component. In format 1 its slots name the top's fields. In a layout that is a page's form, each slot is the schema of a field the page fills, which `x-pkit-runs` may mark as a field of runs, and `x-pkit-paths` as a field of paths, `required` names the slots a page must fill, `preferred` the height of its page by a formula on its parts, which it says where the top asks for no height and never a width (DEC-022 point 3), `lists` declares the fields of each list among its slots that its parts repeat over, as a pattern does, and `parts` draw the page.",
       "type": "object",
       "required": [
         "slots"
@@ -1813,6 +1846,10 @@
         },
         "column": {
           "$ref": "#/$defs/operator"
+        },
+        "trunk": {
+          "description": "Over a list of ties, the end field at which the ties that meet one side of an item, and draw alike, share one meeting point and branch off one trunk (DEC-043 point 1): one of the list's two end fields, never a switch.",
+          "$ref": "defs.schema.json#/$defs/name"
         },
         "when": {
           "$ref": "#/$defs/when"

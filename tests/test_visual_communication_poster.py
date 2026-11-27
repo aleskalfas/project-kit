@@ -166,7 +166,9 @@ def test_the_poster_renders_drawn_by_the_brands_drawing(tmp_path: Path) -> None:
     assert shown.returncode == 0, shown.stderr
     assert shown.stdout.splitlines()[1:] == [
         f"previews: 1 file(s) in {PREVIEWS}/",
-        f"findings: 0 kept in {PIECE_FOLDER}/findings.yaml",
+        f"fact: {PIECE_FOLDER}/piece.yaml#media: the piece names no medium it is shown in "
+        "under `media`, so no text's size was measured, in any language or at any size",
+        f"findings: 1 kept in {PIECE_FOLDER}/findings.yaml",
     ]
     assert list(contents(root / PREVIEWS)) == [PREVIEW]
     drawn = (root / PREVIEWS / PREVIEW).read_text(encoding="utf-8")

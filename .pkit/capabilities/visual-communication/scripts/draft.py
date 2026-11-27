@@ -9,7 +9,7 @@
 # ]
 # ///
 """visual-communication capability — draft: the digest of a draft's text, and whether a text
-still matches the digest the brief records (DEC-042 point 7, DEC-029 points 3 and 4).
+still matches the digest the brief records (DEC-070 point 4, DEC-029 points 3 and 4).
 
 It reads the text from the piece, so no one hashes text by hand: a takeaway from the
 brief's part, a lead or a title from the content in the language, at the key path `--at`

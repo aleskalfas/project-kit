@@ -44,6 +44,20 @@ it to, and the command says which commit it read (point 1).
   line names an undeclared pool (DEC-061 point 10). Where the milestones cannot
   be read, it says so and still takes the seat (ADR-072 point 6).
 
+- **A take for the seat's loop** (`--loop`) records the session that runs the
+  loop on the seat's state issue, once the clone holds the seat (DEC-081 point
+  4, DEC-084 points 1 and 3): its name, given by `--session-name` or the
+  `PKIT_SESSION_NAME` variable, its machine, and the messaging address and the
+  process the backbone gives for the harness session whose shell runs the
+  command (`_lib/processes`). It records without asking where the seat records
+  no session, the recorded process has ended, or it is this session's own, as
+  the backbone tells. Otherwise only on the person's word, given in this
+  session: at a terminal, or with `--yes`. Without it the loop runs
+  unrecorded, and is told so. A record that already holds the session posts
+  nothing. A session whose address the backbone does not give records its name
+  and machine only, and no message to or from it counts as a directive. A take
+  without `--loop` records nothing.
+
 - **Under a credential that names no user's account** (DEC-076 point 6), such
   as an App installation's token, the clone takes no seat that builds, a
   worker's or a lead's, since none of its claims on a Task would count. It
@@ -59,17 +73,23 @@ the foreign-repo guard run first. Taking a seat is the agent's own step, with
 no person's authorisation.
 
 Usage:
-  pkit pm take-seat [<name>] [--role planner|worker|lead] [--agent <definition>] [--dry-run]
+  pkit pm take-seat [<name>] [--role planner|worker|lead] [--agent <definition>]
+                    [--loop --session-name <name> [--yes]] [--dry-run]
 
 Exit codes:
-  0  this clone holds the seat, taken now or taken up, or a dry run printed its plan
+  0  this clone holds the seat, taken now or taken up, or a dry run printed its
+     plan; with --loop, its session recorded, already recorded, or left
+     unrecorded without the person's word
   1  refused: membership, no topology, the default branch, no free seat that
      matches, a seat another clone holds or took first, a seat that builds or
      an open gate under a credential that names no user's account (DEC-076
-     point 6)
-  2  usage error: the capability is not found or not bootstrapped, or no agent
-     definition was given / this code cannot read the topology in full
-  3  GitHub failed
+     point 6); with --loop, the seat no longer this clone's, or another of its
+     sessions recorded after this one
+  2  usage error: the capability is not found or not bootstrapped, no agent
+     definition was given, --loop with no session name / this code cannot read
+     the topology in full
+  3  GitHub failed, or the session's record could not be written (the seat is
+     held)
 """
 
 from __future__ import annotations
@@ -79,6 +99,7 @@ import os
 import subprocess
 import sys
 from collections.abc import Callable, Mapping
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -89,8 +110,11 @@ _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib import (
     bootstrap_gate,
+    consent,
     instance_identity,
     pools,
+    processes,
+    seat_sessions,
     session_guard,
     state_issues,
     topology,
@@ -111,6 +135,22 @@ VERB = "take-seat"
 #: session follows, where `--agent` does not.
 AGENT_ENV = "PKIT_AGENT"
 
+#: The variable that names the session a take for the loop records, where
+#: `--session-name` does not: the name the harness puts on its messages.
+SESSION_NAME_ENV = "PKIT_SESSION_NAME"
+
+#: The longest session name recorded, so the seat's record stays one line.
+SESSION_NAME_LIMIT = 100
+
+
+@dataclass(frozen=True)
+class Loop:
+    """A take for the seat's loop: the session's name, and whether the person
+    gave their word, with `--yes`, to record it over another (DEC-084 point 3)."""
+
+    name: str
+    yes: bool = False
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(
@@ -127,6 +167,24 @@ def main() -> int:
         "--agent",
         default=None,
         help=f"The agent definition this session follows (default: ${AGENT_ENV}).",
+    )
+    parser.add_argument(
+        "--loop",
+        action="store_true",
+        help="This session runs the seat's loop: record it on the seat's state issue.",
+    )
+    parser.add_argument(
+        "--session-name",
+        default=None,
+        help=f"With --loop, the name this session's messages carry (default: ${SESSION_NAME_ENV}).",
+    )
+    parser.add_argument(
+        "--yes",
+        action="store_true",
+        help=(
+            "With --loop, the person's word, given in this session, to record it over "
+            "another live session or one no one can tell of (DEC-084 point 3)."
+        ),
     )
     parser.add_argument("--dry-run", action="store_true", help="Print the plan; claim nothing.")
     parser.add_argument(
@@ -148,6 +206,13 @@ def main() -> int:
     if agent is None:
         print(f"error: {problem}", file=sys.stderr)
         return 2
+    loop: Loop | None = None
+    if args.loop:
+        name, problem = session_name(args.session_name, os.environ)
+        if name is None:
+            print(f"error: {problem}", file=sys.stderr)
+            return 2
+        loop = Loop(name, yes=args.yes)
 
     config = load_adopter_config(capability_root)
     invoker = resolve_invoker_identity(config=config)
@@ -168,7 +233,26 @@ def main() -> int:
         gh=state_issues.runner(config),
         dry_run=args.dry_run,
         names_user=invoker.names_user,
+        loop=loop,
     )
+
+
+def session_name(explicit: str | None, environ: Mapping[str, str]) -> tuple[str | None, str | None]:
+    """The name a take for the loop records: ``--session-name``, else the
+    session's ``PKIT_SESSION_NAME``. Or None, and why, where neither names one
+    or the name is not one line of at most ``SESSION_NAME_LIMIT`` characters."""
+    name = (explicit or environ.get(SESSION_NAME_ENV, "")).strip()
+    if not name:
+        return None, (
+            f"say which name this session's messages carry, with --session-name <name> or "
+            f"${SESSION_NAME_ENV}: a take for the loop records it (DEC-081 point 4)."
+        )
+    if len(name) > SESSION_NAME_LIMIT or not name.isprintable():
+        return None, (
+            f"the session name {topology.shown(name[:SESSION_NAME_LIMIT])!r} is not one line "
+            f"of at most {SESSION_NAME_LIMIT} characters."
+        )
+    return name, None
 
 
 def session_agent(
@@ -201,6 +285,8 @@ def take_seat(
     git: topology.Git | None = None,
     versions: Any = None,
     names_user: bool = True,
+    loop: Loop | None = None,
+    processes_run: processes.Runner | None = None,
 ) -> int:
     """Take the seat ``name``, or the first free one of ``role``, for this clone.
 
@@ -210,7 +296,10 @@ def take_seat(
     ``git`` the reads at its commit. ``names_user`` is whether GitHub answered
     that the credential acts as a user's account: where it did not, only a
     planner's seat is taken, behind a closed gate whose members name the
-    clone's own account (DEC-076 point 6). Returns the exit code."""
+    clone's own account (DEC-076 point 6). ``loop``, where given, is a take for
+    the seat's loop, whose session is recorded once the clone holds the seat,
+    and ``processes_run`` runs the backbone's readings of it. Returns the exit
+    code."""
     if not login:
         return _refuse(f"{format_unresolved(login_cause)}, so no seat is taken.")
     key = instance_identity.read_clone_key(capability_root)
@@ -253,7 +342,13 @@ def take_seat(
     if code is not None:
         return code
     if held is not None:
-        return _take_up(held, capability_root, name=name, role=role, agent=agent, dry_run=dry_run)
+        code = _take_up(held, capability_root, name=name, role=role, agent=agent, dry_run=dry_run)
+        if code != 0 or loop is None:
+            return code
+        if dry_run:
+            print("[dry-run] no session is recorded.")
+            return code
+        return record_loop(held.seat, held.session, snap.clone, snap.run, loop, run=processes_run)
 
     if named is not None:
         state = snap.state(named.name)
@@ -279,6 +374,8 @@ def take_seat(
     if dry_run:
         print(f"  seat {seat.number} ({seat.name}, a {seat.role}): free, on #{seat.state_issue}")
         print("\n[dry-run] nothing claimed, and the runtime file is unchanged.")
+        if loop is not None:
+            print("[dry-run] no session is recorded.")
         return 0
     clone = state_issues.Clone(
         login, instance_identity.ensure_clone_key(capability_root), snap.clone.place
@@ -287,7 +384,11 @@ def take_seat(
     if outcome.outcome in (state_issues.CLAIMED, state_issues.HELD):
         instance_identity.write_seat_hint(capability_root, seat.name)
         _say_held(seat, "took", outcome.view)
-        return 0
+        if loop is None:
+            return 0
+        found = outcome.read.fold if outcome.read is not None else None
+        recorded = found.session if found is not None else None
+        return record_loop(seat, recorded, clone, snap.run, loop, run=processes_run)
     if outcome.outcome in (state_issues.LOST, state_issues.HELD_ELSEWHERE):
         holder = outcome.holder
         who = (
@@ -307,6 +408,86 @@ def take_seat(
         file=sys.stderr,
     )
     return 3
+
+
+def record_loop(
+    seat: topology.Seat,
+    record: state_issues.Session | None,
+    clone: state_issues.Clone,
+    state_run: state_issues.StateRun,
+    loop: Loop,
+    *,
+    run: processes.Runner | None = None,
+) -> int:
+    """Record the session that runs the seat's loop, over ``record``, the one the
+    seat's state issue holds, as DEC-084 point 3's one rule says (DEC-081 point
+    4), under the claim of ``clone``, which holds the seat. The session's
+    address and process come from the backbone, which also reads whether the
+    recorded process runs and whether it is this session's. Returns the exit
+    code."""
+    assert seat.state_issue is not None
+    session = processes.session(run=run)
+    own = state_issues.Session(loop.name, topology.machine(), session.address, session.process)
+    if session.address is None:
+        why = session.address_why or session.process_why or session.why or "it is not given"
+        print(
+            f"warn: this session's messaging address is not read ({why}), so the seat's record "
+            "holds its name and machine only, and no message to or from it counts as a "
+            "directive (DEC-084 point 1).",
+            file=sys.stderr,
+        )
+    recorded: processes.Reading | None = None
+    same: str | None = None
+    if record is not None and record.process is not None and record != own:
+        (recorded,) = processes.read([record.process], run=run)
+        if own.process is not None:
+            same = processes.compare(record.process, own.process, run=run)
+    decision = seat_sessions.recording(record, own, recorded=recorded, same=same)
+    if decision.action == seat_sessions.ALREADY:
+        print(f"  session:          {_session_line(own)}, already recorded")
+        return 0
+    if decision.action == seat_sessions.ASK:
+        print(f"{VERB}: {decision.why}.")
+        stop = consent.authorise(
+            f"Record this session, {topology.shown(own.name)}, in its place? [y/N] ",
+            yes=loop.yes,
+            step=f"Recording this session over the one the seat {seat.name} records",
+            verb=VERB,
+        )
+        if stop is not None:
+            print(
+                "[unrecorded] this loop runs unrecorded: it takes its work from the tracker, "
+                "counts no message as a directive and sends none, and applies the rule again "
+                "at its next round (DEC-084 point 3)."
+            )
+            return 0
+    outcome = state_issues.record_session(
+        seat.state_issue, topology.SEAT_KIND, seat.name, clone, own, state_run
+    )
+    if outcome.outcome in (state_issues.RECORDED, state_issues.UNCHANGED):
+        print(f"  session:          {_session_line(own)}, recorded on #{seat.state_issue}")
+        return 0
+    if outcome.outcome == state_issues.NOT_HOLDER:
+        return _refuse(
+            f"the seat {seat.name} is no longer this clone's, so its session is not recorded."
+        )
+    if outcome.outcome == state_issues.LOST:
+        return _refuse(
+            f"another session recorded itself on the seat {seat.name} after this one, and which "
+            "of two live loops keeps the seat is the person's to settle (DEC-081 point 4)."
+        )
+    print(
+        f"[error] the session could not be recorded on #{seat.state_issue}: "
+        f"{outcome.cause or outcome.outcome}. The seat is held; run this again.",
+        file=sys.stderr,
+    )
+    return 3
+
+
+def _session_line(session: state_issues.Session) -> str:
+    shown = topology.shown
+    address = shown(session.address) if session.address else "no messaging address"
+    return f"{shown(session.name)} on {shown(session.machine)}, {address}"
 
 
 def show_pools(tree: topology.Topology, gh: state_issues.Gh) -> None:

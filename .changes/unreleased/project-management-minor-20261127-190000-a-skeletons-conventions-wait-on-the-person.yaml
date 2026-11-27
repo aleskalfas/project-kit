@@ -1,0 +1,18 @@
+component: project-management
+kind: minor
+custom:
+  category: Added
+body: >
+  The pm skill carries a walking skeleton's conventions step (DEC-060 points 2
+  and 5, #2199). Where software-engineering is installed, batch planning plans
+  the skeleton's Task, or the first slice it is folded into, saying that its
+  change also writes the conventions it settles into the conventions corpus,
+  where that corpus offers a location the project owns, for a person to accept
+  with that change before it merges. A Task that changes a convention a
+  foundation set changes its entry too. In the work loop, the worker leaves
+  the entries' acceptance and status to the person, names them in the pull
+  request's body, and goes on to its next Task while the change waits in
+  Review, where its claim does not lapse. It lands such a change only once the
+  person has accepted the entries, since authorising the merge accepts none.
+  No command holds the merge yet. The README's account of a seat's loop says
+  so.

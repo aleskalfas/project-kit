@@ -11,6 +11,7 @@ pkit:
         - .pkit/adapters/claude-code/settings/project/settings.json
         - .pkit/adapters/claude-code/harness-support.yaml
         - .pkit/adapters/claude-code/permission-enforcement.yaml
+        - .pkit/adapters/claude-code/session.yaml
         - .pkit/adapters/claude-code/tool-access.json
         - src/project_kit/visibility.py
         - .pkit/permissions/decide.py
@@ -22,7 +23,7 @@ pkit:
         - .pkit/agents/tool_access.py
         - .pkit/agents/definition_source.py
         - .pkit/cli/install-pkit.sh
-      record: [COR-002, COR-004, COR-005, COR-007, "COR-013#7", "COR-013#8", COR-016, COR-017, COR-020, COR-026, COR-028, COR-047, COR-070, COR-074, ADR-002, ADR-004, ADR-005, ADR-009, ADR-014, ADR-025, ADR-034, ADR-052, ADR-060, ADR-066, ADR-073, ADR-076, ADR-085, ADR-086, ADR-087, "ADR-090#3", "ADR-090#4", ADR-095, ADR-099, "project-management:DEC-029", "project-management:DEC-030", "project-management:DEC-068"]
+      record: [COR-002, COR-004, COR-005, COR-007, "COR-013#7", "COR-013#8", COR-016, COR-017, COR-020, COR-026, COR-028, COR-047, COR-070, COR-074, ADR-002, ADR-004, ADR-005, ADR-009, ADR-014, ADR-025, ADR-034, ADR-052, ADR-060, ADR-066, ADR-073, ADR-076, ADR-085, ADR-086, ADR-087, "ADR-090#3", "ADR-090#4", ADR-095, ADR-099, ADR-102, ADR-103, "project-management:DEC-029", "project-management:DEC-030", "project-management:DEC-068", "project-management:DEC-081", "project-management:DEC-084"]
       artefact:
         - .pkit/lifecycle/component-registry.md#uninstall-origin-aware-removal-cor-031-d4
         - .pkit/capabilities/project-management/README.md#starting-the-fixers--fix-drift
@@ -49,9 +50,12 @@ Translates kit content for the [Claude Code](https://docs.claude.com/en/docs/cla
 ├── _resolve_agent.py                  # resolves one agent: overlay placeholders, model and effort, tool access, storyboard paths, the workspace sentence
 ├── run-agent.py                       # the agent runner: starts one agent in Claude Code for `pkit agents run`
 ├── probe-confined-run.py              # the probe of the runner's confined form; a person runs it, never a test
+├── probe-messaging.py                 # the probe of messaging between sessions; a person runs it, never a test
+├── probe-reviewer-clone.py            # the probe of a reviewer's run in its own clone; a person runs it, never a test
 ├── tool-access.json                   # Claude Code's keys for an agent's tool access, its names' forms, the built-in tools it knows, and the withheld entries it admits
 ├── harness-support.yaml               # how far Claude Code meets each harness requirement the core declares
 ├── permission-enforcement.yaml        # which permission dimensions this harness realizes, and via which layer
+├── session.yaml                       # how a command finds its Claude Code session, the session's process and its messaging address
 ├── permission-hook.py                 # the PreToolUse enforcement hook (registered by `pkit permissions enable`)
 └── session-start-hook.py              # the start hook: the workspace sentence at each session's and subagent's start, and the install script where no pkit is on the PATH
 ```
@@ -171,7 +175,7 @@ The one place `claude` is started for an agent a command starts, which nobody ca
 
 It runs under the system `python3` with the standard library only, as the permission hook does, so it needs nothing to provision. In the confined form it runs the deploy's resolver, which runs on `uv`, as the deploy does.
 
-**Two forms.** A request with `folder` takes the unconfined form (ADR-066 point 10). The review command's runs take it, and so do the drift command's fixers, in a clone the drift command makes. A request with `confined` takes the confined form, which every fixer's run takes where that form is built and the harness holds it. When the drift command starts a fixer, and in which form, is project-management's to say ([its README, "Starting the fixers"](../../capabilities/project-management/README.md#starting-the-fixers--fix-drift)). A request with both, or with any other key the runner does not run, is refused.
+**Two forms.** A request with `folder` takes the unconfined form (ADR-066 point 10). The review command's runs take it, in a seat's clone each in a reviewer's clone of its own, and so do the drift command's fixers, in a clone the drift command makes. A request with `confined` takes the confined form, which every fixer's run takes where that form is built and the harness holds it. When the drift command starts a fixer, and in which form, is project-management's to say ([its README, "Starting the fixers"](../../capabilities/project-management/README.md#starting-the-fixers--fix-drift)). A request with both, or with any other key the runner does not run, is refused.
 
 **The marker** (ADR-066 point 8). The runner refuses every request when `PKIT_AGENT_RUN` is in its own environment, even empty, and starts nothing. It sets `PKIT_AGENT_RUN=1` in the harness's environment for every run, of either form. So every process of a run inherits it, and a run cannot start another agent through the runner.
 
@@ -181,6 +185,10 @@ It runs under the system `python3` with the standard library only, as the permis
 - **For a name some place of the methodology ships,** it asks the agents area's picker, through the deploy's resolver beside it (`--pick`), which definition is the agent, in the project's tree the runner lies in ([ADR-087](../../../tech-docs/architecture/decisions/ADR-087-agent-definition-picker.md) point 3). It passes that definition as the confined form checks it ("The agent's definition" below), with `--agents`, under a name unique to the run, so the harness runs that agent and no other copy of the name. It refuses the run where the confined form refuses the definition, and where the picker cannot tell which definition is the agent, or the name has none.
 - **For a name no place ships,** it refuses the run when the agent is not deployed, and passes the name alone. Deployed means `.claude/agents/<agent>.md` exists in the run's folder or a folder above it, or in the person's own agents folder (`$CLAUDE_CONFIG_DIR/agents`, else `~/.claude/agents`). So an agent the project wrote straight into the harness's folder still runs.
 - **The person's local settings.** Where the request carries `local_settings_from`, the person's checkout, the runner copies that checkout's `.claude/settings.local.json` into the run's folder, as a new file only the person can read, before the harness starts. It copies nothing where the checkout has no such file, where the folder already holds one, which then stays as it is, or where the folder is the checkout. A symbolic link at the folder's `.claude` or at the file refuses the run, so the copy writes nothing outside the folder. The copy is the last step before the harness starts, so a run refused earlier writes nothing there. A request with `confined` that carries the key is refused.
+- **In a reviewer's clone** ([ADR-102](../../../tech-docs/architecture/decisions/ADR-102-reviews-in-own-clone.md) point 3), the request also carries `seat_permissions`: `seat_clone`, the seat's clone, and `settings_folder`, a folder beside the reviewer's clone the run does not work in. Claude Code ignores a project's allow rules in a folder nobody trusted, and no person trusted the reviewer's clone, so the runner passes the seat's rules itself:
+  - **What it reads.** The `allow`, `ask` and `deny` lists of `permissions` in the seat's clone's `.claude/settings.json`, the file the harness keeps from sandboxed writes, and nothing else of that file. It reads the file only as a regular file of at most 1 MiB, through no link at it or at `.claude`. A list the file does not hold, or a file it does not have, gives no rules. A file it cannot read so, that is no JSON object, or whose list is not a list of strings, refuses the run.
+  - **What it passes.** It writes `{"permissions": {"allow": [...], "ask": [...], "deny": [...]}}` as a new file, `settings.json`, in `settings_folder`, only the person can read, and passes it with `--settings`. The file carries no mode, no sandbox setting, no added folder, and no hook or server. A `settings_folder` that is a link, or lies in or around the run's folder, refuses the run. It writes the file after the agent's definition is picked and checked, so a run refused before writes nothing there.
+  - **The hook.** Where a snapshot of a realized model binds the seat's clone, the runner would register the permission hook from the copy naming that snapshot as its bound ([ADR-095](../../../tech-docs/architecture/decisions/ADR-095-hook-out-of-reach.md) point 3). No snapshot binds one while realizing keeps none, so the runner names none and registers no hook of its own. The registration the clone's own settings carry runs as in the seat's clone, and the reviewer is held as it would be there.
 - It starts `claude` in the run's folder, in a session of its own, and writes the brief to its standard input. So no word of the brief is read as a flag.
 - The harness gets the runner's environment, less the backbone's own variables for its run of the runner (`PKIT_COMMAND_DEADLINE`, `PKIT_COMMAND_STRAYS`, `PKIT_RUN_CACHE`), and with the marker set.
 - It starts the `claude` it found on `PATH`, made absolute. So a relative `PATH` entry never runs a `claude` that the run's folder holds.
@@ -194,10 +202,11 @@ It runs under the system `python3` with the standard library only, as the permis
 | `--agents <definition>` | for a name some place ships: the agent's checked definition, under the run's name |
 | `--agent <agent>` | always: the run's name, or the agent's name for one no place ships |
 | `--effort <level>` | where the run sets an effort |
+| `--settings <file>` | in a reviewer's clone only: the file of the seat's allow, ask and deny rules the runner wrote |
 
-None of them approves a call by itself. `--agent` makes the agent's definition the session's agent. A definition passed with `--agents` carries only the fields the confined form passes, so none can bring a permission mode, hooks or MCP servers. A definition loaded by name, for a name no place ships, is checked by nothing, so a field it carries, such as a permission mode, hooks or MCP servers, applies as in any session started with it. Among the flags it never passes are `--dangerously-skip-permissions`, `--allow-dangerously-skip-permissions`, `--permission-mode`, `--permission-prompt-tool`, `--allowedTools`, `--add-dir`, `--settings` and `--mcp-config`.
+None of them approves a call by itself. `--agent` makes the agent's definition the session's agent. A definition passed with `--agents` carries only the fields the confined form passes, so none can bring a permission mode, hooks or MCP servers. A definition loaded by name, for a name no place ships, is checked by nothing, so a field it carries, such as a permission mode, hooks or MCP servers, applies as in any session started with it. Among the flags it never passes are `--dangerously-skip-permissions`, `--allow-dangerously-skip-permissions`, `--permission-mode`, `--permission-prompt-tool`, `--allowedTools`, `--add-dir` and `--mcp-config`, and `--settings` outside a reviewer's clone. In a reviewer's clone, `--settings` passes only the file the runner wrote, of the seat's rules alone.
 
-**What the unconfined form leaves open.** The run takes the person's and the project's settings in its folder, as a session started there would. It starts in the mode those settings or the harness choose, and the runner passes no settings of its own. So a run may write in the folder, or wherever those settings let it, and may start in a mode that approves calls no rule allows (ADR-066 point 11). The hook judges a run's calls as it judges a person's session. `--agent` does not change the `agent` key the hook reads, so which subject it judges there is not yet known ([the permissions README, "Default-agent subject resolution"](../../permissions/README.md#default-agent-subject-resolution)).
+**What the unconfined form leaves open.** The run takes the person's and the project's settings in its folder, as a session started there would. It starts in the mode those settings or the harness choose, and the runner passes no settings of its own, save, in a reviewer's clone, the seat's allow, ask and deny rules. So a run may write in the folder, or wherever those settings let it, and may start in a mode that approves calls no rule allows (ADR-066 point 11). The hook judges a run's calls as it judges a person's session. `--agent` does not change the `agent` key the hook reads, so which subject it judges there is not yet known ([the permissions README, "Default-agent subject resolution"](../../permissions/README.md#default-agent-subject-resolution)).
 
 #### The confined form
 
@@ -407,6 +416,30 @@ Two facts are the runner's own logic, with nothing of the harness beneath them, 
 - The hook takes both its model's root and its anchor from `CLAUDE_PROJECT_DIR`. A working run needs the two apart: the model from outside the clone, the anchor the clone.
 - The hook judges `agent:<name>`, by the name the run passes to `--agent`.
 
+#### The probe of a reviewer's clone (`probe-reviewer-clone.py`)
+
+[ADR-102](../../../tech-docs/architecture/decisions/ADR-102-reviews-in-own-clone.md) point 6 has a probe confirm, on each platform the adapter supports, what a reviewer's run in its own clone rests on, before reviews in a seat's clone rest on it. This probe takes the record's first and fourth facts. The second and third rest on a snapshot that binds the seat's clone, which nothing keeps yet ([ADR-095](../../../tech-docs/architecture/decisions/ADR-095-hook-out-of-reach.md) point 3), and they and the run on Linux are [#3528](https://github.com/aleskalfas/project-kit/issues/3528)'s <!-- unanchored: names the Task that extends the probe, a pointer and no statement of the system -->.
+
+A person runs it, never a test. It starts one real run, which signs in and spends, so it refuses to start unless given `--start-claude`, and it refuses inside an agent's run. It needs no other step of the person's:
+
+```
+python3 .pkit/adapters/claude-code/probe-reviewer-clone.py --start-claude
+```
+
+- **The code host.** Through `gh`, in the checkout the probe lies in, it reads the base repository, its default branch, and the newest pull request, or the one `--pr` names.
+- **The reviewer's clone.** It makes one in a new folder under `~/.cache` (or `--root`), outside every working tree and the per-user temp folder, as the backbone's run command makes one (ADR-102 point 2). The clone is made from the code host, sharing no object with the checkout and borrowing none. It holds no hook, and its one remote has a push address no push can use. The pull request's head is fetched through the code host's reference for it and checked against the head read, and the clone is checked out at the default branch's head with no branch, with its agent workspace. The folder for the run's rules lies beside it.
+- **This checkout's runner.** It copies the runner and the deploy's resolver of the checkout it lies in into the clone, so it probes that runner whether or not the default branch holds it yet, and adds a small probe agent.
+- **One run.** It starts one run in the clone through the runner's own functions, as a run in a reviewer's clone, with a fixed brief. The checkout the probe lies in stands as the seat's clone: the runner passes its allow, ask and deny rules and carries its local settings in. To the runner's command line the probe adds only `--output-format stream-json --verbose --include-hook-events`, which make the harness's stream readable and change no permission.
+
+It prints, for each fact, `pass` or `FAIL` with what it saw beneath, and exits 0 only when all pass:
+
+- the run starts in the reviewer's clone, and finishes
+- the runner passes the seat's allow, ask and deny rules, and nothing else
+- the first fact: the code host's command line (`gh pr view`), git (`git rev-parse HEAD`, and `git log` of the change's head, which the clone fetched) and a methodology's check (`pkit rule-sets altered`) each run with no prompt, and give what only that command could
+- the fourth fact: a file tool's write into the seat's checkout is refused, and no file lands. Whether a person would have been asked shows in the harness's words for the refusal, and in the answers the `PreToolUse` hooks gave, which the probe prints beside the facts.
+
+A write that lands is removed, by the path the probe named. The scratch folder is removed unless `--keep`, which keeps the run's answer and its stream in `answer.json`. The harness keeps some state in the person's home for the folder it ran in, as it does for each reviewer's clone (ADR-102's Rationale, "What it costs"). In what it prints, the probe gives the home folder as `~` and replaces nothing else, so read the results before posting them anywhere. The results are recorded on [#3467](https://github.com/aleskalfas/project-kit/issues/3467) <!-- unanchored: names the Task that records the results, a pointer and no statement of the system -->.
+
 ### Live permission enforcement (`permission-hook.py`)
 
 The realizer that makes declared permissions *bite* at runtime (per [COR-028](../../decisions/core/COR-028-permission-model-realization.md) / [ADR-002](../../../tech-docs/architecture/decisions/ADR-002-permission-realizer-ownership.md)). It's **opt-in** — see *enable / disable* below.
@@ -509,6 +542,37 @@ The line names the install script, which installs the version the project pins o
 
 Where the hook finds a `pkit` on its `PATH`, it adds nothing. The line reaches each session and each subagent at its start, as the workspace sentence does, and no confined run, which loads no project settings.
 
+### The probe of messaging between sessions (`probe-messaging.py`)
+
+[project-management:DEC-081] lets a worker take direction by message only from the session its directing seat's state issue records. It rests on facts of Claude Code's messaging between sessions that the harness's documentation leaves unconfirmed, and its build measures them before it rests anything on them (DEC-081's Context). [project-management:DEC-084] decides again on what they found: a seat records its session's messaging address and process, and a message's reply address is checked against them. Its build measured four more facts first (DEC-084's Context, 9 to 12). [ADR-103](../../../tech-docs/architecture/decisions/ADR-103-process-liveness-reading.md) has the backbone alone read whether a recorded process runs, by a name that holds the process's space, its id and its start time, and its build measures first, on each platform the adapter supports, what that reading rests on (ADR-103's Implications). This probe takes the three sets of measurements: the six DEC-081 lists, two more, the listing under remote control and a subagent resumed by a message, DEC-084's four, and ADR-103's four (13 to 16).
+
+A person runs it, never a test. It starts real sessions, which sign in and spend, so it refuses to start unless given `--start-claude`, and it refuses inside an agent's run. It needs Claude Code 2.1.224 or later, and runs under the system's `python3`, 3.9 or later:
+
+```
+python3 .pkit/adapters/claude-code/probe-messaging.py --start-claude
+```
+
+It makes a new scratch folder under `~/.cache` (or `--root`), outside every working tree: a git repository with a linked worktree, another repository whose sessions run their shell in the sandbox, and a folder for each other session. Each folder's settings name a probe agent, which withholds neither messaging tool, as the session's agent, and register a hook that records each event the session sees. The hook is the probe itself, copied into the scratch folder. The probe runs in four parts, and `--part headless`, `--part terminal`, `--part address` or `--part process` runs one alone:
+
+- **The headless part** runs what a session started with `claude -p` can show: whether the session's agent and its subagents hold the tools, a subagent resumed by a message, five cases of a held message, and whether a run shaped as a builder's working run can send or receive. It starts fourteen runs, in about fifteen minutes.
+- **The terminal part** walks the person through each step that needs a session at a terminal, in up to four terminals. It prints the line to run and the prompt to type, reads what the sessions recorded, and asks the person what only a terminal shows, such as an approval dialog. It takes about half an hour.
+- **The address part** takes DEC-084's measurements at a terminal, in three terminals, in about a quarter of an hour. Two sessions under one name each message a third, in another repository, so the probe reads the reply address each message carries against the address each sender's shell reads. Each sender's shell also reads the process `CLAUDE_PID` names, the processes the shell runs under, and, through `lsof`, whether that process holds the address's socket. A subagent of the first session messages the third too. The third session then checks, from its sandbox and from a copy of the probe it runs with the sandbox disabled for that one call, whether each sender's process runs, and again once one sender has closed. The second check runs outside the sandbox, as the methodology's command runs on macOS, through the Bash tool's own escape, since the harness measured took no command out of its sandbox through `excludedCommands`. It reads a session's own name again too, from the first line of the listing the agent reads.
+- **The process part** takes ADR-103's measurements headless, in a minute or two, and needs nothing of the person. It starts one run of `claude -p` whose shell runs in the sandbox. The run reads twice from the sandbox and once outside it, through the Bash tool's own escape, and the probe reads twice at the person's terminal. Each read takes the process space it runs in from the operating system: the machine's identity, the boot and, on Linux, the process namespace. It also takes three processes' start times from the operating system's process table, through `sysctl` and libproc on macOS and `/proc` on Linux: the session's process, the probe's own, and a process the probe started and ended. So the results say whether the space and the start times can be read inside and outside the sandbox, and whether every read of one process gives one start time (13). They name the source of the machine's identity and whether the machine runs virtual (14), and whether each command in the sandbox runs in a process space of its own (15). On macOS they say what the sandbox lets a command read where `ps` cannot run (16). Run it on each platform the adapter supports. The results hold each part of a space but a namespace as a digest, which tells nothing of the value and differs between runs.
+
+The sessions it starts shorten the deadline of a held message through `CLAUDE_CODE_USER_DIALOG_TIMEOUT_MS`, so a step waits a minute at most rather than five.
+
+It writes the harness's version and each measurement's result to `results.md` in the scratch folder, or to `--out`: a table of the results, then each measurement's findings and the evidence they rest on. In the file, `<scratch>` stands for the scratch folder and `~` for the home folder, the user's and the machine's names are replaced, and each listing leaves out the rows of sessions outside the probe. Read the results before posting them anywhere, since what the probe replaces is all it knows to replace. The scratch folder keeps the raw evidence as it was, so remove it once done. The results are recorded on [#3461](https://github.com/aleskalfas/project-kit/issues/3461) <!-- unanchored: names the Task that records the results, a pointer and no statement of the system -->.
+
+### The declaration of a session (`session.yaml`)
+
+How a command finds the Claude Code session whose shell runs it, which the backbone reads as data and gives through `pkit harness session` ([the adapters README, "The declaration of a session"](../README.md#the-declaration-of-a-session) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->). It rests on what the probe above measured on macOS, with Claude Code 2.1.330 and 2.1.331, recorded on [#3461](https://github.com/aleskalfas/project-kit/issues/3461) <!-- unanchored: names the Task that records the results, a pointer and no statement of the system -->:
+
+- **The session's process** is the one `CLAUDE_PID` names in each command's environment: the process the session's shell runs under, which holds the session's messaging socket and ends when the session ends (DEC-084's Context, measurement 10).
+- **The messaging address** is the path `CLAUDE_CODE_MESSAGING_SOCKET` holds, a local socket named after that process, as `/tmp/cc-socks/<id>.sock`. Each message the session sends carries it as its reply address, `from="uds:<address>"` (measurement 9). The declaration admits only that form, so an address in a user's folder is not given and reaches no tracker.
+- **No platform reads a process by its id alone.** On macOS a start time reads wherever a command reads its process space whole, which a command outside the sandbox does, where the methodology's command runs ([ADR-014](../../../tech-docs/architecture/decisions/ADR-014-macos-sandbox-platform-stance.md) point 2). Inside the sandbox the boot does not read, so every reading there cannot tell, and the id alone would not help (ADR-103's measurements 13 and 16). Linux is not measured.
+
+The address and the process change when the session restarts, `--continue` and `--resume` included, while its name stays.
+
 ### Harness support (`harness-support.yaml`)
 
 The adapter's support declaration ([COR-047](../../decisions/core/COR-047-harness-requirement-declaration.md) point 2): its answer to each requirement in `.pkit/schemas/harness-requirements.yaml`, with the evidence for each. The grades are [the adapters README's](../README.md#harness-requirements), and `pkit harness report` resolves them for a project. In prose:
@@ -523,6 +587,7 @@ The adapter's support declaration ([COR-047](../../decisions/core/COR-047-harnes
   - **The cost.** A session keeps a person who answers its asks. In a turn that something other than a person answers, each ask is refused, and the refusal reads as the person's own. In a turn nobody answers, each ask holds the turn until someone answers it.
   - **The asks** are the permission hook's ("When the hook asks" above).
   - **What the trial saw,** in auto mode. In a turn a message in a chat channel started, the hook's ask was refused at once, and the tool returned `User refused permission to run tool`. In a run with nobody at it, the ask waited in the host's approval inbox, which expires after 24 hours.
+- **A session reads its own messaging address, which its messages carry and no other session holds** (`session-messaging-address`): `at-cost`, for 2.1.330 to 2.1.331, the versions DEC-084's measurements ran on, on macOS. A subagent's message carries its session's address and name, so the address tells one session from another, never a session from its own subagents, and the harness was seen checking an address against the sending process only on a held message. No platform reads a process by its id alone ("The declaration of a session" above).
 
 ### `permission-enforcement.yaml`
 

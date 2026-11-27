@@ -382,7 +382,7 @@ def on_each_foundations(
 
 #: The shared roles the foundations being built add to their release 1.0.0, each by the role
 #: its default aliases (DEC-004 point 7, DEC-032 point 1, DEC-036 point 3), the type of a
-#: page's title among them (DEC-008 point 2).
+#: page's title and the lead type among them (DEC-008 point 2, DEC-072 point 1).
 ADDED_ROLES = {
     "size.site": "size.slide",
     "size.line": "size.figure",
@@ -393,28 +393,38 @@ ADDED_ROLES = {
     "family.order.last": "family.neutral.fill",
     "family.order.text": "family.neutral.text",
     "type.title": "type.heading",
+    "type.lead": "type.body",
 }
 
 #: The tokens the deck of the foundations being built declares, each by the shared type its
-#: default aliases, the type their release 1.0.0 draws its part in (DEC-035 point 4).
+#: default aliases (DEC-035 point 4): its title's, the type their release 1.0.0 draws it in,
+#: and its lead's, the lead type, whose own default is the type that release draws the lead
+#: in (DEC-072 point 3).
 DECK_TOKENS = {
     "component.foundations.deck.title": "type.heading",
-    "component.foundations.deck.lead": "type.body",
+    "component.foundations.deck.lead": "type.lead",
 }
 
 #: Where the deck of the foundations being built places its parts other than their release
 #: 1.0.0: each line of its file, with the line the release holds in its place. Its lead
 #: stands a small space under its title, not a medium one, and its visual reaches down to
-#: one large space above its limit or its footer only where each is drawn, where the
-#: release leaves two above its footer on a slide with no limit.
+#: one large space above its limit or its foot only where each is drawn, where the
+#: release leaves two above its footer on a slide with no limit. Its foot holds a slide's
+#: documents under its footer, which a slide that gives none leaves where the release
+#: places it (DEC-056 point 4).
 DECK_PLACES = {
     'y: "=title.bottom + @space.2"': 'y: "=title.bottom + @space.3"',
     'height: "=limit.y - min(limit.height, @space.1) / @space.1 * @space.4 - visual.y"': (
         'height: "=limit.y - @space.4 - visual.y"'
     ),
-    'y: "=footer.y - min(footer.height, @space.1) / @space.1 * @space.4 - limit.height"': (
-        'y: "=footer.y - @space.4 - limit.height"'
-    ),
+    (
+        'y: "=footer.y - min(footer.height + documents.height, @space.1) / @space.1 * @space.4 '
+        '- limit.height"'
+    ): 'y: "=footer.y - @space.4 - limit.height"',
+    (
+        'y: "=documents.y - min(footer.height, documents.height, @space.1) / @space.1 * '
+        '@space.2 - footer.height"'
+    ): 'y: "=:height - margin - footer.height"',
 }
 
 
@@ -464,14 +474,15 @@ def test_each_reference_render_draws_on_the_foundations_being_built_as_on_their_
 ) -> None:
     """The foundations being built add the size axis `device`, the roles `size.site`,
     `size.line`, those of a run's sign and ground and an order's, the type of a page's title,
-    and their deck's tokens to their release 1.0.0, and the test brand 1.0.0 gives no size
-    (DEC-021 points 2 and 9, DEC-022 point 3, DEC-035 point 4, DEC-036 point 3). Their deck
-    places its lead and its visual otherwise, which the comparison takes back
-    (`DECK_PLACES`). So each reference piece of a component the starter's release holds,
-    drawn with that release, draws on them as on their release, byte for byte: each preview,
-    but for the foundations' version they name, and its values, but for the roles and the
-    tokens they add. The starter being built reads roles their release does not declare,
-    and its web parts name the sizes, which that release does not declare either."""
+    the lead type and their deck's tokens to their release 1.0.0, and the test brand 1.0.0
+    gives no size (DEC-021 points 2 and 9, DEC-022 point 3, DEC-035 point 4, DEC-036 point 3,
+    DEC-072 point 3). Their deck places its lead and its visual otherwise, which the
+    comparison takes back (`DECK_PLACES`). So each reference piece of a component the
+    starter's release holds, drawn with that release, draws on them as on their release,
+    byte for byte: each preview, but for the foundations' version they name, and its
+    values, but for the roles and the tokens they add. The starter being built reads roles
+    their release does not declare, and its web parts name the sizes, which that release
+    does not declare either."""
     importable(monkeypatch, svg)
     root = reference_location(project(tmp_path))
     hold_shipped(root, "foundations", version="1.0.0")
@@ -503,8 +514,28 @@ UNSIGNED = [
 #: the bottom of its card's box differ by 1.6 px, and fail nothing.
 BOX_LABELS = ("near-alignment", "near-alignment-between-groups", "box-overlap")
 
+#: The fact the check of a text's size states on a piece that names no medium, as no
+#: reference piece does, which the tests read apart (DEC-055 point 10).
+UNMEASURED = "text-size-unmeasured"
+
 #: The labels the tests of the reference pieces' checks read apart from the rest.
-APART = ("component-experimental", *SIGN_LABELS, *BOX_LABELS)
+APART = ("component-experimental", *SIGN_LABELS, *BOX_LABELS, UNMEASURED)
+
+
+def unmeasured(judged: Iterable[tuple[Any, str]]) -> list[tuple[str, str, str]]:
+    """The statements of the check of a text's size among a check's findings, `judged`,
+    each with its level, file and place."""
+    return [
+        (level, finding.file, finding.where)
+        for finding, level in judged
+        if finding.code == UNMEASURED
+    ]
+
+
+def no_medium(pieces: Iterable[str]) -> list[tuple[str, str, str]]:
+    """The statement on each of `pieces`, which names no medium: a fact at its `media`, once
+    for every language and key (DEC-055 point 10)."""
+    return [("fact", f"visual/pieces/{piece}/piece.yaml", "media") for piece in sorted(pieces)]
 
 
 def box_levels(judged: Iterable[tuple[Any, str]]) -> set[str]:
@@ -539,6 +570,7 @@ def test_every_reference_piece_passes_the_check_under_the_test_brand(location: P
         ("fact", "picture-role-unvalued", "visual/libraries/test-brand/1.1.0/", "picture.logo")
     ]
     assert on_signs(report.judged) == UNSIGNED
+    assert unmeasured(report.judged) == no_medium(COMPONENTS)
     assert box_levels(report.judged) <= {"attention"}
     assert not report.failed()
     assert report.summary == [

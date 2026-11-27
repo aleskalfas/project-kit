@@ -1,0 +1,8 @@
+component: project-management
+kind: none
+body: >
+  Internal. ADR-103 decides that the backbone alone names a recorded process
+  and reads whether it runs, answering running, ended or cannot tell, and
+  DEC-084 is refined to read a seat's session through it and to check a
+  message's sender name. Nothing is built until its build; no command an
+  adopter runs changes.

@@ -630,6 +630,62 @@ def _stops_on_signal() -> Generator[None]:
     help="Confined: the folder the run's files are copied to after the run.",
 )
 @click.option(
+    "--clone-at",
+    "clone_at",
+    default=None,
+    metavar="SHA",
+    help="In a reviewer's clone: the full id of the commit, the default branch's head, the "
+    "clone is made at from the code host. With the other --clone options, for a reviewer "
+    "the review command runs in a seat's clone, the project you run the command in.",
+)
+@click.option(
+    "--clone-remote",
+    "clone_remote",
+    default=None,
+    metavar="NAME",
+    help="In a reviewer's clone: the name of its one remote, the one the default branch "
+    "resolves through.",
+)
+@click.option(
+    "--clone-url",
+    "clone_url",
+    default=None,
+    metavar="URL",
+    help="In a reviewer's clone: the address the code host gives for the pull request's base "
+    "repository, which the clone fetches from and never pushes to.",
+)
+@click.option(
+    "--clone-default",
+    "clone_default",
+    default=None,
+    metavar="BRANCH",
+    help="In a reviewer's clone: the default branch, which the clone fetches.",
+)
+@click.option(
+    "--clone-branch",
+    "clone_branches",
+    multiple=True,
+    metavar="BRANCH",
+    help="In a reviewer's clone: a branch the clone fetches besides, such as the change's "
+    "base. Repeatable.",
+)
+@click.option(
+    "--clone-head-ref",
+    "clone_head_ref",
+    default=None,
+    metavar="REF",
+    help="In a reviewer's clone: the code host's reference for the change's head, such as "
+    "refs/pull/<N>/head.",
+)
+@click.option(
+    "--clone-head",
+    "clone_head",
+    default=None,
+    metavar="SHA",
+    help="In a reviewer's clone: the full id of the commit --clone-head-ref must resolve to, "
+    "the head the review names.",
+)
+@click.option(
     "--limit",
     "limit_seconds",
     type=click.IntRange(1, _AGENT_RUN_MAX_LIMIT_SECONDS),
@@ -654,6 +710,13 @@ def agents_run(
     commit: str | None,
     rules_of: str | None,
     files_to: Path | None,
+    clone_at: str | None,
+    clone_remote: str | None,
+    clone_url: str | None,
+    clone_default: str | None,
+    clone_branches: tuple[str, ...],
+    clone_head_ref: str | None,
+    clone_head: str | None,
     limit_seconds: int,
     effort: str | None,
     as_json: bool,
@@ -675,6 +738,13 @@ def agents_run(
       the mode the settings there, or the harness, choose. With
       --local-settings, it first carries the person's local settings into
       FOLDER from the project the command runs in (ADR-066 point 10).
+      In a reviewer's clone, with --clone-at, --clone-remote, --clone-url,
+      --clone-default, --clone-head-ref and --clone-head together, and
+      --clone-branch where a branch is fetched besides: the run works in a
+      clone of its own, made from the code host at the commit and removed
+      after the run. The runner gives it the allow, ask and deny rules of the
+      settings of the project the command runs in, a seat's clone, and
+      carries the person's local settings in from it (ADR-102).
     - Confined, with --commit, --rules-of and --files-to, together: the run
       runs in a fresh clone at the commit, held by the run rules of the named
       command, and its files are copied to the folder after the clone is
@@ -690,24 +760,34 @@ def agents_run(
     `refused_calls` (the calls the harness refused), `confined`, and for a
     confined run `commit`, `check` (`verdict`: `clean`, `breach` or
     `not-run`, and its `changes`), `files` (the folder, once copied) and
-    `excluded` (the commands run outside the sandbox). Without it, the agent's
-    output, and on standard error how the run ended, and for a confined run
-    the check and the excluded commands.
+    `excluded` (the commands run outside the sandbox), and `refusal_cause`
+    (`run-folder` where the backbone's folder for the run cannot be made or
+    written, else null). Without it, the agent's output, and on standard
+    error how the run ended, and for a confined run the check and the
+    excluded commands.
 
     Exit 0 when the harness finished and exited 0; 1 on any other ending; 2 on a
     usage error. A caller decides on the document's `ending`, never on the exit.
     Reference: `.pkit/cli/README.md`, "Agent runs".
     """
     confined_options = (commit, rules_of, files_to)
-    confined = folder is None and any(option is not None for option in confined_options)
+    clone_options = (clone_at, clone_remote, clone_url, clone_default, clone_head_ref, clone_head)
+    in_clone = any(option is not None for option in clone_options) or bool(clone_branches)
+    confined = (
+        folder is None and not in_clone and any(option is not None for option in confined_options)
+    )
     marked = agent_runs.inside_a_run(agent_name, confined=confined, commit=commit)
     if marked is not None:
         sys.exit(_show_agent_run(marked, as_json))
-    if folder is not None and confined_options != (None, None, None):
+    review = _reviewer_clone(
+        in_clone, folder, confined_options, local_settings, clone_options, clone_branches
+    )
+    if review is None and folder is not None and confined_options != (None, None, None):
         raise click.UsageError("--folder and --commit, --rules-of, --files-to exclude each other.")
-    if folder is None and None in confined_options:
+    if review is None and folder is None and None in confined_options:
         raise click.UsageError(
-            "give --folder, or --commit, --rules-of and --files-to, all three together."
+            "give --folder; or --commit, --rules-of and --files-to, all three together; or "
+            "--clone-at with the other --clone options."
         )
     if local_settings and folder is None:
         raise click.UsageError("--local-settings goes only with --folder.")
@@ -725,6 +805,7 @@ def agents_run(
         rules_of=rules_of,
         files_to=None if files_to is None else files_to.resolve(),
         local_settings_from=target_root if local_settings else None,
+        review=review,
     )
     problem = request.problem(target_root)
     if problem is not None:
@@ -736,6 +817,48 @@ def agents_run(
     except _AskedToStop as stopped:
         sys.exit(128 + stopped.signum)
     sys.exit(_show_agent_run(run, as_json))
+
+
+def _reviewer_clone(
+    in_clone: bool,
+    folder: Path | None,
+    confined_options: tuple[str | Path | None, ...],
+    local_settings: bool,
+    clone_options: tuple[str | None, ...],
+    clone_branches: tuple[str, ...],
+) -> agent_runs.ReviewerClone | None:
+    """The reviewer's clone `agents run`'s --clone options name, or None where they
+    name none. Raises a usage error where they come with another form's options, or
+    without one another."""
+    if not in_clone:
+        return None
+    if folder is not None or confined_options != (None, None, None) or local_settings:
+        raise click.UsageError(
+            "the --clone options exclude --folder, --local-settings, and --commit, "
+            "--rules-of, --files-to: a reviewer's clone takes the local settings itself."
+        )
+    clone_at, remote, url, default, head_ref, head = clone_options
+    if (
+        clone_at is None
+        or remote is None
+        or url is None
+        or default is None
+        or head_ref is None
+        or head is None
+    ):
+        raise click.UsageError(
+            "give --clone-at, --clone-remote, --clone-url, --clone-default, --clone-head-ref "
+            "and --clone-head together."
+        )
+    return agent_runs.ReviewerClone(
+        commit=clone_at,
+        remote=remote,
+        url=url,
+        default_branch=default,
+        branches=clone_branches,
+        head_ref=head_ref,
+        head=head,
+    )
 
 
 def _show_agent_run(run: agent_runs.AgentRun, as_json: bool) -> int:
@@ -1239,6 +1362,139 @@ def harness_report_command(ctx: click.Context, adapters: tuple[str, ...], as_jso
     else:
         click.echo(harness_support.render_human(reports, known), nl=False)
     ctx.exit(1 if harness_support.unmet_count(reports, known) else 0)
+
+
+@harness.command("session")
+@click.option(
+    "--reply",
+    "replies",
+    metavar="ADDRESS",
+    multiple=True,
+    help="A message's reply address to give in the form of a session's address. Repeatable.",
+)
+@click.option(
+    "--json", "as_json", is_flag=True, default=False, help="Write the document as one line of JSON."
+)
+def harness_session_command(replies: tuple[str, ...], as_json: bool) -> None:
+    """The harness session whose shell runs this command, as the adapter declares it.
+
+    Reads the one registered adapter's `session.yaml` as data (ADR-100 point 9),
+    and gives the session's process by the name the backbone gives it, only once a
+    null signal finds it in this command's process space, and its messaging
+    address only where it names that process (ADR-103 point 5). Each `--reply`
+    is brought into the address's form. Read-only; exit 0 whenever it read, the
+    document saying what it found.
+    """
+    import json
+    import os
+
+    from project_kit import harness_session, recorded_processes
+
+    target_root = find_target_root()
+    if target_root is None:
+        raise click.ClickException("not in a project tree.")
+    session = harness_session.read(
+        target_root, os.environ, recorded_processes.this_system(), replies=replies
+    )
+    if as_json:
+        click.echo(json.dumps(session.document(), sort_keys=True))
+        return
+    if not session.found:
+        click.echo(f"No harness session found: {session.why}.")
+    else:
+        click.echo(f"A session of the adapter {session.adapter} runs this command.")
+        click.echo(f"  process: {session.process or f'not named ({session.process_why})'}")
+        click.echo(f"  messaging address: {session.address or f'none ({session.address_why})'}")
+    for reply in session.replies:
+        click.echo(f"  reply {reply.given!r}: {reply.address or f'no address ({reply.why})'}")
+
+
+@main.group("recorded-process")
+def recorded_process() -> None:
+    """Whether a process a part of the methodology recorded still runs, read in one
+    place (ADR-103).
+
+    Each command reads a JSON request on standard input. `read` answers whether
+    each named process is running, ended, or whether pkit cannot tell, and
+    `compare` whether two names name one process. A name is the one `pkit harness
+    session` gives, stored and passed whole. Reference: `.pkit/cli/README.md`,
+    "Recorded-process commands".
+    """
+
+
+def _process_request(run: Callable[[object], dict[str, Any]]) -> dict[str, Any]:
+    """Read a JSON request on standard input and answer it with `run`. A request
+    it refuses prints no document and exits 1, saying why."""
+    import json
+
+    from project_kit import recorded_processes
+
+    text = click.get_text_stream("stdin").read()
+    try:
+        request: object = json.loads(text)
+    except (json.JSONDecodeError, ValueError) as exc:
+        raise click.ClickException(f"the request on standard input is no JSON: {exc}") from exc
+    try:
+        return run(request)
+    except recorded_processes.FormError as exc:
+        raise click.ClickException(f"refused: {exc}") from exc
+
+
+@recorded_process.command("read")
+@click.option(
+    "--json", "as_json", is_flag=True, default=False, help="Write the document as one line of JSON."
+)
+def recorded_process_read(as_json: bool) -> None:
+    """Answer whether each process a JSON request names runs.
+
+    Reads `{"names": [<name>, ...]}` on standard input, and answers each
+    `running`, `ended` or `cannot-tell`, with the reading that told and why.
+    `ended` only where this command could have seen the process, or the
+    machine has restarted since (ADR-103 point 3). Exit 1, with no document, on
+    a request it refuses.
+    """
+    import json
+    import os
+
+    from project_kit import harness_session, recorded_processes
+
+    target_root = find_target_root()
+    if target_root is None:
+        raise click.ClickException("not in a project tree.")
+    system = recorded_processes.this_system()
+    reader = harness_session.reader(
+        target_root, harness_session.declaration(target_root), os.environ, system
+    )
+    document = _process_request(lambda r: recorded_processes.read_document(r, reader, system))
+    if as_json:
+        click.echo(json.dumps(document, sort_keys=True))
+        return
+    for answer in document["answers"]:
+        click.echo(f"{answer['state']}: {answer['name']} ({answer['why']})")
+
+
+@recorded_process.command("compare")
+@click.option(
+    "--json", "as_json", is_flag=True, default=False, help="Write the document as one line of JSON."
+)
+def recorded_process_compare(as_json: bool) -> None:
+    """Answer whether two names name one process.
+
+    Reads `{"pairs": [[<name>, <name>], ...]}` on standard input, and answers each
+    pair `one`, `two` or `cannot-tell`. Reads no process. Exit 1, with no
+    document, on a request it refuses.
+    """
+    import json
+
+    from project_kit import recorded_processes
+
+    document = _process_request(recorded_processes.compare_document)
+    if as_json:
+        click.echo(json.dumps(document, sort_keys=True))
+        return
+    for pair in document["pairs"]:
+        left, right = pair["names"]
+        click.echo(f"{pair['answer']}: {left} and {right} ({pair['why']})")
 
 
 @main.group("pull-request")
@@ -2564,6 +2820,26 @@ def friction_prune_command(dry_run: bool, yes: bool, as_json: bool) -> None:
     "from that commit is then a document too.",
 )
 @click.option(
+    "--artefact",
+    "judged_locations",
+    metavar="LOCATION",
+    multiple=True,
+    help="With --all, judge only the artefact at LOCATION (`path`, or `path#id` for a "
+    "collection entry), as the whole check judges it; repeatable. The measures stay the "
+    "whole repository's, and which answer files a prune would remove is not read.",
+)
+@click.option(
+    "--artefacts-from",
+    "judged_from",
+    metavar="FILE",
+    type=click.Path(exists=True, dir_okay=False, allow_dash=True),
+    default=None,
+    help="With --all, judge only the artefacts at the locations FILE lists, one a line, "
+    "beside any --artefact names; `-` reads standard input, never a terminal. The check "
+    "may read the list as late as just before it judges, so a caller may start it and "
+    "write the list when it knows it. An empty list judges none.",
+)
+@click.option(
     "--json", "as_json", is_flag=True, default=False, help="Emit the stable JSON document."
 )
 def friction_check_command(
@@ -2571,6 +2847,8 @@ def friction_check_command(
     whole_repository: bool,
     head_rev: str | None,
     own_rev: str | None,
+    judged_locations: tuple[str, ...],
+    judged_from: str | None,
     as_json: bool,
 ) -> None:
     """The change check (COR-050 point 6): every artefact whose anchor changed in the diff
@@ -2610,12 +2888,19 @@ def friction_check_command(
     accepted with a reason listed apart, never counted — and uncovered
     surface. Reads each artefact's history back to
     where it was last added; in a shallow clone it marks what the cut hides,
-    and exits 0 in either mode.
+    and exits 0 in either mode. With --artefact or --artefacts-from, it judges
+    only the artefacts named, each as the whole check judges it, and the
+    measures stay the whole repository's.
     """
     if whole_repository and head_rev is not None:
         raise click.UsageError(
             "--head and --all exclude each other: the whole-repository check reads HEAD and "
             "its history."
+        )
+    if (judged_locations or judged_from is not None) and not whole_repository:
+        raise click.UsageError(
+            "--artefact and --artefacts-from name what the whole-repository check judges, so "
+            "they need --all; the change check judges what the change touches."
         )
     if own_rev is not None and head_rev is None:
         raise click.UsageError(
@@ -2626,7 +2911,9 @@ def friction_check_command(
     if target_root is None:
         raise click.ClickException("not in a project tree.")
     if whole_repository:
-        report = friction_repository.run_repository_check(target_root)
+        report = friction_repository.run_repository_check(
+            target_root, judging=_judging(judged_locations, judged_from)
+        )
         if as_json:
             click.echo(friction_repository.render_json(report), nl=False)
         else:
@@ -2655,6 +2942,28 @@ def friction_check_command(
         click.echo(friction_check.render_human(result), nl=False)
     if result.exit_code:
         raise SystemExit(result.exit_code)
+
+
+def _judging(named: tuple[str, ...], listed_in: str | None) -> friction_repository.Judging | None:
+    """What `friction check --all` judges: every artefact (`None`), the locations named, or
+    those and the ones `listed_in` lists — a file, or `-` for standard input — read when
+    the check asks for them, so a caller may write the list while the check reads."""
+    if listed_in is None:
+        return frozenset(named) if named else None
+    if listed_in == "-" and click.get_text_stream("stdin").isatty():
+        raise click.UsageError(
+            "--artefacts-from - reads the list from standard input, which is a terminal here: "
+            "pipe the list in, name a file, or name each artefact with --artefact."
+        )
+
+    def read() -> frozenset[str]:
+        if listed_in == "-":
+            text = click.get_text_stream("stdin").read()
+        else:
+            text = Path(listed_in).read_text(encoding="utf-8")
+        return frozenset(named) | {line.strip() for line in text.splitlines() if line.strip()}
+
+    return read
 
 
 @friction.command("debt")

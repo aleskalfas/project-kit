@@ -1,4 +1,4 @@
-"""The makers' record of drafts, in a piece's brief (visual-communication DEC-042 point 7,
+"""The makers' record of drafts, in a piece's brief (visual-communication DEC-070 point 4,
 DEC-029 points 2 to 4): for each lead, title or takeaway the designer drafted and the asker
 has not seen, an entry naming its page, its kind and the language of its text, with a digest
 of that text, never the text.
@@ -25,7 +25,7 @@ of that text, never the text.
   (`briefs.pages_of`), and is read as the check reads it, under the piece's lock
   (`checks.top_of`). Where the piece has no lock yet, it is read under the versions the
   piece's first render would lock (`libraries.move_lock`, DEC-003 point 8). So a draft is
-  digested as the designer writes it, before that render (DEC-042 point 7), and what that
+  digested as the designer writes it, before that render (DEC-070 point 4), and what that
   render's search refuses, such as a pinned draft with no lock, refuses the draft.
 - **What the record tells.** A text *matches* the digest recorded for its page, kind and
   language, *differs* from it, or has *no entry*. Only a match leaves the text the
@@ -101,8 +101,8 @@ def state(part: Mapping[str, Any], kind: str, language: str, text: str) -> str:
 
 
 def asker_owns(found: str) -> bool:
-    """Whether a text in this state is the asker's: every state but a match (DEC-042
-    point 7)."""
+    """Whether a text in this state is the asker's: every state but a match (DEC-070
+    point 4)."""
     return found != MATCHES
 
 

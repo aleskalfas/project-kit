@@ -11,7 +11,14 @@ DEC-012).
   `x-pkit-runs: [<word>, ...]`, the words of its run styles, the first the default: a
   field of runs, whose content is text, read as one run of the first word, or a list of
   runs, each text or `{text, style?, concept?}` (DEC-012 points 1 and 2). The mark lies on
-  no schema below a field, and no `$ref` leads to it;
+  no schema below a field, and no `$ref` leads to it. A field of text alone, or a list of
+  such texts, may be marked `x-pkit-paths: true`, on the same terms: it holds a path, or a
+  list of paths, each naming a file of the repository from its root, which the check of
+  the content finds, a list of paths holding texts and no items, so no part repeats over it
+  or passes it on, and a text part shows it as one text, a path to a paragraph (DEC-056
+  points 1 and 2). A field or a slot whose schema admits a list of entries that are not
+  mappings, and carries neither mark, holds no items, runs or paths, which asks the
+  component's owner for attention (`list-unmarked`, point 5);
 - `options`: each a list of words, the first the default; or `{item: <list field>}`,
   which names an item of that list by its id; or `{item: <list field>, point: true}`,
   which names an item and one of its exposed points, `{item: <id>, point: <name>}`. Such
@@ -25,6 +32,14 @@ DEC-012).
   (DEC-034 point 3). No formula reads it. The top asks for its height through it, never
   under `preferred`: the engine sets the height from the width it asks for and the size's
   proportion, wherever the top lies, and names itself as the height's source;
+- `smallest-text`, on a top alone: the smallest text size of each medium its pages are made
+  for, by the medium's word, one of `MEDIA` (DEC-055 points 2 and 3). Each is a fixed
+  length, a positive number of px, or a share of the page, a formula that gives a length
+  and reads only numbers and the size of the page a run lies on, `:page-width` and
+  `:page-height`, which no other formula reads. It never switches, no brand gives it, and
+  a fixed length for `paper` is refused on a top that declares a physical size, whose
+  brand's width sets its print's scale. The check of a text's size reads it of the piece's
+  top alone (`text_size`);
 - `parts`: drawn in order (below);
 - `lists`: for each list field a `repeat` part of its own repeats over, the fields DEC-010
   gives that list, `{component: <field>, arrangement: {<field>: {words: [<word>, ...],
@@ -173,9 +188,12 @@ A part's place is `x` and `y` (zero if absent), its
 size `width` and `height`, each a formula. A line has `x1 y1 x2 y2`; or, in a component
 that takes ends, `connect: straight` or `connect: corners`, the connector tool, which
 runs from its start to its end, straight or with corners, never around anything, and
-spreads the ends that meet one side of an item evenly (DEC-005 point 2). A connector's
-`rx`, a length, is the radius its turns are drawn round at, and a line of its own ends,
-which turns nowhere, takes none. A line's
+spreads the ends that meet one side of an item evenly (DEC-005 point 2). A part that
+repeats over a list of ties may name one of its end fields under `trunk`: the ties that
+meet one side of an item there and draw alike then meet it at one point, branching off
+one trunk where they can be drawn clear, else spread (DEC-043, `Instance._anchors`, with
+the geometry in `trunks`). A connector's `rx`, a length, is the radius its turns are
+drawn round at, and a line of its own ends, which turns nowhere, takes none. A line's
 `marker-start` and `marker-end` are `none`, the default, or `arrow`. A text's height is
 its measured text's, and its width, where none is given, its widest paragraph's. An
 image's height, where none is given, keeps its picture's proportions, a produced output's
@@ -246,6 +264,7 @@ that brand's own finding says what it owes, and the part takes none.
 
 from __future__ import annotations
 
+import contextlib
 import itertools
 import math
 import re
@@ -253,7 +272,7 @@ from collections.abc import Callable, Collection, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from typing import Any, TypeVar
 
-from _lib import colour_steps, names
+from _lib import colour_steps, names, trunks
 from _lib import formula as fm
 from _lib.env import (
     Env,
@@ -290,7 +309,7 @@ PART_KEYS: Mapping[str, tuple[str, ...]] = {
     "sign": ("x", "y", "width", "height"),
     "use": ("x", "y", "width", "height", "fields", "options"),
     "slot": ("x", "y", "width", "height"),
-    "repeat": ("x", "y", "width", "height", "draw", "colour", "row", "column"),
+    "repeat": ("x", "y", "width", "height", "draw", "colour", "row", "column", "trunk"),
 }
 
 #: The keys of a part that hold a formula: a place, a size or a line's end.
@@ -388,12 +407,26 @@ STAND_INS: Mapping[str, str] = {"version": "v88", "date": "2088-08-28"}
 COMPONENT_KEYS = (
     "pkit_schema", "schema_version", "status", "about", "fields", "options", "states",
     "colour", "values", "preferred", "parts", "lists", "exposes", "ends", "tokens",
-    "physical-size", "layouts", "draws",
+    "physical-size", "smallest-text", "layouts", "draws",
 )  # fmt: skip
 
 #: The key under which a top whose pages print at one size declares it, its trim width and
 #: height in millimetres (DEC-034 point 3), and the code of every finding on it.
 PHYSICAL_SIZE = "physical-size"
+
+#: The key under which a top declares the smallest text size of each medium its pages are
+#: made for (DEC-055 point 2).
+SMALLEST_TEXT = "smallest-text"
+
+#: The media a page reaches a reader's eye in, by the capability's words, which a piece
+#: names and a top declares a smallest text size for (DEC-055 point 1): a screen at hand,
+#: read at arm's length or nearer; a screen read from across a room, projected or not; and a
+#: printed page. The piece's format names them, so a medium means the same under every top.
+MEDIA = ("screen", "room", "paper")
+
+#: The medium of a printed page, on which a fixed smallest size names a printed size only
+#: where the top declares no physical size (DEC-055 point 3).
+PAPER = "paper"
 
 #: The key under which a component declares its component tokens (DEC-035 point 1).
 TOKENS = "tokens"
@@ -462,6 +495,19 @@ ENDS = ("start", "end")
 #: point 2).
 END_KEYS = ("item", "point")
 
+#: The key by which a part over a list of ties names the end field at which the ties that
+#: meet one side of an item share a trunk (DEC-043 point 1).
+TRUNK = "trunk"
+
+#: The findings on ties that share a trunk (DEC-043 point 7), each stated as a fact but the
+#: last: a group drawn spread, since it cannot be drawn clear; ties that meet one side of
+#: an item at their trunk end and form no group; and a part a tie's component places
+#: otherwise than by its line's own stretch that stands on a stretch its tie shares, or
+#: centred on another tie's line.
+TRUNK_SPREAD = "trunk-spread"
+TRUNK_UNGROUPED = "trunk-ungrouped"
+TRUNK_PART = "trunk-part"
+
 #: The sides of a frame an end of a connector meets.
 SIDES = ("left", "right", "top", "bottom")
 
@@ -507,6 +553,15 @@ PAGES = "x-pkit-pages"
 
 #: The mark of a field of runs, which holds the words of its run styles (DEC-012 point 1).
 RUNS = "x-pkit-runs"
+
+#: The mark of a field that holds a path, or a list of paths, each naming a file of the
+#: repository from its root (DEC-056 point 1).
+PATHS = "x-pkit-paths"
+
+#: The call for attention on a field or a slot whose schema admits a list of entries that
+#: are not mappings, and that carries neither the mark of runs nor that of paths (DEC-056
+#: point 5).
+LIST_UNMARKED = "list-unmarked"
 
 #: The keys the format fixes on a run, and no other (DEC-012 point 1).
 RUN_KEYS = ("text", "style", "concept")
@@ -624,9 +679,71 @@ def runs_of(fields: Mapping[str, Any]) -> dict[str, tuple[str, ...]]:
     }
 
 
-def _marks_below(schema: Any, path: str) -> list[str]:
-    """The key path of each mark of a field of runs below a schema: in a list's items or an
-    object's properties, at any depth."""
+def _only_text(schema: Any) -> bool:
+    """Whether a schema takes text alone, any text: its `type` is `string` and no other, and
+    it holds no `enum`, `const` or `$ref`."""
+    if not isinstance(schema, Mapping):
+        return False
+    kind = schema.get("type")
+    if (kind if isinstance(kind, list) else [kind]) != ["string"]:
+        return False
+    return not any(key in schema for key in ("enum", "const", "$ref"))
+
+
+def paths_problem(name: str, schema: Any) -> str | None:
+    """Why a field's schema marked `x-pkit-paths` is no field of paths (DEC-056 point 1):
+    its mark is not `true`; it also takes runs; or it is neither text alone, with no `enum`,
+    `const` or `$ref`, nor a list of such texts. None where it is one."""
+    if not isinstance(schema, Mapping):
+        return f"the field `{name}` is no schema"
+    if schema.get(PATHS) is not True:
+        return f"`{PATHS}` takes `true`, where the field `{name}` holds a path or a list of paths"
+    if RUNS in schema:
+        return (
+            f"the field `{name}` is marked as holding paths and as taking runs: a path is one "
+            "name in one look, so a field of paths takes no runs"
+        )
+    if _only_text(schema):
+        return None
+    kind = schema.get("type")
+    listed = (kind if isinstance(kind, list) else [kind]) == ["array"]
+    held = [key for key in ("enum", "const", "$ref") if key in schema]
+    if listed and not held and _only_text(schema.get("items")):
+        return None
+    return (
+        f"the field of paths `{name}` takes more than a path, or a list of paths: its `type` "
+        "is `string` alone, or `array` alone with `items` of `type: string` alone, and neither "
+        "holds `enum`, `const` or `$ref`"
+    )
+
+
+def paths_of(fields: Mapping[str, Any]) -> frozenset[str]:
+    """The fields of paths among a component's fields, each holding a path or a list of
+    paths (DEC-056 point 1). A mark of another shape marks no field of paths, and the
+    component's reading reports it."""
+    return frozenset(
+        name
+        for name, schema in fields.items()
+        if isinstance(schema, Mapping) and PATHS in schema and paths_problem(name, schema) is None
+    )
+
+
+def _admits_texts(schema: Any, root: Any) -> bool:
+    """Whether a list field's schema admits entries that are not mappings: it names no
+    `items`, or its `items`, a local `$ref` followed within `root`, takes another type than
+    `object` alone, or any type (DEC-056 point 5)."""
+    items = schema.get("items") if isinstance(schema, Mapping) else None
+    if isinstance(items, Mapping) and isinstance(items.get("$ref"), str):
+        items = _target(items["$ref"], root)
+    if not isinstance(items, Mapping):
+        return True
+    kind = items.get("type")
+    return (kind if isinstance(kind, list) else [kind]) != ["object"]
+
+
+def _marks_below(schema: Any, path: str, mark: str = RUNS) -> list[str]:
+    """The key path of each `mark`, of a field of runs or of paths, below a schema: in a
+    list's items or an object's properties, at any depth."""
     found: list[str] = []
     if not isinstance(schema, Mapping):
         return found
@@ -636,9 +753,9 @@ def _marks_below(schema: Any, path: str) -> list[str]:
         below.extend((f"{path}.properties.{key}", each) for key, each in properties.items())
     for at, each in below:
         if isinstance(each, Mapping):
-            if RUNS in each:
-                found.append(f"{at}.{RUNS}")
-            found.extend(_marks_below(each, at))
+            if mark in each:
+                found.append(f"{at}.{mark}")
+            found.extend(_marks_below(each, at, mark))
     return found
 
 
@@ -1124,15 +1241,29 @@ class Component:
         # Each field of runs, with its words; and those some text part chooses by.
         self.runs = runs_of(self.fields)
         self.chosen_by: set[str] = set()
+        # Each field of paths, and those among them that hold a list of paths (DEC-056
+        # point 1).
+        self.paths = paths_of(self.fields)
+        self.path_lists = frozenset(name for name in self.paths if name in self.lists)
+        # What asks the component's owner for attention, never failing, as `(code, key
+        # path, message)`: a list that holds no items, runs or paths (DEC-056 point 5).
+        self.attention: list[tuple[str, str, str]] = []
         # The parts each part names under `lies-over` that it lies over, by its name, each
         # name it gives that names none refused (DEC-066 point 1).
         self.lies_over: dict[str, tuple[str, ...]] = {}
+        # The end at which the ties each part over a list of ties draws share a trunk, by the
+        # part's name, as `start` or `end`, where its `trunk` names one of its list's end
+        # fields (DEC-043 point 1).
+        self.trunks: dict[str, str] = {}
         self.colour: str | None = data.get("colour")
         self.values = self._mapping(data, "values")
         self.preferred = self._mapping(data, "preferred")
         # The trim width and height its pages print at, in millimetres, as declared, read
         # before its layouts, whose pages' heights may follow it (DEC-034 point 3).
         self.physical_size = self._physical_size(data)
+        # The smallest text size it declares for each medium, as a top: a fixed length in
+        # px, or a share of the page, its formula (DEC-055 points 2 and 3).
+        self.smallest_text: dict[str, float | fm.Formula] = {}
         exposes = data.get("exposes") or []
         self.exposes: tuple[str, ...] = tuple(exposes) if isinstance(exposes, list) else ()
         # Whether it takes ends: drawn as a tie, it is given two (DEC-011 point 1). One that
@@ -1146,6 +1277,7 @@ class Component:
         self.token_reads: set[str] = set()
         self._read(data)
         self._read_runs(data)
+        self._read_paths(data)
 
     @property
     def drawn(self) -> tuple[str, str] | None:
@@ -1523,6 +1655,7 @@ class Component:
             self._shape("fields", f"marks a field `{PAGES}`, and declares no layouts")
         self._read_paged_sizes()
         self._read_physical_size(data)
+        self._read_smallest_text(data)
 
     def _read_lies_over(self) -> None:
         """The parts each part names under `lies-over`, which it lies over on purpose
@@ -1600,6 +1733,95 @@ class Component:
                 "declares a physical size, and asks for a height by a formula: the engine sets "
                 "its height from the width it asks for, in the physical size's proportion",
             )
+
+    def _read_smallest_text(self, data: Mapping[str, Any]) -> None:
+        """The smallest text size the top declares for each medium its pages are made for
+        (DEC-055 points 2, 3 and 7): a fixed length, a positive number of px, or a share of
+        the page (`_share`). Each fault is a finding, and its value is not read: the key on
+        a component that is no top, a key that names no medium, a value that is no positive
+        number and no formula, a switch, which a smallest size never takes, and a fixed
+        length for `paper` on a top that declares a physical size, whose brand's width sets
+        the scale it prints at. A brand's drawing that declares one is refused where the
+        drawing is read (`Context._drawing`)."""
+        declared = data.get(SMALLEST_TEXT)
+        if declared is None:
+            return
+        if not self.top:
+            self._shape(
+                SMALLEST_TEXT,
+                "declares a smallest text size, and is no top component: only the piece's "
+                "top declares the smallest size of each medium its pages are made for",
+            )
+            return
+        if not isinstance(declared, Mapping):
+            self._shape(
+                SMALLEST_TEXT, f"`{SMALLEST_TEXT}` takes a value for each medium, by its word"
+            )
+            return
+        for medium, value in declared.items():
+            where = f"{SMALLEST_TEXT}.{medium}"
+            if medium not in MEDIA:
+                self._shape(where, f"names no medium `{medium}`: the media are {', '.join(MEDIA)}")
+            elif isinstance(value, Mapping):
+                self._shape(
+                    where,
+                    f"the smallest size of `{medium}` switches: it is a value, never a switch, "
+                    "so no option and no size chooses it",
+                )
+            elif fm.is_formula(value):
+                share = self._share(where, value)
+                if share is not None:
+                    self.smallest_text[medium] = share
+            elif not _positive(value):
+                self._shape(
+                    where,
+                    f"the smallest size of `{medium}` is `{value}`: it takes a positive number "
+                    "of px, or a formula of the page's size",
+                )
+            elif medium == PAPER and self.physical_size is not None:
+                self._shape(
+                    where,
+                    f"gives `{PAPER}` a fixed smallest size, and declares a physical size: its "
+                    "brand's width sets the scale it prints at, so a fixed length names no "
+                    "printed size; give a share of the page, such as `=:page-height / 100`",
+                )
+            else:
+                self.smallest_text[medium] = float(value)
+
+    def _share(self, where: str, text: str) -> fm.Formula | None:
+        """A smallest text size given as a share of the page, read at `where`: a formula that
+        gives a length, and reads only numbers and the size of the page a run lies on,
+        `:page-width` and `:page-height` (DEC-055 points 3 and 7). Else None, with the
+        formula's own finding."""
+        try:
+            formula = fm.parse(text)
+        except fm.FormulaError as error:
+            self._issue("formula-unreadable", where, str(error))
+            return None
+        for ref in formula.references():
+            if not (isinstance(ref, fm.Engine) and ref.name in fm.PAGE_NAMES):
+                self._issue(
+                    "formula-reach",
+                    where,
+                    f"the formula `{text}` reads `{ref}`: a smallest text size reads only "
+                    "numbers and the size of the page a run lies on, `:page-width` and "
+                    "`:page-height`",
+                )
+                return None
+        try:
+            result = fm.dimension(formula, lambda _: fm.LENGTH)
+        except fm.FormulaError as error:
+            self._issue("formula-dimension", where, str(error))
+            return None
+        if result != fm.LENGTH:
+            self._issue(
+                "formula-dimension",
+                where,
+                f"the formula `{text}` gives {fm.dimension_name(result or 0)} where a length "
+                "belongs",
+            )
+            return None
+        return formula
 
     def _read_options(self, options: Mapping[str, Any]) -> None:
         for name, decl in options.items():
@@ -1789,6 +2011,12 @@ class Component:
             for theirs, ours in bound.items():
                 if not _is_field(ours, self.fields):
                     self._shape(f"{where}.fields.{theirs}", f"passes no field `{ours}` of its own")
+                elif ours in self.path_lists:
+                    self._shape(
+                        f"{where}.fields.{theirs}",
+                        f"passes the list of paths `{ours}` on to a component it places, which "
+                        "no part does for now: only a text part of its own shows it",
+                    )
                 elif ours in self.runs and self.draws is not None:
                     # A brand's drawing that passes it on takes none of its runs, which asks
                     # the brand's owner for attention (DEC-012 points 2 and 8).
@@ -1811,11 +2039,19 @@ class Component:
         listed = part.spec["repeat"]
         if not _is_field(listed, self.lists):
             self._shape(f"{where}.repeat", f"repeats over `{listed}`, which is no list field")
+        elif listed in self.path_lists:
+            self._shape(
+                f"{where}.repeat",
+                f"the list `{part.name}` repeats over `{listed}`, a list of paths, which holds "
+                "texts, not items: only a text part shows it, a path to a paragraph",
+            )
         if "draw" in part.spec and not _is_use(part.spec["draw"]):
             self._shape(f"{where}.draw", f"`{part.spec['draw']}` is not `<library>/<component>`")
         if "colour" in part.spec:
             self._read_place_colour(part)
         operators = [name for name in OPERATORS if name in part.spec]
+        if TRUNK in part.spec:
+            self._read_trunk(part)
         if isinstance(listed, str) and listed in self._tie_lists:
             for name in operators:
                 self._shape(
@@ -1856,6 +2092,37 @@ class Component:
             )
         if CROSS_SIZE in settings:
             self._read_cross_size(part)
+
+    def _read_trunk(self, part: Part) -> None:
+        """The end field of its list at which the ties a part draws share a trunk (DEC-043
+        point 1): a name, never a switch, of one of the two end fields of the list of ties it
+        repeats over, as the versions it is read with declare them. A drawing's list takes its
+        top's end fields, so it is judged with the top it is read with. Where it names none,
+        or the part repeats over no list of ties, it is refused, and the ties spread."""
+        where, given = f"parts.{part.name}.{TRUNK}", part.spec[TRUNK]
+        declared, listed = self.ties(part), part.spec.get("repeat")
+        if declared is None or declared.ends is None:
+            if listed not in self._tie_lists:  # a list's malformed ends are refused already
+                self._shape(
+                    where,
+                    f"the part `{part.name}` declares `{TRUNK}`, and repeats over no list of "
+                    "ties: only ties share a trunk",
+                )
+        elif not isinstance(given, str):
+            self._shape(
+                where,
+                f"the part `{part.name}` takes the name of one of its list's end fields under "
+                f"`{TRUNK}`, never a switch",
+            )
+        elif given not in declared.ends:
+            fields = " and ".join(f"`{name}`" for name in declared.ends)
+            self._shape(
+                where,
+                f"the part `{part.name}` shares a trunk at `{given}`, which is neither of its "
+                f"list's end fields, {fields}: name one of them",
+            )
+        else:
+            self.trunks[part.name] = ENDS[declared.ends.index(given)]
 
     def _read_cross_size(self, part: Part) -> None:
         """What a `cross-size` may not do, judged for each set of the options, the size axes
@@ -2269,12 +2536,13 @@ class Component:
                     self._shape(f"layouts.{layout}.slots.{slot}", f"the slot `{slot}` is no field")
                 if isinstance(slot_decl, Mapping) and slot_decl.get("pages") is True:
                     pages.add(slot)
-                if isinstance(slot_decl, Mapping) and RUNS in slot_decl:
-                    self._shape(
-                        f"layouts.{layout}.slots.{slot}.{RUNS}",
-                        f"marks the slot `{slot}` as taking runs: the slot names a field of the "
-                        "top, and the field takes the mark",
-                    )
+                for mark, what in ((RUNS, "as taking runs"), (PATHS, "as holding paths")):
+                    if isinstance(slot_decl, Mapping) and mark in slot_decl:
+                        self._shape(
+                            f"layouts.{layout}.slots.{slot}.{mark}",
+                            f"marks the slot `{slot}` {what}: the slot names a field of the "
+                            "top, and the field takes the mark",
+                        )
         self.pages = frozenset(pages)
 
     def _read_forms(self, data: Mapping[str, Any], forms: PageForms) -> None:
@@ -2466,6 +2734,77 @@ class Component:
                     f"{at}.{RUNS}",
                     f"the field of runs `{name}` declares {len(schema[RUNS])} words, and no "
                     "text part chooses its role, its paint, a run's sign or its ground by them",
+                )
+
+    # -- fields of paths, and lists that hold no items
+
+    def _read_paths(self, data: Mapping[str, Any]) -> None:
+        """The component's fields of paths (DEC-056 points 1 and 5), judged once every part
+        and layout is read, as its fields of runs are: each mark lies directly on one of its
+        fields, or on a slot of a layout that is a page's form, never below one, and no
+        `$ref` leads to a marked schema; a marked field holds a path or a list of paths
+        (`paths_problem`). Each field or such slot whose schema admits a list of entries that
+        are not mappings, and that carries neither the mark of runs nor that of paths, asks
+        the component's owner for attention (`LIST_UNMARKED`): such a list holds no items,
+        runs or paths. A field that holds a top's pages holds pages, which the check reads
+        as mappings, so it takes none. A top's own drawing of a layout, and a brand's, leave
+        all of this to the top that declares it."""
+        if self.layout is not None or self.draws is not None:
+            return
+        fields = data.get("fields")
+        if isinstance(fields, Mapping) and PATHS in fields:
+            self._shape(f"fields.{PATHS}", "marks the schema of all its fields as holding paths")
+        self._read_path_marks("fields", self.fields, fields)
+        layouts = data.get("layouts") if self.forms else None
+        for layout, decl in (layouts if isinstance(layouts, Mapping) else {}).items():
+            slots = decl.get("slots") if isinstance(decl, Mapping) else None
+            if isinstance(slots, Mapping):
+                root = {"type": "object", "properties": slots}
+                self._read_path_marks(f"layouts.{layout}.slots", slots, root, slots=True)
+
+    def _read_path_marks(
+        self, where: str, properties: Mapping[str, Any], root: Any, *, slots: bool = False
+    ) -> None:
+        """The marks of fields of paths among `properties`, the fields or a layout's slots at
+        `where`, whose `$ref`s lead within `root`; and each list among them that holds no
+        items, runs or paths."""
+        for name, schema in properties.items():
+            at = f"{where}.{name}" if slots else f"{where}.properties.{name}"
+            for below in _marks_below(schema, at, PATHS):
+                self._shape(
+                    below,
+                    f"marks a schema below the field `{name}` as holding paths: only a field "
+                    "itself, or a layout's slot, holds paths",
+                )
+            for path, ref in _refs(schema, at):
+                target = _target(ref, root)
+                if isinstance(target, Mapping) and PATHS in target:
+                    self._shape(
+                        path,
+                        f"`$ref: {ref}` leads to a field of paths, so another field would hold "
+                        "paths through it",
+                    )
+            if not isinstance(schema, Mapping):
+                continue
+            if PATHS in schema:
+                problem = paths_problem(str(name), schema)
+                if problem is not None:
+                    self._shape(f"{at}.{PATHS}", problem)
+            elif (
+                _is_list(schema)
+                and RUNS not in schema
+                and schema.get(PAGES) is not True
+                and _admits_texts(schema, root)
+            ):
+                self.attention.append(
+                    (
+                        LIST_UNMARKED,
+                        at,
+                        f"the field `{name}` takes a list whose entries may be no "
+                        f"mappings, and carries neither `{RUNS}` nor `{PATHS}`: such a list "
+                        "holds no items, runs or paths, so nothing the format gives a list, such "
+                        "as an item's id or a path's check, reaches what it holds",
+                    )
                 )
 
     # -- values, which may switch on an option
@@ -2702,6 +3041,11 @@ class Component:
                     f"reads `{ref}`, which only the `{CROSS_SIZE}` of a row or a column reads: "
                     "the place of the item it sizes, or how many its list draws"
                 )
+            if isinstance(ref, fm.Engine) and ref.name in fm.PAGE_NAMES:
+                problem = (
+                    f"reads `{ref}`, which only a top's `{SMALLEST_TEXT}` reads: the size of "
+                    "the page a run lies on"
+                )
             if problem:
                 self._issue("formula-reach", where, f"the formula `{text}` {problem}")
                 return
@@ -2722,7 +3066,31 @@ class Component:
 
     def _unreachable(self, ref: fm.Reference) -> str | None:
         """Why a formula of this component may not read `ref`, as far as reading the
-        component alone tells; the rest is found when the scene is computed."""
+        component alone tells; the rest is found when the scene is computed. A measure of a
+        line's own stretch reads only a line (DEC-043 point 7)."""
+        problem = self._out_of_reach(ref)
+        if problem is None and isinstance(ref, fm.Path) and ref.measure in fm.OWN_MEASURES:
+            return self._no_line(ref)
+        return problem
+
+    def _no_line(self, ref: fm.Path) -> str | None:
+        """Why `ref`, which reads a measure of a line's own stretch, reads no line, as far as
+        reading the component alone tells: it reads an end, or the item or the point an
+        option gives, or names a part of its own that is no line, or an item of a list. What
+        a step below an item or a placed component reaches is found when the scene is
+        computed."""
+        said = f"reads `{ref}`: `{ref.measure}` is a measure of a line, and"
+        if ref.option is not None:
+            return None if ref.steps else f"{said} `{{{ref.option}}}` gives no line"
+        first = ref.steps[0]
+        part = self.parts.get(first.name)
+        if part is None or len(ref.steps) > 1:
+            return None
+        if first.item is not None:
+            return f"{said} `{first}` is an item of a list"
+        return f"{said} `{first.name}` is a {part.kind}" if part.kind != "line" else None
+
+    def _out_of_reach(self, ref: fm.Reference) -> str | None:
         if isinstance(ref, fm.Value):
             return None if ref.name in self.values else f"names no value `{ref.name}`"
         if not isinstance(ref, fm.Path):
@@ -2765,7 +3133,7 @@ class Component:
         role it cannot read is reported once, in the component; a library's own role the
         brand leaves with no value is reported where `Context.unvalued_at_lock` places it."""
         if isinstance(ref, fm.Engine):
-            return fm.LENGTH if ref.name in ("width", "height") else fm.NUMBER
+            return fm.LENGTH if ref.name in ("width", "height", *fm.PAGE_NAMES) else fm.NUMBER
         if isinstance(ref, fm.Path):
             return fm.LENGTH
         if isinstance(ref, fm.Value):
@@ -2954,6 +3322,9 @@ class Context:
         self.findings: list[Finding] = []
         self.stack: list[tuple[Instance, tuple[str, ...]]] = []
         self.active: set[tuple[int, tuple[str, ...]]] = set()
+        # The cells begun while cells are computed aside, in any instance, each forgotten
+        # after (`Instance._aside`); None outside.
+        self.aside: list[tuple[Instance, tuple[str, ...]]] | None = None
         self._seen: set[tuple[str, str, str, str, str]] = set()
         self._components: dict[str, Component | None] = {}
         self._unreadable: set[str] = set()
@@ -2964,6 +3335,9 @@ class Context:
         self._order_read = False
         self._concepts: dict[str, str | UnknownConcept | None] = {}
         self._signs: dict[str, Outline | None] = {}
+        # Each part a tie's component places on a stretch its tie shares, reported once, by
+        # the component, its library's version and the part (DEC-043 point 7).
+        self.trunk_parts: set[tuple[str, str, str]] = set()
 
     def fact(self, word: str) -> str:
         """The text of the fact `word`, one of `FACTS`."""
@@ -3065,6 +3439,20 @@ class Context:
             self._components[use] = component
             for code, where, message in component.issues if component else ():
                 self.report(code, message, where=where, use=use)
+            for code, where, message in component.attention if component else ():
+                self.add(
+                    Finding(
+                        code,
+                        ATTENTION,
+                        message,
+                        where=where,
+                        fix=f"mark the field `{PATHS}: true` where its entries are paths, or "
+                        "give its `items` the type `object`, where they are items",
+                        library=self.library(use),
+                        who="the component's owner",
+                        extra={"component": use},
+                    )
+                )
         return self._components[use]
 
     def _drawing(self, use: str, data: Mapping[str, Any]) -> Component:
@@ -3098,6 +3486,11 @@ class Context:
             issues.append(
                 (PHYSICAL_SIZE, PHYSICAL_SIZE, "declares a physical size, and is a drawing: its "
                  "top alone declares the size its pages print at")
+            )  # fmt: skip
+        if SMALLEST_TEXT in data:
+            issues.append(
+                ("component-shape", SMALLEST_TEXT, "declares a smallest text size, and is a "
+                 "drawing: the piece's top alone declares it, and no brand gives it")
             )  # fmt: skip
         draws = data.get(DRAWS)
         top_use = draws.get("top") if isinstance(draws, Mapping) else None
@@ -3364,13 +3757,23 @@ def _join(path: str, key: str) -> str:
     return f"{path}.{key}" if path else key
 
 
-def _filled(value: Any, *, runs: bool = False) -> bool:
+def _filled(value: Any, *, runs: bool = False, paths: bool = False) -> bool:
     """Whether a field holds something: not missing, empty text, an empty list or an empty
     mapping. A list of runs, where `runs`, is filled where one of its runs holds text
-    (DEC-012 point 1)."""
+    (DEC-012 point 1); a list of paths, where `paths`, where it holds a path (DEC-056 point
+    1)."""
     if runs and isinstance(value, list):
         return any(_run_text(run) for run in value)
+    if paths and isinstance(value, list):
+        return any(isinstance(path, str) and path for path in value)
     return value not in (None, "", [], {})
+
+
+def _shown_paths(value: list[Any]) -> str:
+    """The text a list of paths is shown as: its paths in the content's order, a path to a
+    paragraph, each parted from the next by a line feed (DEC-056 point 1). An entry that is
+    no text is left out, as the check of the content reports."""
+    return "\n".join(path for path in value if isinstance(path, str))
 
 
 def _run_text(run: Any) -> str:
@@ -3465,6 +3868,10 @@ class Instance:
         self.arranged: dict[str, str] = {}
         self.chain = chain or (component.use,)
         self.cells: dict[tuple[str, ...], Any] = {}
+        # Whether the groups of the ties it draws are being judged, and, where it is a tie
+        # of one, the round's routes its parts are computed from (DEC-043 point 5).
+        self._judging = False
+        self._round: _Round | None = None
         self.nodes: dict[str, Node] = {}
         self.options: dict[str, Any] = {}
         self.option_sources: dict[str, str] = {}
@@ -3742,7 +4149,11 @@ class Instance:
             if isinstance(when, bool):
                 return when
         if isinstance(when, str):
-            return _filled(self.given.get(when), runs=when in self.component.runs)
+            return _filled(
+                self.given.get(when),
+                runs=when in self.component.runs,
+                paths=when in self.component.paths,
+            )
         if isinstance(when, Mapping) and len(when) == 1:
             ((name, words),) = when.items()
             return self.options.get(name) in (words if isinstance(words, list) else [words])
@@ -3772,7 +4183,9 @@ class Instance:
         """The text a text part shows: a fact of its export (`_build_fact`), or its field's
         text, one run, or, in a field of runs, its runs (DEC-012 point 1). Each run takes the
         typography role its word chooses. A field given as text is one run of the field's
-        first word. A part that names neither is recorded when the component was read."""
+        first word. A list of paths is one run too, a path to a paragraph (`_shown_paths`,
+        DEC-056 point 1). A part that names neither is recorded when the component was
+        read."""
         props = node.part.props
         if "fact" in props:
             self._build_fact(node, trace)
@@ -3785,6 +4198,8 @@ class Instance:
         value = self.given.get(content)
         if isinstance(value, (int, float)) and not isinstance(value, bool):
             value = str(value)
+        if isinstance(value, list) and content in self.component.path_lists:
+            value = _shown_paths(value)
         given = self._given_runs(content, words, value) if isinstance(value, list) else []
         if not isinstance(value, list) or words is None:
             if value is not None and not isinstance(value, str):
@@ -4432,7 +4847,8 @@ class Instance:
                 shown |= part.passes | ({part.shows} if part.shows else set())
         for name in component.fields:
             given = self.given.get(name)
-            if _filled(given, runs=name in component.runs) and name not in shown:
+            filled = _filled(given, runs=name in component.runs, paths=name in component.paths)
+            if filled and name not in shown:
                 return f"the field `{name}`"
         for name, source in sorted(self.option_sources.items()):
             word = self.options.get(name)
@@ -4518,6 +4934,8 @@ class Instance:
             raise self._fail("loop", f"a loop of references: {' → '.join(loop)}")
         self.ctx.stack.append((self, cell))
         self.ctx.active.add(key)
+        if self.ctx.aside is not None:
+            self.ctx.aside.append((self, cell))
         try:
             value = self._compute(cell)
         except Fault:
@@ -4558,6 +4976,8 @@ class Instance:
         if kind == "end":
             return self._end_frame(name)
         if kind == "anchors":
+            if self._judging:
+                raise Fault()  # its groups are being judged (`_aside`)
             return self._anchors()
         if kind == "route":
             return self._route(name)
@@ -4590,6 +5010,8 @@ class Instance:
         if isinstance(ref, fm.Engine):
             if ref.name in ("width", "height"):
                 return self.get("size", ref.name)
+            if ref.name in fm.PAGE_NAMES:
+                raise Fault()  # refused when the component was read
             if ref.name in fm.PLACE_NAMES:
                 if at is None:
                     raise Fault()  # refused when the component was read
@@ -5151,24 +5573,49 @@ class Instance:
         dx, dy = (pattern.get("part", self.part_name, axis) for axis in ("x", "y"))
         return x - dx, y - dy, width, height
 
-    def _anchors(self) -> dict[tuple[int, str], Anchor]:
+    def _anchors(self) -> Meetings:
         """Where each tie this instance draws meets each of its ends, in this instance's
-        frame, by the tie and the end: the connector tool's (DEC-005 point 2). A tie leaves
-        an end's frame on the side that faces its other end: across, where the two frames
-        lie further apart across than down, else down. The ties that meet one side of one
-        item spread evenly along it, ordered by where their other ends' centres lie along
-        it, then in the order of their lists. A tie ends at a point an end names. A tie
-        whose ends cannot be computed has no anchors, and its finding is recorded."""
-        frames: dict[Instance, dict[str, tuple[float, float, float, float]]] = {}
+        frame, by the tie and the end, and how each tie of a group drawn as declared runs
+        along its trunk: the connector tool's (DEC-005 point 2, DEC-043). A tie leaves an
+        end's frame on the side that faces its other end: across, where the two frames lie
+        further apart across than down, else down. The ends that meet one side of one item
+        spread evenly along it (`_meet`), and a tie ends at a point an end names. A tie whose
+        ends cannot be computed has no anchors, and its finding is recorded. Where a part
+        declares a trunk end, its ties that meet one side of an item there form a group
+        where they may (`_groups`), and the groups are judged together, in rounds
+        (`_judged`)."""
+        frames: dict[Instance, dict[str, Frame]] = {}
         for node in self.nodes.values():
             if node.present and self.component.ties(node.part) is not None:
                 for tie in node.items:
                     ends = self.ctx.attempt(lambda t=tie: _shifted(self, t), None)
                     if ends is not None:
                         frames[tie] = ends
+        groups = self._groups(frames)
+        if not groups:
+            return Meetings(self._meet(frames, []))
+        self._judging = True
+        try:
+            return self._judged(frames, groups)
+        finally:
+            self._judging = False
+
+    def _meet(
+        self, frames: Mapping[Instance, Mapping[str, Frame]], groups: Sequence[_Group]
+    ) -> dict[tuple[int, str], Anchor]:
+        """Where each tie of `frames` meets each of its ends, with `groups` drawn as declared.
+        The ends that meet one side of one item spread evenly along it, ordered by where
+        their other ends' centres lie along it, then by the ties' order (DEC-005 point 2). A
+        group counts as one end among them, placed by the middle of the range its ties'
+        other ends' centres cover, then by its first tie, and each of its ties meets the side
+        at that one point (DEC-043 point 2)."""
+        grouped = {(id(tie), group.which): group for group in groups for tie in group.ties}
+        order: dict[int, int] = {}
+        reached: dict[int, list[float]] = {}
         anchors: dict[tuple[int, str], Anchor] = {}
-        sides: dict[tuple[int, str], list[tuple[float, int, Instance, str]]] = {}
-        for order, (tie, ends) in enumerate(frames.items()):
+        sides: dict[tuple[int, str], list[tuple[float, int, list[tuple[Instance, str]]]]] = {}
+        for place, (tie, ends) in enumerate(frames.items()):
+            order[id(tie)] = place
             across = _across(ends["start"], ends["end"])
             for which, other in zip(ENDS, reversed(ENDS), strict=True):
                 if tie.ends[which].point is not None:
@@ -5177,45 +5624,616 @@ class Instance:
                 side = _side(ends[which], ends[other], across)
                 ox, oy, ow, oh = ends[other]
                 along = oy + oh / 2 if side in ("left", "right") else ox + ow / 2
+                group = grouped.get((id(tie), which))
+                if group is not None:
+                    reached.setdefault(id(group), []).append(along)
+                    continue
                 key = (id(tie.ends[which].item), side)
-                sides.setdefault(key, []).append((along, order, tie, which))
+                sides.setdefault(key, []).append((along, place, [(tie, which)]))
+        for group in groups:
+            alongs = reached[id(group)]
+            middle = (min(alongs) + max(alongs)) / 2
+            meeting = [(tie, group.which) for tie in group.ties]
+            sides.setdefault(group.key, []).append((middle, order[id(group.ties[0])], meeting))
         for (_, side), members in sides.items():
             members.sort(key=lambda member: (member[0], member[1]))
-            for place, (_, _, tie, which) in enumerate(members, start=1):
+            for place, (_, _, meeting) in enumerate(members, start=1):
+                tie, which = meeting[0]
                 x, y, width, height = frames[tie][which]
                 share = place / (len(members) + 1)
                 if side in ("left", "right"):
                     at = (x if side == "left" else x + width, y + height * share)
                 else:
                     at = (x + width * share, y if side == "top" else y + height)
-                anchors[(id(tie), which)] = Anchor(at[0], at[1], side)
+                for each, end in meeting:
+                    anchors[(id(each), end)] = Anchor(at[0], at[1], side)
         return anchors
+
+    def _groups(self, frames: Mapping[Instance, Mapping[str, Frame]]) -> list[_Group]:
+        """The groups of ties that may share a trunk (DEC-043 point 2): for each part that
+        declares a trunk end, the ties of its list that meet one side of one item there, two
+        or more, where none reads a line's frame or own stretch, all draw alike and each
+        draws with corners. A tie whose trunk end names a point meets no side. Where the ties
+        of one side form no group, each meets the side at a point of its own, and the fact
+        is stated, unless all of them are straight and alike (`_ungrouped`)."""
+        found: list[_Group] = []
+        for name, node in self.nodes.items():
+            which = self.component.trunks.get(name)
+            if which is None or not node.present:
+                continue
+            other = ENDS[1 - ENDS.index(which)]
+            sides: dict[tuple[int, str], list[Instance]] = {}
+            for tie in node.items:
+                ends = frames.get(tie)
+                if ends is None or tie.ends[which].point is not None:
+                    continue
+                side = _side(ends[which], ends[other], _across(ends["start"], ends["end"]))
+                sides.setdefault((id(tie.ends[which].item), side), []).append(tie)
+            for key, ties in sides.items():
+                if len(ties) < 2:
+                    continue
+                forms, why = _ungrouped(ties)
+                if forms:
+                    found.append(_Group(name, which, key, ties))
+                elif why is not None:
+                    self._state(TRUNK_UNGROUPED, ties, which, key[1], why)
+        return found
+
+    def _judged(
+        self, frames: Mapping[Instance, Mapping[str, Frame]], groups: list[_Group]
+    ) -> Meetings:
+        """The meetings with each group drawn as declared that can be drawn clear, and every
+        other group spread, judged together, in rounds (DEC-043 point 5). Each round meets
+        the ends with the groups still standing and lays each group's trunk and branches
+        (`_lay`). Where a group has no room or a branch's middle leg is too short, its routes
+        cannot be drawn, so each such group is drawn spread and the next round begins.
+        Otherwise the round finds each group two of whose ties cross or that adds a crossing
+        (`_crossed`), and each a part of whose ties placed by the measures does not fit
+        (`_unfit`). Each group found is drawn spread, its fact stated, and judged no more,
+        and the next round judges the rest anew, until a round finds none. The spread
+        routes, every group spread, are the same in every round."""
+        lines = {id(tie): tie._line() for tie in frames}
+        spread = self._meet(frames, [])
+        spread_routes = {id(tie): self._held_routes(tie, spread, None) for tie in frames}
+        standing = list(groups)
+        while True:
+            anchors = self._meet(frames, standing)
+            branchings: dict[int, Branching] = {}
+            failed: dict[int, _Unclear] = {}
+            for group in standing:
+                laid = self._lay(group, anchors, lines)
+                if isinstance(laid, _Unclear):
+                    failed[id(group)] = laid
+                else:
+                    branchings.update(laid)
+            if not failed:
+                routes = {
+                    id(tie): self._held_routes(tie, anchors, branchings.get(id(tie)))
+                    for tie in frames
+                }
+                declared = _Declared(anchors, branchings, routes, spread_routes, lines)
+                self._crossed(declared, standing, failed)
+                for group in standing:
+                    unfit = None if id(group) in failed else self._unfit(group, anchors, branchings)
+                    if unfit is not None:
+                        failed[id(group)] = unfit
+            if not failed:
+                break
+            for group in standing:
+                if id(group) in failed:
+                    side = group.key[1]
+                    self._state(TRUNK_SPREAD, group.ties, group.which, side, failed[id(group)])
+            standing = [group for group in standing if id(group) not in failed]
+        mates = {
+            id(tie): tuple(other for other in group.ties if other is not tie)
+            for group in standing
+            for tie in group.ties
+        }
+        return Meetings(anchors, branchings, mates)
+
+    def _lay(
+        self,
+        group: _Group,
+        anchors: Mapping[tuple[int, str], Anchor],
+        lines: Mapping[int, _Line | None],
+    ) -> dict[int, Branching] | _Unclear:
+        """How the ties of a group run from its point (DEC-043 points 2 and 3), by the tie:
+        the one that reaches least far, the first in the ties' order where two reach as far,
+        is the trunk, and runs as any connector with corners does; each other is a branch,
+        which leaves the trunk's first leg at its junction (`trunks.junctions`), the
+        farthest-reaching nearest the item. Why the group cannot be drawn clear instead,
+        where it has no room or a branch's middle leg is shorter than the least leg."""
+        which = group.which
+        other = ENDS[1 - ENDS.index(which)]
+        point = anchors[(id(group.ties[0]), which)]
+        way = WAYS[group.key[1]]
+        across = group.key[1] in ("left", "right")
+        order = {id(tie): place for place, tie in enumerate(group.ties)}
+
+        def reach(tie: Instance) -> float:
+            far = anchors[(id(tie), other)]
+            return abs(far.y - point.y) if across else abs(far.x - point.x)
+
+        trunk = min(group.ties, key=lambda tie: (reach(tie), order[id(tie)]))
+        branches = sorted(
+            (tie for tie in group.ties if tie is not trunk),
+            key=lambda tie: (-reach(tie), order[id(tie)]),
+        )
+        drawn = [line for line in (lines[id(tie)] for tie in group.ties) if line is not None]
+        radius = max(line.radius for line in drawn)
+        stroke = max(line.width for line in drawn)
+        least_leg, least_gap = max(2 * radius, 2 * stroke), max(radius, 2 * stroke)
+        head = max(line.heads[which] for line in drawn)
+        ends = anchors[(id(trunk), "start")], anchors[(id(trunk), "end")]
+        course = _connector(*ends, (0.0, 0.0), True, None)
+        first = (course if which == "start" else course[::-1])[1]
+        leg = (first[0] - point.x) * way[0] + (first[1] - point.y) * way[1]
+        limits = []
+        for tie in branches:
+            far, line = anchors[(id(tie), other)], lines[id(tie)]
+            reaches = (far.x - point.x) * way[0] + (far.y - point.y) * way[1]
+            limits.append(reaches - least_leg - (line.heads[other] if line is not None else 0.0))
+        places = trunks.junctions(head + least_leg, leg - least_gap, least_gap, limits, leg)
+        mend = "move the items the ties join, in the content, so the branches have room"
+        if places is None:
+            count = f"{len(branches)} branch{'es' if len(branches) > 1 else ''}"
+            return _Unclear(
+                f"its trunk's first leg, {_said(leg)} px long, has no room for {count} to "
+                f"leave it, each with legs of at least {_said(least_leg)} px beside its turns "
+                f"and {_said(least_gap)} px from the next",
+                mend,
+            )
+        for tie in branches:
+            if reach(tie) < least_leg - trunks.EXACT:
+                return _Unclear(
+                    f"the branch `{tie.trace}` would run a middle leg {_said(reach(tie))} px "
+                    f"long, shorter than its least leg, {_said(least_leg)} px",
+                    mend,
+                )
+        found: dict[int, Branching] = {}
+        start = (point.x, point.y)
+        for tie, place in zip(branches, places, strict=True):
+            junction = (point.x + way[0] * place, point.y + way[1] * place)
+            found[id(tie)] = Branching(which, start, junction, branch=True)
+        last = (point.x + way[0] * places[-1], point.y + way[1] * places[-1])
+        found[id(trunk)] = Branching(which, start, last, branch=False)
+        return found
+
+    def _held_routes(
+        self,
+        tie: Instance,
+        anchors: Mapping[tuple[int, str], Anchor],
+        branching: Branching | None,
+    ) -> list[list[Point]]:
+        """The routes a tie's connector parts draw, each route once, as the scene would hold
+        them, in the tie's frame, then moved into this instance's frame; none where its ends
+        have no anchors."""
+        start, end = anchors.get((id(tie), "start")), anchors.get((id(tie), "end"))
+        if start is None or end is None:
+            return []
+        dx, dy = (self.get("part", tie.part_name, axis) for axis in ("x", "y"))
+        routes: list[list[Point]] = []
+        for name in tie.connectors():
+            route = trunks.held_route(tie.course(name, start, end, (dx, dy), branching))
+            moved = [(x + dx, y + dy) for x, y in route]
+            if moved not in routes:
+                routes.append(moved)
+        return routes
+
+    def _crossed(
+        self, declared: _Declared, standing: Sequence[_Group], failed: dict[int, _Unclear]
+    ) -> None:
+        """Adds to `failed` each standing group two of whose ties cross, and each that adds a
+        crossing (DEC-043 point 5), judged between every two ties of every list this
+        instance draws. Two ties of one group cross where they meet past the stretch they
+        share, but at the junction where one leaves the other (`_shared_meetings`). Any other
+        two that meet in the declared routes add their crossing where the spread routes have
+        them meet nowhere, meet fewer times, or only pass across where the declared routes
+        have them run side by side. It is added by each group on a side either of the two
+        meets."""
+        group_of = {id(tie): group for group in standing for tie in group.ties}
+        on_side: dict[tuple[int, str], list[_Group]] = {}
+        for group in standing:
+            on_side.setdefault(group.key, []).append(group)
+        mend = "move the items the ties join, in the content, so no tie crosses another"
+        ties = [tie for tie in self._drawn_ties() if declared.routes.get(id(tie))]
+        for first, second in itertools.combinations(ties, 2):
+            ours, theirs = declared.routes[id(first)], declared.routes[id(second)]
+            gap = max(
+                _least_gap(declared.lines[id(first)], ours),
+                _least_gap(declared.lines[id(second)], theirs),
+            )
+            named = f"`{first.trace}` and `{second.trace}`"
+            group = group_of.get(id(first))
+            if group is not None and group is group_of.get(id(second)):
+                if sum(self._shared_meetings(first, second, declared, gap)):
+                    failed.setdefault(id(group), _Unclear(f"its ties {named} would cross", mend))
+                continue
+            meet = trunks.meetings(ours, theirs, gap, trunks.common_ends(ours, theirs))
+            if not sum(meet):
+                continue
+            before = declared.spread[id(first)], declared.spread[id(second)]
+            was = trunks.meetings(*before, gap, trunks.common_ends(*before))
+            if sum(was) >= sum(meet) and (was[1] or not meet[1]):
+                continue
+            unclear = _Unclear(f"it would add a crossing of the ties {named}", mend)
+            for tie in (first, second):
+                for which in ENDS:
+                    anchor = declared.anchors.get((id(tie), which))
+                    if anchor is not None and anchor.side is not None:
+                        key = (id(tie.ends[which].item), anchor.side)
+                        for each in on_side.get(key, []):
+                            failed.setdefault(id(each), unclear)
+
+    def _drawn_ties(self) -> list[Instance]:
+        """Every tie this instance draws, in the ties' order."""
+        return [
+            tie
+            for node in self.nodes.values()
+            if node.present and self.component.ties(node.part) is not None
+            for tie in node.items
+        ]
+
+    def _shared_meetings(
+        self, first: Instance, second: Instance, declared: _Declared, gap: float
+    ) -> tuple[int, int]:
+        """How often two ties of one group meet past the stretch they share, from the group's
+        point to where the first of them leaves the trunk's first leg: that stretch, and the
+        junction where one leaves the other, are no crossing (DEC-043 point 5)."""
+        one, other = declared.branchings[id(first)], declared.branchings[id(second)]
+        dx, dy = (self.get("part", first.part_name, axis) for axis in ("x", "y"))
+
+        def held(point: Point) -> Point:
+            return trunks.held(point[0] - dx) + dx, trunks.held(point[1] - dy) + dy
+
+        start = held(one.point)
+        leaves = min(
+            held(one.leaves),
+            held(other.leaves),
+            key=lambda at: math.hypot(at[0] - start[0], at[1] - start[1]),
+        )
+        by = math.hypot(leaves[0] - start[0], leaves[1] - start[1])
+        from_start = one.which == "start"
+        ours = [trunks.trimmed(route, by, from_start) for route in declared.routes[id(first)]]
+        theirs = [trunks.trimmed(route, by, from_start) for route in declared.routes[id(second)]]
+        return trunks.meetings(ours, theirs, gap, (leaves, *trunks.common_ends(ours, theirs)))
+
+    def _unfit(
+        self,
+        group: _Group,
+        anchors: Mapping[tuple[int, str], Anchor],
+        branchings: Mapping[int, Branching],
+    ) -> _Unclear | None:
+        """Why a part that a tie of the group places by the measures, centred halfway along
+        its line's own stretch, does not fit there in this round (DEC-043 point 6): any part
+        of its frame lies on the stretch its tie shares, or its centre on the line of another
+        tie of the group. The parts' frames are computed aside, from the round's routes
+        (`Instance.parts_in`), and move nothing. None where every such part fits."""
+        dx, dy = (self.get("part", group.ties[0].part_name, axis) for axis in ("x", "y"))
+        rounds: dict[int, _Round] = {}
+        for tie in group.ties:
+            start, end = anchors[(id(tie), "start")], anchors[(id(tie), "end")]
+            branching = branchings[id(tie)]
+            courses = {
+                name: tie.course(name, start, end, (dx, dy), branching) for name in tie.connectors()
+            }
+            rounds[id(tie)] = _Round(courses, branching)
+        with self._aside():
+            drawn = {id(tie): tie.parts_in(rounds[id(tie)]) for tie in group.ties}
+        for tie in group.ties:
+            mates = [mate for mate in group.ties if mate is not tie]
+            others = [
+                _Other(mate.trace, rounds[id(mate)].held((dx, dy)).every(), _width(mate._line()))
+                for mate in mates
+            ]
+            held = rounds[id(tie)].held((dx, dy))
+            for name, frame in drawn[id(tie)].items():
+                if not held.by_measures(frame):
+                    continue
+                same = [drawn[id(mate)].get(name) for mate in mates]
+                why = _misplaced(frame, held, others, same)
+                if why is not None:
+                    use = tie.component.use
+                    return _Unclear(
+                        f"the part `{name}` of `{tie.trace}`, which `{use}` places halfway along "
+                        f"its line's own stretch, does not fit there: it {why}",
+                        f"give the part `{name}` of `{use}` room on the stretch its tie alone "
+                        "runs, or move the items the ties join, in the content",
+                    )
+        return None
+
+    @contextlib.contextmanager
+    def _aside(self) -> Iterator[None]:
+        """Computes cells aside, while a group is judged: every cell computed meanwhile, in
+        this instance, below it or above it, is forgotten after, with every finding and loop
+        it met, so a round moves nothing (DEC-043 point 6). A cell is computed again where it
+        is next read, and records its finding then. A request for this instance's ties'
+        meetings meanwhile fails (`_judging`)."""
+        ctx = self.ctx
+        begun: list[tuple[Instance, tuple[str, ...]]] = []
+        state = ctx.active, ctx.stack, ctx.findings, ctx._seen, ctx.aside
+        ctx.active, ctx.stack, ctx.findings, ctx._seen = set(), [], [], set(ctx._seen)
+        ctx.aside = begun
+        try:
+            yield
+        finally:
+            for each, cell in begun:
+                each.cells.pop(cell, None)
+            ctx.active, ctx.stack, ctx.findings, ctx._seen, ctx.aside = state
+
+    def _state(
+        self, code: str, ties: Sequence[Instance], which: str, side: str, why: _Unclear
+    ) -> None:
+        """States, as a fact, a group drawn spread, or ties that meet one side of an item at
+        their trunk end and form no group, and why (DEC-043 point 7). It lies in the content,
+        at the first of the ties in the ties' order, and names what would let them share a
+        trunk."""
+        first = ties[0]
+        declared = first.tie
+        field_name = declared.ends[ENDS.index(which)] if declared and declared.ends else which
+        named = ", ".join(f"`{tie.trace}`" for tie in ties)
+        what = (
+            "are drawn spread along it, sharing no trunk"
+            if code == TRUNK_SPREAD
+            else "form no group, so share no trunk"
+        )
+        message = (
+            f"{first.trace}: the ties {named} meet the {side} side of "
+            f"`{first.ends[which].item.trace}` at their end `{field_name}`, and {what}: "
+            f"{why.said}"
+        )
+        where = first.content_path if first.content_path is not None else first.trace
+        self.ctx.add(Finding(code, STATED, message, where=where, fix=f"to share one, {why.mend}"))
 
     def _route(self, name: str) -> list[tuple[float, float]]:
         """The points of the connector the line part `name` draws, in this tie's frame, from
         its start to its end: straight, or with corners, leaving and meeting each end
-        square to its side, never around anything (DEC-005 point 2). Raises `Fault`."""
+        square to its side, never around anything (DEC-005 point 2), a branch's off its
+        trunk (DEC-043 point 2). While its group is judged, the round's (`parts_in`).
+        Raises `Fault`."""
+        if self._round is not None:
+            return list(self._round.routes[name])
         pattern = self.parent
         if pattern is None or self.tie is None:
             raise Fault()
         found = pattern.get("anchors", "")
-        start, end = (found.get((id(self), which)) for which in ENDS)
+        start, end = (found.anchors.get((id(self), which)) for which in ENDS)
         if start is None or end is None:
             raise Fault()  # recorded where its ends were computed
-        dx, dy = (pattern.get("part", self.part_name, axis) for axis in ("x", "y"))
-        (sx, sy), (ex, ey) = (start.x - dx, start.y - dy), (end.x - dx, end.y - dy)
+        shift = (pattern.get("part", self.part_name, "x"), pattern.get("part", self.part_name, "y"))
+        return self.course(name, start, end, shift, found.branchings.get(id(self)))
+
+    def course(
+        self,
+        name: str,
+        start: Anchor,
+        end: Anchor,
+        shift: tuple[float, float],
+        branching: Branching | None,
+    ) -> list[Point]:
+        """The route of this tie's connector part `name` between two anchors, in its
+        pattern's frame less `shift`: straight, or with corners, as its `connect` says, a
+        branch's off its trunk where `branching` makes it one (`_connector`)."""
         spec = self.nodes[name].part.spec
-        if self.word(f"parts.{name}.connect", spec["connect"], "straight") == "straight":
-            return [(sx, sy), (ex, ey)]
-        sides = {start.side, end.side} - {None}
-        across = bool(sides & {"left", "right"}) if sides else abs(ex - sx) >= abs(ey - sy)
-        if across and abs(ey - sy) > TOLERANCE:
-            middle = (sx + ex) / 2
-            return [(sx, sy), (middle, sy), (middle, ey), (ex, ey)]
-        if not across and abs(ex - sx) > TOLERANCE:
-            middle = (sy + ey) / 2
-            return [(sx, sy), (sx, middle), (ex, middle), (ex, ey)]
-        return [(sx, sy), (ex, ey)]
+        corners = self.word(f"parts.{name}.connect", spec["connect"], "straight") != "straight"
+        return _connector(start, end, shift, corners, branching if corners else None)
+
+    def connectors(self) -> list[str]:
+        """The connector parts this tie draws, in its component's order."""
+        return [name for name, node in self.nodes.items() if node.present and _connects(node)]
+
+    def straight(self) -> list[str]:
+        """The connector parts this tie draws straight."""
+        return [
+            name
+            for name in self.connectors()
+            if self.word(f"parts.{name}.connect", self.nodes[name].part.spec["connect"], "straight")
+            == "straight"
+        ]
+
+    def _line(self) -> _Line | None:
+        """What this tie's connector parts draw, as the junctions read it (DEC-043 points 2
+        and 3): the greatest radius and stroke width among them, and at each end the longest
+        arrowhead, `trunks.HEAD` stroke widths long. None where a radius or a stroke width
+        reads a line's frame or own stretch (`line_read`), which no group reads."""
+        if self.line_read() is not None:
+            return None
+        radius, width, heads = 0.0, 0.0, dict.fromkeys(ENDS, 0.0)
+        for name in self.connectors():
+            props = self.nodes[name].part.props
+            stroke = self._length(name, "stroke-width", 1.0)
+            radius, width = max(radius, self._length(name, "rx", 0.0)), max(width, stroke)
+            for which, marker in zip(ENDS, MARKERS, strict=True):
+                where = f"parts.{name}.line.{marker}"
+                if marker in props and self.word(where, props[marker], "none") == "arrow":
+                    heads[which] = max(heads[which], trunks.HEAD * stroke)
+        return _Line(radius, width, heads)
+
+    def _length(self, name: str, prop: str, default: float) -> float:
+        """A length a connector part gives, as the scene holds it; `default`, as a renderer
+        draws it, where it gives none."""
+        props = self.nodes[name].part.props
+        if prop not in props:
+            return default
+        where = f"parts.{name}.line.{prop}"
+        return trunks.held(self.ctx.attempt(lambda: self.number(where, props[prop]), 0.0))
+
+    def line_read(self) -> tuple[str, str] | None:
+        """The key path and the text of a formula that reads the frame or the own stretch of
+        a line the connector tool draws, which a connector part of this tie reads in its
+        radius or its stroke width, directly, through a named value, or through another
+        part's place or size, as its formulas show (DEC-043 point 2); None where none does.
+        An arrowhead is a word, which reads no line."""
+        for name in self.connectors():
+            props = self.nodes[name].part.props
+            for prop in LENGTHS:
+                if prop in props:
+                    found = self._reads_line(f"parts.{name}.line.{prop}", props[prop], set())
+                    if found is not None:
+                        return found
+        return None
+
+    def _reads_line(self, where: str, raw: Any, seen: set[str]) -> tuple[str, str] | None:
+        chosen, value, _ = self.pick(where, raw)
+        formula = self.component.formulas.get(chosen)
+        if chosen in seen or formula is None:
+            return None
+        seen.add(chosen)
+        for ref in formula.references():
+            found = None
+            if isinstance(ref, fm.Value) and ref.name in self.component.values:
+                found = self._reads_line(
+                    f"values.{ref.name}", self.component.values[ref.name], seen
+                )
+            elif isinstance(ref, fm.Path) and ref.option is None and ref.steps:
+                node = self.nodes.get(ref.steps[0].name)
+                if node is not None and _connects(node):
+                    return chosen, str(value)
+                part = node.part if node is not None else None
+                if part is not None and len(ref.steps) == 1:
+                    for key in GEOMETRY:
+                        if found is None and key in part.spec and key in PART_KEYS[part.kind]:
+                            found = self._reads_line(
+                                f"parts.{part.name}.{key}", part.spec[key], seen
+                            )
+            if found is not None:
+                return found
+        return None
+
+    def look(self) -> dict[str, Any]:
+        """How this tie draws, as ties that draw alike share it (DEC-043 point 2), by what
+        it is: its component, its options and its state; its connector parts' stroke widths
+        and arrowheads; and each part's paints, as the scene holds them, a role or a step of
+        an order. Read only where no radius or stroke width reads a line's frame."""
+        paints: dict[str, str | None] = {}
+        for name, node in self.nodes.items():
+            if node.present and node.part.kind in PAINTED:
+                for prop in ("fill", "stroke"):
+                    paint = self.ctx.attempt(lambda n=name, p=prop: self.paint(n, p), (None, ""))
+                    paints[f"{name}.{prop}"] = paint[0]
+        connectors = self.connectors()
+        arrowheads = [
+            [
+                self.word(
+                    f"parts.{name}.line.{marker}", self.nodes[name].part.props.get(marker), "none"
+                )
+                for marker in MARKERS
+            ]
+            for name in connectors
+        ]
+        return {
+            "component": self.component.use,
+            "options": sorted(self.options.items()),
+            "state": self.given.get("state"),
+            "stroke width": [self._length(name, "stroke-width", 1.0) for name in connectors],
+            "arrowheads": arrowheads,
+            "paints": paints,
+        }
+
+    def parts_in(self, overlay: _Round) -> dict[str, Frame]:
+        """The frame of each part but its connectors that this tie draws, in its own frame,
+        with its routes and its line's own stretch the round's, `overlay` (DEC-043 point 6).
+        Its pattern computes them aside (`_aside`). A part whose frame cannot be computed,
+        or has no area, is left out."""
+        self._round = overlay
+        try:
+            found = {
+                name: self._frame(name) for name, node in self.nodes.items() if not _connects(node)
+            }
+        finally:
+            self._round = None
+        return {name: frame for name, frame in found.items() if frame is not None}
+
+    def _frame(self, name: str) -> Frame | None:
+        """A drawn part's frame, in this instance's frame; None where it is not drawn, cannot
+        be computed or has no area."""
+        node = self.nodes[name]
+        if not node.present:
+            return None
+        try:
+            x, y, width, height = (self.get("part", name, key) for key in FRAME)
+        except Fault:
+            return None
+        return (x, y, width, height) if width > TOLERANCE and height > TOLERANCE else None
+
+    def _own_shift(self, name: str) -> tuple[float, float]:
+        """How far the point halfway along the own stretch of the line `name` lies from the
+        centre of its frame, across and down (DEC-043 point 6): none where the line shares no
+        stretch, as a line that is no tie's connector, or a tie's in no group drawn as
+        declared, so `own-center` and `own-middle` read what `center` and `middle` read.
+        Raises `Fault`."""
+        node, pattern = self.nodes[name], self.parent
+        if not _connects(node) or self.tie is None or pattern is None:
+            return 0.0, 0.0
+        if self._round is not None:
+            branching: Branching | None = self._round.branching
+        else:
+            branching = pattern.get("anchors", "").branchings.get(id(self))
+        if branching is None:
+            return 0.0, 0.0
+        shift = (pattern.get("part", self.part_name, "x"), pattern.get("part", self.part_name, "y"))
+        x, y = _Round({name: self.get("route", name)}, branching).held(shift).own(name)
+        width, height = (self.get("part", name, size) for size in ("width", "height"))
+        centre = (
+            self.get("part", name, "x") + 0.5 * width,
+            self.get("part", name, "y") + 0.5 * height,
+        )
+        return x - centre[0], y - centre[1]
+
+    def shared_parts(self) -> list[tuple[str, str]]:
+        """Each part but its connectors that this tie's component places otherwise than by
+        the measures, and that stands where DEC-043 point 6 bars it, its group drawn as
+        declared: on the stretch its tie shares, or centred on another tie's line, by its
+        name, with why. None where the tie shares no trunk, or its ties' meetings were never
+        computed. Raises `Fault`."""
+        pattern = self.parent
+        meetings = pattern.cells.get(("anchors", "")) if pattern is not None else None
+        if pattern is None or not isinstance(meetings, Meetings):
+            return []
+        branching = meetings.branchings.get(id(self))
+        if branching is None:
+            return []
+        shift = (pattern.get("part", self.part_name, "x"), pattern.get("part", self.part_name, "y"))
+        routes = {name: self.get("route", name) for name in self.connectors()}
+        held = _Round(routes, branching).held(shift)
+        mates = meetings.mates.get(id(self), ())
+        others = [
+            _Other(
+                mate.trace,
+                [trunks.held_route(mate.get("route", name)) for name in mate.connectors()],
+                _width(mate._line()),
+            )
+            for mate in mates
+        ]
+        found = []
+        for name, node in self.nodes.items():
+            frame = None if _connects(node) else self._frame(name)
+            if frame is None or held.by_measures(frame):
+                continue
+            same = [mate._frame(name) if name in mate.nodes else None for mate in mates]
+            why = _misplaced(frame, held, others, same)
+            if why is not None:
+                found.append((name, why))
+        return found
+
+    def report_shared_parts(self) -> None:
+        """Reports each part `shared_parts` finds, in this tie's component, once in each
+        scene for each version of it, naming the first tie that shows it (DEC-043 point
+        7)."""
+        for name, why in self.ctx.attempt(self.shared_parts, []):
+            key = (self.component.use, self.library, name)
+            if key in self.ctx.trunk_parts:
+                continue
+            self.ctx.trunk_parts.add(key)
+            self.ctx.report(
+                TRUNK_PART,
+                f"{self.trace}/{name}: `{self.component.use}` places its part `{name}` otherwise "
+                f"than halfway along its line's own stretch, and where its tie shares a trunk, "
+                f"it {why}: place it by its line's `own-center` and `own-middle`, which the "
+                "engine keeps clear, or off the stretch its tie shares",
+                where=f"parts.{name}",
+                use=self.component.use,
+            )
 
     def attached(self, name: str) -> dict[str, dict[str, str]]:
         """Which element each end of this tie's connector meets, and where: the trace id of
@@ -5225,7 +6243,7 @@ class Instance:
         pattern = self.parent
         if pattern is None:
             raise Fault()
-        found = pattern.get("anchors", "")
+        found = pattern.get("anchors", "").anchors
         out = {}
         for which in ENDS:
             end, anchor = self.ends[which], found.get((id(self), which))
@@ -5239,6 +6257,8 @@ class Instance:
 
     def measure(self, path: fm.Path) -> float:
         """A path's measure in this instance's frame. Raises `_Missing` and `Fault`."""
+        if path.measure in fm.OWN_MEASURES:
+            return self._own_measure(path)
         if path.option in ENDS and self.component.takes_ends:
             if self.tie is None:
                 raise _Missing(f"it is given no `{{{path.option}}}`, since it is drawn as no tie")
@@ -5260,6 +6280,50 @@ class Instance:
             return place
         share = 1.0 if path.measure in ("right", "bottom") else 0.5
         return place + share * self._extent(steps, axis)
+
+    def _own_measure(self, path: fm.Path) -> float:
+        """`own-center` or `own-middle` of a line: the point halfway along the stretch of its
+        route that it alone runs (DEC-043 point 6). Of a line that shares no stretch, which
+        is every line but a tie's connector in a group drawn as declared, what `center` and
+        `middle` read. Of what is no line, refused, as a reference it may not reach: one the
+        component alone shows was refused when it was read (`Component._no_line`). Raises
+        `_Missing` and `Fault`."""
+        measure = fm.OWN_MEASURES[path.measure]
+        base = self.measure(fm.Path(path.option, path.steps, measure))
+        steps = (self._option_steps(path.option) if path.option else []) + list(path.steps)
+        kind = self._kind_of(steps)
+        if kind is not None and kind != "line":
+            message = (
+                f"{self.trace}: {self.component.use} reads `{path}`: `{path.measure}` is a "
+                f"measure of a line, and it reaches a {kind}"
+            )
+            raise self._fail("formula-reach", message)
+        if len(steps) != 1:
+            return base
+        across, down = self._own_shift(steps[0].name)
+        return base + (across if measure == "center" else down)
+
+    def _kind_of(self, steps: Sequence[fm.Step]) -> str | None:
+        """The kind of what a path's steps reach: a part's, `item` for an item of a list,
+        `point` for a picture's exposed point; None where nothing is drawn there. Raises
+        `_Missing`."""
+        first, rest = steps[0], list(steps[1:])
+        node = self.nodes[first.name]
+        if node.part.kind == "repeat" and first.item is not None:
+            if not rest:
+                return "item"
+            return node.items[self._item(node, first)]._exposed_kind(rest)
+        if not rest:
+            return node.part.kind
+        if not node.present:
+            return None
+        if node.child is not None:
+            return node.child._exposed_kind(rest)
+        return "point"
+
+    def _exposed_kind(self, steps: Sequence[fm.Step]) -> str | None:
+        _, point = self._exposer(list(steps))
+        return "point" if point is not None else self._kind_of(steps)
 
     def _option_steps(self, name: str) -> list[fm.Step]:
         chosen = self.options.get(name)
@@ -5469,7 +6533,296 @@ def _pictured(item: Instance) -> bool:
     )
 
 
-def _shifted(pattern: Instance, tie: Instance) -> dict[str, tuple[float, float, float, float]]:
+#: A frame, `x y width height`, and a point, across and down.
+Frame = tuple[float, float, float, float]
+Point = trunks.Point
+
+#: The measures of a frame, in order.
+FRAME = ("x", "y", "width", "height")
+
+#: A line's arrowheads, at its start and at its end.
+MARKERS = ("marker-start", "marker-end")
+
+#: The way each side of an item faces, across and down: the way a tie leaves it there.
+WAYS = {"left": (-1.0, 0.0), "right": (1.0, 0.0), "top": (0.0, -1.0), "bottom": (0.0, 1.0)}
+
+#: The kinds of part that take paints, which ties that draw alike share (DEC-043 point 2).
+PAINTED = ("box", "ellipse", "line", "sign", "text")
+
+
+@dataclass(frozen=True)
+class Branching:
+    """How a tie of a group drawn as declared runs along its trunk (DEC-043 points 2 and 3),
+    in its pattern's frame: its trunk end, `start` or `end`; the group's point; where the
+    stretch it shares ends, a branch's junction, where it leaves the trunk's first leg, or
+    the trunk's group's last junction; and whether it is a branch."""
+
+    which: str
+    point: Point
+    leaves: Point
+    branch: bool
+
+
+@dataclass(frozen=True)
+class Meetings:
+    """Where the ties an instance draws meet their ends, by the tie and the end (`Anchor`),
+    and, by the tie, how each tie of a group drawn as declared runs along its trunk, and the
+    group's other ties (DEC-043 point 2)."""
+
+    anchors: Mapping[tuple[int, str], Anchor]
+    branchings: Mapping[int, Branching] = field(default_factory=dict)
+    mates: Mapping[int, tuple[Instance, ...]] = field(default_factory=dict)
+
+
+@dataclass(eq=False)
+class _Group:
+    """The ties of one list that meet one side of one item at their trunk end, as the part
+    `part` draws them: the end, the item and the side, and the ties, in the ties' order."""
+
+    part: str
+    which: str
+    key: tuple[int, str]
+    ties: list[Instance]
+
+
+@dataclass(frozen=True)
+class _Unclear:
+    """Why ties share no trunk, as a fact states it, and what would let them."""
+
+    said: str
+    mend: str
+
+
+@dataclass(frozen=True)
+class _Line:
+    """What a tie's connector parts draw, as the junctions read it (`Instance._line`)."""
+
+    radius: float
+    width: float
+    heads: Mapping[str, float]
+
+
+@dataclass(frozen=True)
+class _Declared:
+    """One round's declared routes, as the scene would hold them, in the pattern's frame, by
+    the tie, with the meetings and the branchings they come from, beside the spread routes
+    and what each tie draws (DEC-043 point 5)."""
+
+    anchors: Mapping[tuple[int, str], Anchor]
+    branchings: Mapping[int, Branching]
+    routes: Mapping[int, list[list[Point]]]
+    spread: Mapping[int, list[list[Point]]]
+    lines: Mapping[int, _Line | None]
+
+
+@dataclass(frozen=True)
+class _Other:
+    """Another tie of a group, as a part's centre keeps off it: its trace, its routes as the
+    scene holds them, and its stroke width."""
+
+    trace: str
+    routes: list[list[Point]]
+    width: float
+
+
+@dataclass(frozen=True)
+class _Round:
+    """A tie's routes in its own frame, by its connector part, and how it runs along its
+    trunk, in a round or as drawn."""
+
+    routes: Mapping[str, Sequence[Point]]
+    branching: Branching
+
+    def held(self, shift: tuple[float, float]) -> _Held:
+        """The routes as the scene holds them, with where the stretch they share ends, its
+        pattern's frame less `shift`."""
+        leaves = self.branching.leaves
+        since = (trunks.held(leaves[0] - shift[0]), trunks.held(leaves[1] - shift[1]))
+        routes = {name: trunks.held_route(route) for name, route in self.routes.items()}
+        return _Held(routes, since, self.branching.which == "start")
+
+
+@dataclass(frozen=True)
+class _Held:
+    """A tie's routes as the scene holds them, by its connector part, and the point where the
+    stretch they share ends, which they share from their first point where `from_start`,
+    else up to their last (DEC-043 point 6)."""
+
+    routes: Mapping[str, list[Point]]
+    since: Point
+    from_start: bool
+
+    def every(self) -> list[list[Point]]:
+        """Its routes, each once."""
+        found: list[list[Point]] = []
+        for route in self.routes.values():
+            if route not in found:
+                found.append(route)
+        return found
+
+    def own(self, name: str) -> Point:
+        """The point halfway along the own stretch of the line `name`."""
+        return trunks.own_point(self.routes[name], self.since, self.from_start)
+
+    def by_measures(self, frame: Frame) -> bool:
+        """Whether a frame's centre lies at the point halfway along a line's own stretch."""
+        centre = (frame[0] + frame[2] / 2, frame[1] + frame[3] / 2)
+        return any(
+            math.hypot(centre[0] - x, centre[1] - y) <= trunks.NEAR
+            for x, y in (self.own(name) for name in self.routes)
+        )
+
+
+def _connects(node: Node) -> bool:
+    """Whether a part is a connector, a line the connector tool draws."""
+    return node.part.kind == "line" and "connect" in node.part.spec
+
+
+def _connector(
+    start: Anchor,
+    end: Anchor,
+    shift: tuple[float, float],
+    corners: bool,
+    branching: Branching | None,
+) -> list[Point]:
+    """The points of a connector between two anchors, in their frame less `shift`: straight,
+    or with corners, leaving and meeting each end square to its side, turning halfway
+    between its ends (DEC-005 point 2). A branch runs along its trunk's first leg to its
+    junction, turns there, runs its middle leg to the level of its other end, and turns once
+    more into its last leg (DEC-043 point 2)."""
+    dx, dy = shift
+    (sx, sy), (ex, ey) = (start.x - dx, start.y - dy), (end.x - dx, end.y - dy)
+    if not corners:
+        return [(sx, sy), (ex, ey)]
+    if branching is not None and branching.branch:
+        jx, jy = branching.leaves[0] - dx, branching.leaves[1] - dy
+        across = (start if branching.which == "start" else end).side in ("left", "right")
+        if branching.which == "start":
+            return [(sx, sy), (jx, jy), (jx, ey) if across else (ex, jy), (ex, ey)]
+        return [(sx, sy), (jx, sy) if across else (sx, jy), (jx, jy), (ex, ey)]
+    sides = {start.side, end.side} - {None}
+    across = bool(sides & {"left", "right"}) if sides else abs(ex - sx) >= abs(ey - sy)
+    if across and abs(ey - sy) > TOLERANCE:
+        middle = (sx + ex) / 2
+        return [(sx, sy), (middle, sy), (middle, ey), (ex, ey)]
+    if not across and abs(ex - sx) > TOLERANCE:
+        middle = (sy + ey) / 2
+        return [(sx, sy), (sx, middle), (ex, middle), (ex, ey)]
+    return [(sx, sy), (ex, ey)]
+
+
+def _said(value: float) -> str:
+    """A length in a message, as the scene holds it."""
+    return f"{trunks.held(value):g}"
+
+
+def _width(line: _Line | None) -> float:
+    return line.width if line is not None else 0.0
+
+
+def _least_gap(line: _Line | None, routes: Sequence[Sequence[Point]]) -> float:
+    """A tie's least gap (DEC-043 point 3): its radius, none where it turns nowhere, and
+    never less than twice its stroke width. None is known of a tie whose radius or stroke
+    width reads a line's frame (`Instance._line`), so its least gap is none."""
+    if line is None:
+        return 0.0
+    turns = any(len(route) > 2 for route in routes)
+    return max(line.radius if turns else 0.0, 2 * line.width)
+
+
+def _ungrouped(ties: Sequence[Instance]) -> tuple[bool, _Unclear | None]:
+    """Whether ties that meet one side of an item at their trunk end form a group (DEC-043
+    point 2), and, where they do not, why, as the fact states it: one reads a line's frame
+    or own stretch in its radius or its stroke width, two draw otherwise, or a connector part
+    is straight beside one with corners. Where all of them are straight and alike, they
+    form none, and nothing is said."""
+    for tie in ties:
+        found = tie.line_read()
+        if found is not None:
+            where, text = found
+            use = tie.component.use
+            return False, _Unclear(
+                f"`{use}` draws the line of `{tie.trace}` by the formula `{text}`, at `{where}`, "
+                "which reads a line's frame or own stretch, as the junctions would read it",
+                f"change that formula of `{use}`, or move the lock to versions whose formula "
+                "reads no line",
+            )
+    first, looks = ties[0], [tie.look() for tie in ties]
+    for tie, look in zip(ties[1:], looks[1:], strict=True):
+        differs = _differs(looks[0], look)
+        if differs is not None:
+            return False, _Unclear(
+                f"`{tie.trace}` draws otherwise than `{first.trace}`, by its {differs}",
+                "draw them alike, giving them one component, options, state and concept in the "
+                "content",
+            )
+    straight, connectors = first.straight(), first.connectors()
+    if len(straight) == len(connectors):
+        return False, None
+    if straight:
+        use = first.component.use
+        return False, _Unclear(
+            f"`{use}` draws its part `{straight[0]}` straight, beside one with corners",
+            f"draw every connector part of `{use}` with corners, or move the lock to versions "
+            "that do",
+        )
+    return True, None
+
+
+def _differs(first: Mapping[str, Any], second: Mapping[str, Any]) -> str | None:
+    """What two ties' looks (`Instance.look`) differ by, in words; None where they are one.
+    A look holds paints only for the parts its tie draws, so a part one tie draws and the
+    other does not, as by a `when` on a field of the tie, differs by its paints, even where
+    it paints nothing."""
+    for what, value in first.items():
+        other = second[what]
+        if other == value:
+            continue
+        if what == "paints":
+            named = next(
+                key
+                for key in {**value, **other}
+                if key not in value or key not in other or value[key] != other[key]
+            )
+            return f"paint `{named}`"
+        return what
+    return None
+
+
+def _misplaced(
+    frame: Frame, held: _Held, others: Sequence[_Other], same: Sequence[Frame | None]
+) -> str | None:
+    """Why a part of a tie, at `frame` in the tie's frame, stands where DEC-043 point 6 bars
+    it, with the tie's routes as the scene holds them, `held`, and the group's other ties:
+    any part of the frame lies on the stretch its tie shares, or its centre within half a
+    stroke width of another tie's leg. A part whose frame holds its tie's meeting point with
+    an end is left out where each other tie of the group draws the same part there, its
+    frame in `same`. None where it stands where the rule allows."""
+    frame = (
+        trunks.held(frame[0]),
+        trunks.held(frame[1]),
+        trunks.held(frame[2]),
+        trunks.held(frame[3]),
+    )
+    ends = [route[at] for route in held.every() for at in (0, -1)]
+    if any(trunks.holds(frame, point) for point in ends) and all(
+        other is not None
+        and all(abs(trunks.held(a) - b) <= trunks.NEAR for a, b in zip(other, frame, strict=True))
+        for other in same
+    ):
+        return None
+    for route in held.every():
+        if trunks.frame_meets(frame, trunks.shared_stretch(route, held.since, held.from_start)):
+            return "stands on the stretch its tie shares"
+    centre = (frame[0] + frame[2] / 2, frame[1] + frame[3] / 2)
+    for other in others:
+        for route in other.routes:
+            if any(trunks.distance(centre, leg) <= other.width / 2 for leg in trunks.legs(route)):
+                return f"is centred on the line of `{other.trace}`"
+    return None
+
+
+def _shifted(pattern: Instance, tie: Instance) -> dict[str, Frame]:
     """The frames of both ends of `tie` in its pattern's frame. Raises `Fault`."""
     dx, dy = (pattern.get("part", tie.part_name, axis) for axis in ("x", "y"))
     frames = {}
@@ -5547,3 +6900,90 @@ def placed(ctx: Context, drawing: Component, *, where: str, use: str, piece: boo
         ctx.add(Finding(DRAWING_PLACED, FAILS, message, where=where, extra={"piece": True}))
     else:
         ctx.report(DRAWING_PLACED, message, where=where, use=use)
+
+
+# --- what a share of a page reads (DEC-055) -----------------------------------------------------
+
+
+@dataclass(frozen=True)
+class SmallestText:
+    """What the piece's top declares of the smallest text size of each medium its pages are
+    made for (DEC-055 point 2): the top, by its use, the library version that holds it,
+    `<library>@<version>`, empty for the piece's own, and the value of each medium, a fixed
+    length in px or a share of the page, its formula."""
+
+    top: str
+    library: str
+    sizes: Mapping[str, float | fm.Formula]
+
+
+@dataclass(frozen=True)
+class PageHeight:
+    """Whether a share of a page's height may be read at one page (DEC-055 points 3 and 7):
+    whether the page asks for a height that what it draws does not set (`asks`), and whether
+    the top's own drawing draws it, so the top's file alone shows a share's fault there
+    (`own`)."""
+
+    asks: bool
+    own: bool
+
+
+def smallest_text(ctx: Context, top: str) -> SmallestText | None:
+    """What the piece's top `top` declares of the smallest text size of each medium, read of
+    its own component, whichever drawing draws it (DEC-055 point 2); None where `top` names
+    no component, or one whose file cannot be read, or a drawing, each its own finding."""
+    component = ctx.component(top)
+    if component is None or component.draws is not None:
+        return None
+    return SmallestText(top, ctx.library(top), dict(component.smallest_text))
+
+
+def page_heights(top: Instance) -> dict[str, PageHeight]:
+    """For each page placed below the piece's top `top`, itself among them where it is a
+    page alone, by its trace: whether it asks for a height, and whether the top's own
+    drawing draws it (DEC-055 points 3 and 7).
+
+    A page asks for a height where what it draws does not set it. It does where it gets the
+    height its top asks for, a fixed page (DEC-022 point 3), or where the component that draws
+    it declares a physical size, whose proportion sets its height (DEC-034 point 3), or asks
+    for a height by a formula that reads none of its parts, through a value of its own or
+    directly. A page whose height reads its parts, as a site's pages and the figure do, is as
+    tall as its content, and asks for none."""
+    fixed = top.component.forms and top.component.asks_for("height")
+    found = {}
+    for page in (top, *top.below()):
+        if not page.is_page:
+            continue
+        component = page.component
+        if (fixed and page in top.pages) or component.physical_size is not None:
+            asks = True
+        elif "height" in component.preferred:
+            asks = not _reads_parts(component, component.preferred["height"], frozenset())
+        else:
+            asks = False
+        drawn = component.drawn
+        found[page.trace] = PageHeight(asks, drawn is not None and drawn[0] == top.component.use)
+    return found
+
+
+def _reads_parts(component: Component, value: Any, seen: frozenset[str]) -> bool:
+    """Whether a formula of `component`, or any branch of a switch of formulas, reads one of
+    its parts, directly or through a value of its own; `seen` holds the values already
+    followed, so a loop of values, refused elsewhere, ends."""
+    if isinstance(value, Mapping):
+        return any(
+            _reads_parts(component, each, seen) for key, each in value.items() if key != SWITCH
+        )
+    if not fm.is_formula(value):
+        return False
+    try:
+        formula = fm.parse(value)
+    except fm.FormulaError:
+        return False
+    for ref in formula.references():
+        if isinstance(ref, fm.Path):
+            return True
+        if isinstance(ref, fm.Value) and ref.name not in seen:
+            if _reads_parts(component, component.values.get(ref.name), seen | {ref.name}):
+                return True
+    return False

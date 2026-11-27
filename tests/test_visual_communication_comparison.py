@@ -1,6 +1,6 @@
 """The release's comparison of two versions of one library (visual-communication DEC-003
-points 6 and 7, DEC-004 point 5, DEC-008 to DEC-013): each break and addition it names,
-the segment it finds, and what it refuses to compare.
+points 6 and 7, DEC-004 point 5, DEC-008 to DEC-013, DEC-056 point 6): each break and
+addition it names, the segment it finds, and what it refuses to compare.
 
 Each test builds a location in its own folder that holds both versions, and the shipped
 foundations they build on, and reads each version in full (`full_read.read`) before it
@@ -747,6 +747,24 @@ CASES: dict[str, tuple[Change, list[str], str | None]] = {
         [],
         "`parts/slides`, layout `cover`, slot `title`: comes to take runs (DEC-012 point 6)",
     ),
+    # DEC-056 point 6: fields of paths.
+    "a field that comes to hold paths": (
+        lambda s: put(fields_of(s)["title"], "x-pkit-paths", True),
+        ["`parts/card`, field `title`: comes to hold paths (DEC-056 point 6)"],
+        None,
+    ),
+    "a slot that comes to hold paths": (
+        lambda s: put(slots_of(s)["title"], "x-pkit-paths", True),
+        ["`parts/slides`, layout `cover`, slot `title`: comes to hold paths (DEC-056 point 6)"],
+        None,
+    ),
+    "a new optional field of paths": (
+        lambda s: fields_of(s).update(
+            sources={"type": "array", "items": {"type": "string"}, "x-pkit-paths": True}
+        ),
+        [],
+        "`parts/card`, field `sources`: is new (DEC-009 point 7)",
+    ),
     # DEC-008 point 7: the library's own roles, and its pairs.
     "a role a stable component reads removed": (
         lambda s: s["roles"].pop("parts.gap"),
@@ -1034,13 +1052,14 @@ def test_the_foundations_being_built_add_the_size_axis_device_which_breaks_their
     """The version being built of the foundations, compared with their release 1.0.0, adds
     the shared size axis `device`, the top `site` and its role `size.site`, the length of a
     line, `size.line`, the shapes a notation maps a concept to, the lengths of a run's sign
-    and ground, an order's roles with their pairs, and the type of a page's title,
-    `type.title`, and changes nothing else. A brand may
-    now hold an axis of its own, whose name a new shared axis may meet, so `device` breaks
-    their release 1.0.0 (DEC-004 point 5): it landed in their release 1.1.0 before brands
-    could hold their own axes (DEC-021 point 9). The rest are additions: a new component, a
-    new role with a default (DEC-003 point 1, DEC-022 point 8, DEC-036 point 3, DEC-032 point
-    8), a new shape (DEC-036 point 7) and a new pair (DEC-008 point 7)."""
+    and ground, an order's roles with their pairs, the type of a page's title,
+    `type.title`, and the type of running text read before the body, `type.lead`, and
+    changes nothing else. A brand may now hold an axis of its own, whose name a new shared
+    axis may meet, so `device` breaks their release 1.0.0 (DEC-004 point 5): it landed in
+    their release 1.1.0 before brands could hold their own axes (DEC-021 point 9). The rest
+    are additions: a new component, a new role with a default (DEC-003 point 1, DEC-022
+    point 8, DEC-036 point 3, DEC-032 point 8), a new shape (DEC-036 point 7) and a new pair
+    (DEC-008 point 7)."""
     root = project(tmp_path)
     copy_library(root, RELEASED_FOUNDATIONS, "foundations", "1.0.0")
     built = str(libraries.read_library(FOUNDATIONS).version)
@@ -1062,6 +1081,7 @@ def test_the_foundations_being_built_add_the_size_axis_device_which_breaks_their
         "shared role `space.ground-corner`: is new, with a default (DEC-004 point 5)",
         "shared role `space.ground-room`: is new, with a default (DEC-004 point 5)",
         "shared role `space.sign-gap`: is new, with a default (DEC-004 point 5)",
+        "shared role `type.lead`: is new, with a default (DEC-004 point 5)",
         "shared role `type.title`: is new, with a default (DEC-004 point 5)",
         "shape `circle`: is new (DEC-036 point 7)",
         "shape `diamond`: is new (DEC-036 point 7)",

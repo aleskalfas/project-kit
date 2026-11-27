@@ -22,6 +22,8 @@
 #     - name: tester
 #       role: worker
 #       agent: project-manager      # the default
+#       directed_by: planner        # optional: the planner's or lead's seat that
+#                                   #   directs it by message (DEC-081 point 3)
 #       pools: [alpha]              # where pools are declared: the pools it serves
 #       scope:                      # optional; narrows what its pools hold
 #         types: [test]

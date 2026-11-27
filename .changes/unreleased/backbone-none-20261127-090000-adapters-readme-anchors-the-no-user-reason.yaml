@@ -1,0 +1,6 @@
+component: backbone
+kind: none
+body: >
+  Internal. The adapters reference anchors the record that gives the reason a
+  messaging address names no user (#3525). Its text is unchanged, and nothing
+  you run changes.

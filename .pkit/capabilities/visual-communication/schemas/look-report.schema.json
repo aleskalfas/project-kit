@@ -43,7 +43,6 @@
         "on-no-image",
         "images",
         "dropped",
-        "dropped-not-read",
         "losses",
         "drawn-otherwise",
         "profiles"
@@ -126,7 +125,7 @@
           }
         },
         "dropped": {
-          "description": "Each text or run the tool drew nothing of, whatever the cause (DEC-015 point 3). Each page is read whole, once.",
+          "description": "Each text or run the tool drew nothing of, and each span it drew in part, in one entry for each cause, which `why` names (DEC-045 point 2). An entry for a text or run the tool drew nothing of, `no ink` or `off the page`, gives `whole`. A cut or covered entry gives `share`, and `island` where its cause takes an island of the span's ink. Each page is read whole, once.",
           "type": "array",
           "items": {
             "type": "object",
@@ -136,7 +135,7 @@
               "page",
               "element",
               "text",
-              "whole"
+              "why"
             ],
             "additionalProperties": false,
             "properties": {
@@ -155,22 +154,68 @@
               "text": {
                 "type": "string"
               },
+              "why": {
+                "enum": [
+                  "no ink",
+                  "off the page",
+                  "cut",
+                  "covered"
+                ]
+              },
               "whole": {
                 "description": "True for a whole text, and false for a run lost from a line.",
                 "type": "boolean"
+              },
+              "share": {
+                "description": "The share of the span's strong ink its cause loses, or of its counted ink where it holds no strong ink.",
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "island": {
+                "description": "On an entry whose cause takes an island of the span's counted ink, such as a dot, whatever its share. Another entry holds no such key.",
+                "const": true
+              }
+            },
+            "if": {
+              "properties": {
+                "why": {
+                  "enum": [
+                    "cut",
+                    "covered"
+                  ]
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "share"
+              ],
+              "not": {
+                "required": [
+                  "whole"
+                ]
+              }
+            },
+            "else": {
+              "required": [
+                "whole"
+              ],
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "share"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "island"
+                    ]
+                  }
+                ]
               }
             }
-          }
-        },
-        "dropped-not-read": {
-          "description": "The causes of a text the page does not show that this read does not reach, so a text a part covers, or the page's edge cuts, is not named in `dropped` (DEC-037 point 1).",
-          "type": "array",
-          "uniqueItems": true,
-          "items": {
-            "enum": [
-              "cut",
-              "covered"
-            ]
           }
         },
         "losses": {

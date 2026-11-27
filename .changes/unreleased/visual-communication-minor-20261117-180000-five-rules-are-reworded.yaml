@@ -1,0 +1,34 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Changed
+body: >
+  Five rules are reworded, with the new record DEC-068 as their origin
+  (#3396): `RS-GRAPHIC-001`, one focal point: a page's head, its focal point
+  and the action it asks of its reader stand above the rest, in any order
+  among them. `RS-GRAPHIC-003`, nothing extra: it says what decoration and a
+  page's frame are, and judges the frame as any part. `RS-GRAPHIC-007`, the
+  form says what the content says: the strongest difference goes to what the
+  point is about, or to the action the page asks. `RS-COMM-001`, a page makes
+  one point, and shows it: it defines a page's title and its lead, and, by
+  their kind, the pages whose job is not to make a point, such as a cover, an
+  agenda or a section's opening page, which it does not judge, and a page
+  whose title states its point needs no lead. `RS-COMM-003`, the pages tell
+  the story in order: each page's lead, or its title, keeps one of five named
+  orders, and a page whose job is not to make a point stands where its kind
+  does. So `GRAPHIC` rises to 3.0.0 and `COMM` to 2.0.0, new majors. A
+  project's set that inherits an earlier major of `GRAPHIC`, or
+  `visual-communication:COMM@1`, fails validation, and no rule of that set
+  binds through it, until the project reads again `RS-GRAPHIC-008` and the
+  five reworded rules, in `rule-sets/graphic.md` and `rule-sets/comm.md`, and
+  moves its pins to `GRAPHIC@3` and `COMM@2`. The graphic-design reviewer's
+  steps for the rules on the focal point, the form and the pages' order point
+  to the design knowledge's topics, which gain Minto's deductive order,
+  Duarte's shape of a story, Wathan and Schoger's ranking of a page's actions,
+  and a question on whether the facts that matter most take the variables
+  read most accurately. Where a page's part of the brief gives no relation and
+  no takeaway, the reviewer files a path that does not follow its statement,
+  its lead or its title where it has no lead, as for a piece with no brief.
+  The designer ranks a page's head, its focal point and the action it asks
+  above the rest. No migration moves a pin, since the project's own reading
+  of the rules is what it waits for.

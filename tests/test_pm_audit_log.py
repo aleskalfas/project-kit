@@ -128,7 +128,25 @@ def test_a_later_version_of_the_stamp_reads_as_nothing() -> None:
 
 def test_the_families_name_each_seams_types() -> None:
     assert audit_log.OWNERSHIP_EVENTS == ("claim", "handoff", "abandon", "release")
-    assert audit_log.STATE_EVENTS == ("state-claim", "state-release", "state-force-release")
+    assert audit_log.STATE_EVENTS == (
+        "state-claim",
+        "state-release",
+        "state-force-release",
+        "state-session",
+    )
+
+
+def test_a_sessions_event_names_the_session_and_no_folder() -> None:
+    ev = audit_log.event(
+        "state-session", key="worker-1", clone="k", name="worker-1", machine="box", process="p"
+    )
+    line = audit_log.render(ev)
+    assert line == "🪑 state-session — `worker-1` · clone `k` · session `worker-1` on `box`"
+    assert ev.get("place") is None and ev.get("address") is None
+    with pytest.raises(ValueError):
+        audit_log.event("state-session", key="worker-1", clone="k", name="worker-1")
+    with pytest.raises(ValueError):
+        audit_log.event("state-session", key="w", clone="k", name="n", machine="m", place="p")
 
 
 def test_the_facility_agrees_with_its_schema() -> None:

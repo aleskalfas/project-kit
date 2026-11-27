@@ -516,6 +516,7 @@ def _wire_main(
     native=None,
     verdicts_head="",
     config=None,
+    clones=None,
 ):
     """Stub main()'s seams; record invoked names into `invoked`.
 
@@ -537,7 +538,8 @@ def _wire_main(
     and collects the verdict of each one delivered. `verdicts_head` is the PR
     head the verdict read reports judging the verdicts against. `config` is the
     project's pm config; default one that registers the local reviewer
-    `reviewer`.
+    `reviewer`. `clones`, when given, collects the reviewer's clone and the
+    issue each call was passed.
     """
     from types import SimpleNamespace
 
@@ -594,10 +596,14 @@ def _wire_main(
         sha="",
         say=None,
         confined=False,
+        clone=None,
+        issue=None,
     ):
         invoked.append(name)
         if briefed is not None:
             briefed.append((base, head))
+        if clones is not None:
+            clones.append((clone, issue))
         return "APPROVED", "body"
 
     monkeypatch.setattr(rpr, "_invoke_agent", fake_invoke)
@@ -2264,3 +2270,202 @@ def test_two_open_prs_sharing_the_branch_s_name_stop_the_review(rpr, monkeypatch
     monkeypatch.setattr(rpr, "gh_run", fake_gh_run)
     with pytest.raises(rpr.head_programs.TwoOpen, match="#99 and #77"):
         rpr._find_pr_for_branch("feat/147-x", {})
+
+
+# ---- in a seat's clone, each reviewer works in a clone of its own (ADR-102) ----------
+
+
+def _reviewer_clone(rpr, **overrides):
+    fields = {
+        "commit": "e" * 40,
+        "remote": "upstream",
+        "url": "https://github.com/owner/repo",
+        "default_branch": "main",
+        "branches": (),
+        "head_ref": "refs/pull/99/head",
+        "head": _REVIEWED,
+        **overrides,
+    }
+    return rpr.agent_runs.ReviewerClone(**fields)
+
+
+def _in_a_seats_clone(rpr, monkeypatch, found) -> list[tuple]:
+    """A seat's clone, whose reviewer's clone reads as `found`: a clone, or why
+    there is none. Returns each read of it."""
+    reads: list[tuple] = []
+    monkeypatch.setattr(rpr.reviewer_clones, "in_seat_clone", lambda *_a: True)
+
+    def read_clone(pr_number, head, base, config):
+        reads.append((pr_number, head, base))
+        return found
+
+    monkeypatch.setattr(rpr.reviewer_clones, "read_clone", read_clone)
+    return reads
+
+
+def test_in_a_seats_clone_each_reviewer_works_in_a_clone_of_its_own(
+    rpr, monkeypatch, tmp_path, capsys
+) -> None:
+    invoked: list[str] = []
+    clones: list[tuple] = []
+    _wire_main(
+        rpr,
+        monkeypatch,
+        tmp_path,
+        resolution=rpr.Resolution(required_local=("reviewer", "critic")),
+        invoked=invoked,
+        clones=clones,
+    )
+    clone = _reviewer_clone(rpr)
+    reads = _in_a_seats_clone(rpr, monkeypatch, clone)
+    assert rpr.main() == 0
+    assert sorted(invoked) == ["critic", "reviewer"]
+    assert clones == [(clone, 147), (clone, 147)]
+    # Read once, for the head every reviewer is shown, against the PR's base.
+    assert reads == [(99, _REVIEWED, "main")]
+    out = capsys.readouterr().out
+    assert "working folder: a clone of its own for each reviewer, at main's head eeeeeee" in out
+
+
+def test_outside_a_seats_clone_reviewers_work_in_the_checkout(rpr, monkeypatch, tmp_path) -> None:
+    invoked: list[str] = []
+    clones: list[tuple] = []
+    _wire_main(
+        rpr,
+        monkeypatch,
+        tmp_path,
+        resolution=rpr.Resolution(required_local=("reviewer",)),
+        invoked=invoked,
+        clones=clones,
+    )
+
+    def never(*_a):
+        raise AssertionError("no clone is read outside a seat's clone")
+
+    monkeypatch.setattr(rpr.reviewer_clones, "read_clone", never)
+    assert rpr.main() == 0
+    assert clones == [(None, 147)]
+
+
+def test_a_reviewers_clone_that_cannot_be_had_refuses_the_review(
+    rpr, monkeypatch, tmp_path, capsys
+) -> None:
+    invoked: list[str] = []
+    _wire_main(
+        rpr,
+        monkeypatch,
+        tmp_path,
+        resolution=rpr.Resolution(required_local=("reviewer",)),
+        invoked=invoked,
+    )
+    _in_a_seats_clone(rpr, monkeypatch, "the code host did not answer")
+    run = rpr.review(["147", "--no-native"])
+    assert run.exit_code == 2
+    assert invoked == []
+    assert "the code host did not answer" in run.reason
+    err = capsys.readouterr().err
+    assert "[reviewer] not run — no reviewer's clone can be asked for" in err
+
+
+def test_a_dry_run_in_a_seats_clone_reads_no_clone(rpr, monkeypatch, tmp_path) -> None:
+    invoked: list[str] = []
+    _wire_main(
+        rpr,
+        monkeypatch,
+        tmp_path,
+        resolution=rpr.Resolution(required_local=("reviewer",)),
+        invoked=invoked,
+        argv=("--dry-run",),
+    )
+    reads = _in_a_seats_clone(rpr, monkeypatch, _reviewer_clone(rpr))
+    assert rpr.main() == 0
+    assert (invoked, reads) == ([], [])
+
+
+def _capture_clone_run(rpr, monkeypatch, run) -> dict:
+    captured: dict = {}
+
+    def fake_run_in_review_clone(name, brief, **kwargs):
+        captured.update(name=name, brief=brief, **kwargs)
+        return run
+
+    def never(*_a, **_k):
+        raise AssertionError("a reviewer in a clone of its own runs in no folder")
+
+    monkeypatch.setattr(rpr.agent_runs, "run_in_review_clone", fake_run_in_review_clone)
+    monkeypatch.setattr(rpr.agent_runs, "run_agent", never)
+    return captured
+
+
+def test_invoke_agent_runs_a_reviewer_in_its_clone(rpr, monkeypatch) -> None:
+    done = rpr.agent_runs.AgentRun(
+        rpr.agent_runs.FINISHED, exit_code=0, output="Reviewer agent (local, reviewer): APPROVED\n"
+    )
+    captured = _capture_clone_run(rpr, monkeypatch, done)
+    clone = _reviewer_clone(rpr)
+    verdict = rpr._invoke_agent(
+        "reviewer", 99, {}, 720, effort="low", folder=REPO_ROOT, sha=_REVIEWED, clone=clone
+    )
+    assert verdict == ("APPROVED", "")
+    assert (captured["clone"], captured["limit_seconds"], captured["effort"]) == (
+        clone,
+        720,
+        "low",
+    )
+    assert "Its working tree holds the default branch's head" in captured["brief"]
+
+
+def test_a_run_folder_that_cannot_be_written_names_the_way_out(rpr, monkeypatch) -> None:
+    refused = rpr.agent_runs.AgentRun(
+        rpr.agent_runs.REFUSED,
+        reason="the run root cannot be made: Operation not permitted",
+        refusal_cause=rpr.agent_runs.RUN_FOLDER,
+    )
+    _capture_clone_run(rpr, monkeypatch, refused)
+    lines: list[str] = []
+    verdict = rpr._invoke_agent(
+        "reviewer",
+        99,
+        {},
+        folder=REPO_ROOT,
+        clone=_reviewer_clone(rpr),
+        issue=147,
+        say=lambda *values, file=None: lines.append(" ".join(map(str, values))),
+    )
+    assert verdict == (None, "")
+    assert lines[0] == (
+        "  [reviewer] invocation refused: the run root cannot be made: Operation not permitted"
+    )
+    assert "Run `pkit pm review-pr 147` at your own terminal, outside the sandbox" in lines[1]
+
+
+def test_another_refusal_in_a_clone_names_no_way_out(rpr, monkeypatch) -> None:
+    refused = rpr.agent_runs.AgentRun(rpr.agent_runs.REFUSED, reason="the head moved")
+    _capture_clone_run(rpr, monkeypatch, refused)
+    lines: list[str] = []
+    rpr._invoke_agent(
+        "reviewer",
+        99,
+        {},
+        folder=REPO_ROOT,
+        clone=_reviewer_clone(rpr),
+        issue=147,
+        say=lambda *values, file=None: lines.append(" ".join(map(str, values))),
+    )
+    assert lines == ["  [reviewer] invocation refused: the head moved"]
+
+
+def test_the_brief_of_a_reviewer_in_its_clone_says_what_its_tree_holds(rpr) -> None:
+    clone = _reviewer_clone(rpr, branches=("release",))
+    brief = rpr._review_brief(
+        "reviewer", 99, base="release", head="feat/147-x", sha=_REVIEWED, clone=clone
+    )
+    assert f"Its working tree holds the default branch's head, {'e' * 40}, not the change" in brief
+    assert f"`git show {_REVIEWED}:<path>`" in brief
+    # The base is named through the clone's one remote.
+    assert f"`git diff upstream/release...{_REVIEWED}`" in brief
+    assert "origin/" not in brief
+    # Outside a clone of its own, the brief is as it was.
+    plain = rpr._review_brief("reviewer", 99, base="release", head="feat/147-x", sha=_REVIEWED)
+    assert "working tree holds" not in plain
+    assert f"`git diff origin/release...{_REVIEWED}`" in plain
