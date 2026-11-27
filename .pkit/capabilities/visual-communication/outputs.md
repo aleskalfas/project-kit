@@ -171,8 +171,6 @@ pkit:
         - visual-communication:DEC-066#2
         - visual-communication:DEC-070#2
         - visual-communication:DEC-070#5
-        - visual-communication:DEC-077#1
-        - visual-communication:DEC-077#2
         - ADR-097
       artefact:
         - .pkit/capabilities/visual-communication/components.md#exposes
@@ -938,7 +936,7 @@ A run replaces what an earlier run left in its own folder, so a folder never mix
 |---|---|
 | `<piece>.<language>.<key>.png` | one page drawn. A piece of more than one page adds the page's number, from 1, to this name and the next: `<piece>.<language>.<key>.<n>.png` |
 | `<piece>.<language>.<key>.band-<k>.png` | one [band](#the-viewing-step) of a page, numbered from 1 at the page's top, in place of the page's one image. A piece of more than one page puts the page's number first: `<piece>.<language>.<key>.<n>.band-<k>.png` |
-| `<piece>.<language>.<key>.frames.json` | beside each image, its language, key, page and pixels, and the lock it was drawn under. Then each element's frame in the image's pixels, with its [trace id](components.md#trace-ids). A text's frame adds `text-anchor`, where it stands its lines, `lines`, each line's left edge `x` and its `width` across, in the image's pixels, and `given-width`, false where the engine made the text as wide as its widest line. The scene places each line, as it places each box, and the checks read the same places, so a text's lines may differ from what the tool drew, and a line wider than its text reaches past its frame (DEC-077). Beside a band, it names the band. It frames each element the band shows, in part or whole, so a frame a band's edge crosses reaches past the image |
+| `<piece>.<language>.<key>.frames.json` | beside each image, its language, key, page and pixels, and the lock it was drawn under. Then each element's frame in the image's pixels, with its [trace id](components.md#trace-ids). Beside a band, it names the band. It frames each element the band shows, in part or whole, so a frame a band's edge crosses reaches past the image |
 | `<piece>.<language>.<key>.html` | through the HTML renderer, the [page file](#the-html-renderer) the images were drawn from, whichever pages and keys the run draws. Its `<key>` is the file's key ([Modes](#modes)). Open it in your own browser. It is no export, and is never committed |
 | `report.json` | [What the report says](#what-the-report-says) |
 
