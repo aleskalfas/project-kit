@@ -130,7 +130,7 @@ Where the folder is the source, you may change a version being built by "Where t
 
 ### The brief comes from whoever asked
 
-What the piece is for is the asker's: the brief's goals and relations, and, in the piece's own file, who it is for, where it is shown and whether it explains. Write them from what whoever asked for the piece says ([visual-communication:DEC-029-piece-brief] point 4). Show them to that person, or return them to whoever dispatched you, before you design against them. Write the reasons yourself, as you design.
+What the piece is for is the asker's: the brief's goals and relations, and, in the piece's own file, who it is for, where it is shown, in words under `shown` and by its media under `media`, and whether it explains. Write them from what whoever asked for the piece says ([visual-communication:DEC-029-piece-brief] point 4). Show them to that person, or return them to whoever dispatched you, before you design against them. Write the reasons yourself, as you design.
 
 Take the piece's facts from what you are given, or from the sources in the repository the piece names. Guess none.
 

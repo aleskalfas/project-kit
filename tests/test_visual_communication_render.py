@@ -118,6 +118,13 @@ EXPERIMENTAL = experimental(
     ("figure/body/steps[plan]", "tests/card"),
 )
 
+#: The statement on a piece that names no medium, which the render shows among its facts
+#: (DEC-055 point 10).
+NO_MEDIUM = (
+    f"fact: {PIECE_FOLDER}/piece.yaml#media: the piece names no medium it is shown in under "
+    "`media`, so no text's size was measured, in any language or at any size"
+)
+
 
 # --- the walking skeleton, end to end -----------------------------------------------------------
 
@@ -144,7 +151,8 @@ def test_it_draws_a_figure_of_steps_and_a_callout_over_a_produced_picture(
     assert shown.stdout.splitlines() == [
         f"previews: 2 file(s) in {PREVIEWS}/",
         *EXPERIMENTAL,
-        f"findings: 5 kept in {FINDINGS}",
+        NO_MEDIUM,
+        f"findings: 6 kept in {FINDINGS}",
     ]
     drawn = previews(root)
     assert sorted(drawn) == ["flow.en.colour-scheme.dark.svg", "flow.en.default.svg"]
@@ -157,7 +165,10 @@ def test_it_draws_a_figure_of_steps_and_a_callout_over_a_produced_picture(
 
     record = reading.read_yaml(root / FINDINGS)
     assert files.shape_problems(record, "findings") == []
-    assert {entry["code"] for entry in record["findings"]} == {"component-experimental"}
+    assert {entry["code"] for entry in record["findings"]} == {
+        "component-experimental",
+        "text-size-unmeasured",
+    }
     assert all(entry["file"] == "piece.yaml" for entry in record["findings"])
 
 

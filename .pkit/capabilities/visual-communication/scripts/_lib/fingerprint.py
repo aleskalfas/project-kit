@@ -109,6 +109,7 @@ PIECE_FIELDS_LEFT_OUT = (
     "audience",
     COPY_PLACE,
     "explains",
+    "media",
     "pinned",
     "shown",
     "state",

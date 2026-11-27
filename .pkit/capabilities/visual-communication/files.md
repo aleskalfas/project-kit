@@ -206,6 +206,10 @@ pkit:
         - visual-communication:DEC-071#1
         - visual-communication:DEC-071#3
         - visual-communication:DEC-072
+        - visual-communication:DEC-055#1
+        - visual-communication:DEC-055#2
+        - visual-communication:DEC-055#7
+        - visual-communication:DEC-055#8
         - visual-communication:DEC-053#4
         - ADR-057#2
       artefact:
@@ -443,6 +447,7 @@ lock:
 | `languages` | yes | The languages of its content, each once. The first is its source language. Each has its `content.<language>.yaml`. |
 | `audience` | yes | Who the piece is for, in words. |
 | `shown` | yes | Where the piece is shown, in words. |
+| `media` | no | The media it is shown in, which the check of a text's size measures by (DEC-055 point 1): `screen`, a screen at hand, read at arm's length or nearer; `room`, a screen read from across a room, projected or not; `paper`, a printed page. One of two forms holds for the whole piece, and either names one medium at least. A list, each medium once, such as `[screen, room]`, has each medium show every size the piece is drawn at. A mapping from each medium to the sizes it shows, such as `{screen: [desktop], room: [projector]}`, names under each medium one size at least, each once, and each a mode of the size axis the piece is drawn at, a key's size being its mode, else the axis's default. A size the piece is not drawn at fails. No scene reads it, so an export leaves it out. `shown` says the place in words beside it, and whoever writes the two keeps them in agreement. |
 | `explains` | yes | `true` where the piece explains, rather than only shows. |
 | `exports` | yes | The formats an export makes, of `svg`, `svg-modes`, `pdf` and `html` (*Exports* in *What is made from a piece*). `svg` and `svg-modes` write files of one name, so a piece names one of them. `svg-modes` takes no mode of no pair it reads that parts the piece's combinations (DEC-018 point 4). |
 | `state` | yes | The piece's stage of life, `draft`, `final` or `published`, which says who moves its lock ([The lock](#the-lock)). `pkit visual mark-final` sets `final`. A published piece owes a current copy, which each of its exports writes (*The current copy* in *What is made from a piece*). |
@@ -829,6 +834,15 @@ The capability ships the foundations' released versions 1.0.0 and 1.1.0, each at
 - `components/deck.yaml`, the top component `deck`, for a presentation: each of its slides is a page, in its layout `cover` or `slide`, or drawn by the component it names;
 - `components/site.yaml`, the top component `site`, for a web page or a portal of several: each of its `pages` is a web page, in its layout `standard`, or drawn by the component it names (DEC-022 point 1).
 
+Their version being built declares the smallest text size of each medium each top's pages are made for (DEC-055 points 2 and 8; [A smallest text size](components.md#a-smallest-text-size)), each value with its source beside it in the top's file:
+
+- **The figure** is made for a screen at hand and for paper. On a screen it declares 11 px, and on paper 10.67 px.
+- **The deck** is made for a screen at hand and for a room. On a screen it declares 11 px.
+- **The site** is made for a screen at hand, and declares 11 px there.
+- **A screen at hand: 11 px,** from Apple's Human Interface Guidelines, *Typography*, whose table of default and minimum sizes gives a minimum of 11 pt on iOS and iPadOS and of 10 pt on macOS. It states a font size, in the point the platforms lay out in, which a browser on them takes as one CSS px. One value holds for every screen at hand, so the larger is taken.
+- **Paper: 10.67 px,** from PLOS ONE's figure guidelines, which ask that text within a figure be set at 8 to 12 point. It states a font size at the figure's printed size. A figure has no physical size, so it prints at the PDF export's px, 96 to the inch, and 8 pt, a seventy-second of an inch each, is 10.67 px at the scene's rounding.
+- **A room: none.** No top declares a room's smallest size until the display image size standard (ANSI/INFOCOMM V202.01) is read, in the edition it cites, since its publisher's page alone does not define the viewing ratio its least shares are given for, and a value drawn from it could not state what it assumes (DEC-055 point 8). So a piece shown in a room is stated as unmeasured there, and the review judges its texts there by `shown`. No value assumes a viewing ratio yet.
+
 A site of one page is a single web page. The layout `standard` has one slot, `main`. Its page lays the site's `header`, its `main` part and the site's `footer` one under another, each the page's whole width, on the page's background. Each part sets its own inset, so a colour it paints reaches the page's edge and its content keeps from it. A component that sets no inset touches the edge.
 
 - **The header and the footer** are the site's own fields, each optional, each the component the content places there. Every page drawn in a layout takes them, so each is written once in each language, under one lock. A page drawn by its own component takes neither.
@@ -1126,7 +1140,7 @@ A brand's findings hold its base's too, each naming the base's version. A declar
 
 ### Axes and modes
 
-An *axis* is one way a brand's values vary, such as the colour scheme. A *mode* is one value on one axis, such as `dark` (DEC-004 point 2). The foundations declare the shared axes. Their release 1.0.0 declares two value axes: `colour-scheme`, with `light` and `dark`, and `contrast`, with `standard` and `high`. Their release 1.1.0 adds the size axis `device`, with `desktop`, `tablet` and `phone`, and the default `desktop`. Their version being built adds a fourth mode, `projector`, a screen read from across a room (DEC-021 point 1).
+An *axis* is one way a brand's values vary, such as the colour scheme. A *mode* is one value on one axis, such as `dark` (DEC-004 point 2). The foundations declare the shared axes. Their release 1.0.0 declares two value axes: `colour-scheme`, with `light` and `dark`, and `contrast`, with `standard` and `high`. Their release 1.1.0 adds the size axis `device`, with `desktop`, `tablet` and `phone`, and the default `desktop`. Their version being built adds a fourth mode, `projector`, a screen read from across a room (DEC-021 point 1). A mode names what a piece is drawn for, and the piece's `media` where it is shown, so no size chooses a medium: a deck projected that names no size is drawn at `desktop`, and its `media` hold it to the room (DEC-055 point 1; [`piece.yaml`](#pieceyaml)).
 
 - **A brand varies an axis** through a modifier of its Resolver document, in the modes it gives. It may leave out an axis it does not vary. It adds no mode to a shared axis, and changes no default.
 - **A brand that builds on no other may add axes of its own** (DEC-004 point 2). Each is a modifier whose name no shared axis takes, with its kind in the capability's extension key, `"$extensions": {"pkit.visual-communication": {"kind": "value"}}`, or `"size"`. Its contexts are its modes, two or more, each a name, and its `default` is one of them. The brand has the axis whole, and exports it with its modes (DEC-004 point 5). A modifier of no shared axis that declares no kind fails, and so does an axis of a brand's own that takes a shared axis's name ([What the check reports](checks.md)).

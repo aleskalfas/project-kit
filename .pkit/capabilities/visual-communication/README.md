@@ -87,6 +87,7 @@ pkit:
         - visual-communication:DEC-030#6
         - visual-communication:DEC-030#8
         - visual-communication:DEC-046#2
+        - visual-communication:DEC-055#1
         - visual-communication:DEC-068#1
         - visual-communication:DEC-068#4
         - visual-communication:DEC-068#6
@@ -322,7 +323,7 @@ Before you release a library for other projects, sync from a tagged install of t
 
 Stamps a new piece's first files, from what you choose ([A piece](files.md#a-piece)).
 
-- **Takes** a name no piece of the location holds, and the choices of `piece.yaml`: `--top <library>/<component>`, `--brand <library>`, `--language <language>` for each language, the source language first, `--audience <text>` and `--shown <text>`. `--explains` sets `explains: true`. `--export <format>`, `--notation <library>` and `--mode <axis>=<mode>[,<mode>...]` each repeat, and each may be left out.
+- **Takes** a name no piece of the location holds, and the choices of `piece.yaml`: `--top <library>/<component>`, `--brand <library>`, `--language <language>` for each language, the source language first, `--audience <text>` and `--shown <text>`. `--explains` sets `explains: true`. `--medium <medium>`, or `--medium <medium>=<size>[,<size>...]` with the sizes that medium shows, `--export <format>`, `--notation <library>` and `--mode <axis>=<mode>[,<mode>...]` each repeat, and each may be left out. Each `--medium` names its sizes, or none does.
 - **Writes** `pieces/<piece>/` in one change, never over a file:
   - `piece.yaml`, with those choices and `state: draft`, and no lock;
   - a content file for each language, holding each field of the top it can leave empty, empty; a field of another type, such as a number, is left out. A deck's or a site's pages are one page in the top's first layout, each of its slots empty. The top is read from the newest version of its library the location holds that the installed capability reads;
