@@ -1,0 +1,16 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Added
+body: >
+  Each text's frame that `pkit visual look` writes beside an image names,
+  beside its box, `text-anchor`, where the text stands its lines, `lines`,
+  each line's left edge `x` and its `width` across in the image's pixels, and
+  `given-width`, false where the engine made the text as wide as its widest
+  line (#3404, DEC-077). The step reads each from the scene, where the checks
+  read them, so a line stands where the check of edges that nearly line up
+  takes it. The graphic-design reviewer reads a text's room from these keys
+  where a text's frame gives them, as the check does: a text fills its width
+  only where it has one line and was given no width. Where a frame gives
+  none, as one written before them does, it tells the room from the image,
+  as before. Every other element's frame stays its box.

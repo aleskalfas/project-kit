@@ -47,8 +47,10 @@ is read, and none is used up (DEC-016 point 5).
   entry that lies on one. resvg knows no forced colours, so a run through the SVG renderer
   that asks for them is refused.
 - **Beside them,** in the renderer's own folder of `FOLDER` (`folder_of`): each image's
-  frames, one report of what the images cannot show as the renderer set it (DEC-015 point
-  3), and for the HTML renderer each page file, for a person to open in their own browser.
+  frames, a text's naming too where it stands its lines across and whether its component
+  gave it its width, as the scene reads them (`text_lines`, DEC-077), one report of what the
+  images cannot show as the renderer set it (DEC-015 point 3), and for the HTML renderer
+  each page file, for a person to open in their own browser.
 - **A stop.** Where no browser runs, or one stops part way, or its first read fails, the
   run gives the page files and a report that says what stopped it, and no image (DEC-020
   point 8). Every refusal comes before that. The report names the ways on, in the order of
@@ -99,7 +101,7 @@ from _lib.env import MissingFont
 from _lib.plugins import seam
 from _lib.reading import ReadError, read_yaml
 from _lib.root import CAPABILITY, CONFIG, LOCAL
-from _lib.scene import SceneResult
+from _lib.scene import SceneResult, anchor, given_width, line_left
 from _lib.scene_checks import LANGUAGES, SIZES, Found, SceneCheck
 
 #: Where the images of each piece lie, relative to the project root.
@@ -1380,12 +1382,14 @@ def frames(
     """Each element's frame in the pixels of an image of `width` by `height`, with its trace
     id, the page's own first, in drawing order (DEC-015 point 5). Of a band, `region`, each
     element the band shows, a part of it or the whole, in the band's own pixels, so a frame a
-    cut crosses reaches past the image (DEC-022 point 7)."""
+    cut crosses reaches past the image (DEC-022 point 7). A text's frame also names its
+    anchor, each of its lines' left edge and width across, and whether its component gave it
+    its width, as the scene reads them (`text_lines`, DEC-077 point 1)."""
     top, tall = (0.0, float(page["height"])) if region is None else region
     across, down = width / float(page["width"]), height / tall
 
     def frame(element: Mapping[str, Any], x: float, y: float) -> dict[str, Any]:
-        return {
+        held = {
             "id": element["id"],
             "type": element.get("type"),
             "x": round(x * across, 2),
@@ -1393,6 +1397,7 @@ def frames(
             "width": round(float(element.get("width", 0)) * across, 2),
             "height": round(float(element.get("height", 0)) * down, 2),
         }
+        return {**held, **text_lines(element, x, across)} if element.get("type") == "text" else held
 
     def shows(element: Mapping[str, Any], y: float) -> bool:
         bottom, reach = top + tall, float(element.get("height", 0))
@@ -1400,6 +1405,26 @@ def frames(
 
     placed = (frame(each, x, y) for each, x, y in _placed(page) if shows(each, y))
     return [frame(page, 0.0, 0.0), *placed]
+
+
+def text_lines(text: Mapping[str, Any], x: float, across: float) -> dict[str, Any]:
+    """What a text's frame names beside its box (DEC-077 points 1 and 2): its anchor, each of
+    its lines' left edge and width across, in an image `across` pixels to a px of the page,
+    the text's left edge lying `x` px into the page, and whether its component gave it its
+    width. Each is the scene's reading (`scene.anchor`, `scene.line_left`,
+    `scene.given_width`), which the checks read too, and none is worked out here: so a line
+    of a text that overflows starts where the scene starts it, past its box."""
+    return {
+        "text-anchor": anchor(text),
+        "lines": [
+            {
+                "x": round((x + line_left(text, line)) * across, 2),
+                "width": round(float(line.get("width", 0)) * across, 2),
+            }
+            for line in text.get("lines") or ()
+        ],
+        "given-width": given_width(text),
+    }
 
 
 def drawn_otherwise(page: Mapping[str, Any]) -> Iterator[dict[str, Any]]:

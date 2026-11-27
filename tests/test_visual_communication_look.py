@@ -82,6 +82,7 @@ from tests.visual_communication_project import (
     names,
     pl,
     exports,
+    scene_lib,
 ) = load(
     "visual-communication",
     "look.py",
@@ -96,6 +97,7 @@ from tests.visual_communication_project import (
     "names",
     "pipeline",
     "exports",
+    "scene",
 )
 
 LOCK = ["foundations 1.0.0", "test-brand 1.0.0", "tests 1.0.0"]
@@ -1605,6 +1607,80 @@ def test_a_frame_lies_in_the_image_s_pixels_through_every_group_above_it() -> No
     ]
 
 
+def framed_text(trace: str, x: float, width: float, *lines: float, **look: Any) -> dict[str, Any]:
+    """A text of `page/group` at `x` and `width` px, its lines as wide as `lines`. `look` gives
+    its anchor, and `engine` names the engine as its width's source, as a text given no width
+    is named."""
+    by_engine = look.pop("engine", False)
+    spans = [line(0, 15.0 + 20 * at, (0, "words", wide)) for at, wide in enumerate(lines)]
+    text = element("text", trace, x=x, y=0, width=width, height=20 * len(lines), **look)
+    return {**text, "lines": spans, "sources": {"width": "engine"} if by_engine else {}}
+
+
+def test_a_text_s_frame_names_its_anchor_lines_and_whether_its_width_was_given() -> None:
+    """In the image's pixels, twice the page's here: each line where its anchor stands it in
+    the text's width, one wider than its text past the box, and a text given no width named
+    so. Every other frame stays its box (DEC-077 point 1)."""
+    texts = [
+        framed_text("page/group/start", 10, 60, 50, 20, **{"text-anchor": "start"}),
+        framed_text("page/group/middle", 0, 60, 40, 20, **{"text-anchor": "middle"}),
+        framed_text("page/group/over", 0, 40, 50, **{"text-anchor": "end"}),
+        framed_text("page/group/words", 5, 30, 30, engine=True),
+        framed_text("page/group/empty", 0, 30),
+    ]
+    box = element("box", "page/group/box", x=0, y=0, width=10, height=10)
+    group = element("group", "page/group", x=100, y=50, width=60, height=70, children=[*texts, box])
+    page = element("group", "page", width=200, height=100, children=[group])
+    shown = {frame["id"]: frame for frame in viewing.frames(page, 400, 200)}
+    named = {
+        trace: (frame["text-anchor"], frame["lines"], frame["given-width"])
+        for trace, frame in shown.items()
+        if frame["type"] == "text"
+    }
+    assert named == {
+        "page/group/start": (
+            "start",
+            [{"x": 220.0, "width": 100.0}, {"x": 220.0, "width": 40.0}],
+            True,
+        ),
+        "page/group/middle": (
+            "middle",
+            [{"x": 220.0, "width": 80.0}, {"x": 240.0, "width": 40.0}],
+            True,
+        ),
+        "page/group/over": ("end", [{"x": 180.0, "width": 100.0}], True),
+        "page/group/words": ("start", [{"x": 210.0, "width": 60.0}], False),
+        "page/group/empty": ("start", [], True),
+    }
+    assert shown["page/group/over"]["x"] == 200.0
+    assert set(shown["page/group/box"]) == {"id", "type", "x", "y", "width", "height"}
+    assert set(shown["page/group"]) == set(shown["page/group/box"])
+
+
+def test_each_text_s_frame_names_its_lines_where_the_scene_stands_them(flow: Path) -> None:
+    """The frames read where a text stands each line, its anchor and whether its width was
+    given from the scene's one place for them, which the checks read (DEC-077 point 2)."""
+    assert run_look(flow, PIECE).returncode == 0
+    [image] = report_of(flow)["images"]
+    held = {frame["id"]: frame for frame in frames_of(flow, image)["elements"]}
+    page = page_of(flow)
+    across = image["pixels"]["width"] / float(page["width"])
+    texts = [(text, x) for text, x, _ in viewing._placed(page) if text["type"] == "text"]
+    assert texts
+    for text, x in texts:
+        frame = held[text["id"]]
+        assert frame["text-anchor"] == scene_lib.anchor(text)
+        assert frame["given-width"] == scene_lib.given_width(text)
+        assert frame["lines"] == [
+            {
+                "x": round((x + scene_lib.line_left(text, line)) * across, 2),
+                "width": round(float(line["width"]) * across, 2),
+            }
+            for line in text["lines"]
+        ]
+    assert any(frame["given-width"] for frame in held.values() if frame["type"] == "text")
+
+
 @pytest.mark.parametrize(
     ("box", "ground"),
     [
@@ -2319,6 +2395,9 @@ def test_the_html_renderer_draws_one_image_for_each_page_language_and_key_with_i
     first = json.loads((html_folder(root, "tag") / frames[0]).read_text(encoding="utf-8"))
     assert first["elements"][0]["id"] == first["page"]
     assert first["lock"] == report["lock"]
+    texts = [frame for frame in first["elements"] if frame["type"] == "text"]
+    assert texts
+    assert all({"text-anchor", "lines", "given-width"} <= frame.keys() for frame in texts)
     starts = [each for each in logged(program) if "flags" in each]
     assert len(starts) == len(files)
     opened = [each["url"].rsplit("/", 1)[-1] for each in called(program, "Page.navigate")]
@@ -3750,6 +3829,23 @@ def test_beside_each_band_lie_the_frames_of_what_it_shows_in_its_own_pixels(tall
     in_both = first & second
     assert across < in_both
     assert any(name.endswith("/head") for name in in_both)
+
+
+def test_a_text_in_two_bands_names_the_same_lines_across_in_each(tall: Path) -> None:
+    """A band cuts a page down and is as wide as it, so a line's place across, the text's
+    anchor and whether its width was given are the same in each band (DEC-077 point 1)."""
+    assert run_look(tall, PIECE).returncode == 0
+    [first, second, *_] = [
+        {
+            frame["id"]: (frame["text-anchor"], frame["lines"], frame["given-width"])
+            for frame in frames_of(tall, image)["elements"]
+            if frame["type"] == "text"
+        }
+        for image in report_of(tall)["images"]
+    ]
+    in_both = first.keys() & second.keys()
+    assert in_both
+    assert all(first[trace] == second[trace] and first[trace][1] for trace in in_both)
 
 
 def test_a_text_drawn_to_nothing_on_a_page_in_bands_is_reported_once(tall: Path) -> None:
