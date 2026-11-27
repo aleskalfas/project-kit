@@ -1,0 +1,16 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Changed
+body: >
+  The check reports a component given a size of zero or less, whatever gives it
+  (#3113, DEC-073). A component that asks for no width, or no height, takes
+  what it is given there, and asks for more than zero: an item of a list that
+  shares its line whose gaps take the whole line or more, an item a stretch gives
+  no size, or a component a part's formula such as `=:width - 2 * @space.4`
+  gives none, is now `gets-less`, at the content, which fails. A component that
+  lies in one with no size there is not reported, nor is a tie. The engine
+  holds every size it computes for a frame at zero where it comes out below,
+  the size a part's formula gives a box included, so no scene holds a frame
+  below zero, and every formula that reads the part reads it so. A draft meets
+  the check at its next render.

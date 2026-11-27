@@ -250,6 +250,12 @@ element in it. A value has one owner: a part's formula, its measured text, or it
 parent's layout. The frames of a tie's ends are cells too. Each problem is a finding; a
 value that cannot be computed is zero.
 
+**No room.** No frame has a size below zero: the size an instance gets, the size a list
+gives each item and the size a part's formula gives its part are each held at zero where
+they come out below it (DEC-073 point 3). An instance that asks for no size along an axis
+takes what it is given there, and is short of it where it gets zero, but a tie, and one
+that lies in an instance with no size there (`shortfalls`, points 1 and 2).
+
 **Where a finding lies** is the file a person edits to mend it. A finding in a component,
 or in what a component's part gave the component it places, names that component as
 `component`, and its library's version as `library`, empty for the piece's own. The
@@ -3696,6 +3702,18 @@ class Arrangement:
 
 
 @dataclass(frozen=True)
+class Shortfall:
+    """A size an instance gets that is less than it asks for: the size, what it gets, and
+    what it asks for, None where it asks for more than zero, for the reason `why` gives
+    (DEC-038 point 5, DEC-073 point 1)."""
+
+    size: str
+    gets: float
+    asks: float | None
+    why: str = ""
+
+
+@dataclass(frozen=True)
 class TextRun:
     """A run of a text as its text part draws it (DEC-012): its text, the word of its
     style, which a field that takes no runs has none of, the typography role that word
@@ -4950,7 +4968,7 @@ class Instance:
     def _compute(self, cell: tuple[str, ...]) -> Any:
         kind, name = cell[0], cell[1]
         if kind == "size":
-            return self._size(name)
+            return max(self._size(name), 0.0)  # no frame below zero (DEC-073 point 3)
         if kind == "stretch":
             return self._stretch(name)
         if kind == "preferred":
@@ -4968,7 +4986,8 @@ class Instance:
         if kind == "value":
             return self.number(f"values.{name}", self.component.values[name])
         if kind == "part":
-            return self._geometry(name, cell[2])
+            value = self._geometry(name, cell[2])
+            return max(value, 0.0) if cell[2] in ("width", "height") else value
         if kind == "lines":
             return self._lines(name)
         if kind == "points":
@@ -5240,7 +5259,10 @@ class Instance:
         """A list's items laid out along its line (`main`) or across it (`cross`). Along
         it, with `sizes: shares`, the items share the part's size, less the gaps, in
         proportion to the share its list's weight gives each, and equally where every
-        share is the same (DEC-010 point 4)."""
+        share is the same (DEC-010 point 4). Each item's size is held at zero where it comes
+        out below, and the list still asks for what its items' sizes come to before they
+        are held, so a list that shares its line asks for the line it is given (DEC-073
+        point 3)."""
         node = self.nodes[name]
         part, items = node.part, node.items
         count = len(items)
@@ -5255,6 +5277,7 @@ class Instance:
             asked = None if stretched else [item.get("preferred", size) for item in items]
             line = given if given is not None else max(asked or [0.0])
             sizes = [line] * count if align == "stretch" else list(asked or [])
+            sizes = [max(each, 0.0) for each in sizes]
             shift = {"center": 0.5, "end": 1.0}.get(align, 0.0)
             offsets = tuple((line - each) * shift for each in sizes)
             return Arrangement(offsets, tuple(sizes), max(asked) if asked else line)
@@ -5275,6 +5298,7 @@ class Instance:
         else:
             sizes = [(given - gaps) / count] * count if count else []
         asked = sum(sizes) + gaps
+        sizes = [max(each, 0.0) for each in sizes]
         free = given - asked if given is not None else 0.0
         justify = self.setting(name, "justify-content")
         if justify == "space-between" and count > 1 and free > 0:
@@ -6487,23 +6511,28 @@ class Instance:
             return None
         return f"its style `{run.word}`" if run.word is not None else "its part's paint"
 
-    def shortfalls(self) -> list[tuple[str, float, float | None]]:
-        """Each size this instance gets that is less than it asks for: size, gets, asks. An
-        item its list sizes across its line by place asks across it for more than zero
-        besides, which `asks` gives as None where it gets none (DEC-038 point 5). Raises
-        `Fault`."""
+    def shortfalls(self) -> list[Shortfall]:
+        """Each size this instance gets that is less than it asks for. An item its list sizes
+        across its line by place asks across it for more than zero besides (DEC-038 point
+        5). So does an instance that asks for no size along an axis and takes what it is
+        given there, but a tie, and one that lies in an instance with no size there, which
+        has none to give (DEC-073 points 1 and 2). Raises `Fault`."""
         if self.parent is None:
             return []
-        short: list[tuple[str, float, float | None]] = []
+        short: list[Shortfall] = []
         for size in ("width", "height"):
             asks = self.get("preferred", size) if self.component.asks_for(size) else None
-            gets = self.get("size", size) if asks is not None or self._is_sized(size) else None
-            if gets is None:
+            sized = self._is_sized(size)
+            taken = asks is None and self.tie is None and self.parent.get("size", size) > 0.0
+            if asks is None and not sized and not taken:
                 continue
+            gets = self.get("size", size)
             if asks is not None and asks - gets > TOLERANCE:
-                short.append((size, gets, asks))
-            elif gets <= 0.0 and self._is_sized(size):
-                short.append((size, gets, None))
+                short.append(Shortfall(size, gets, asks))
+            elif gets <= 0.0 and sized:
+                short.append(Shortfall(size, gets, None, "as its list sizes it by place"))
+            elif gets <= 0.0 and taken:
+                short.append(Shortfall(size, gets, None, f"as it takes the {size} it is given"))
         return short
 
 

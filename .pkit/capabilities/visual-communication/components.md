@@ -142,6 +142,9 @@ pkit:
         - visual-communication:DEC-055#7
         - visual-communication:DEC-055#8
         - visual-communication:DEC-055#10
+        - visual-communication:DEC-073#1
+        - visual-communication:DEC-073#2
+        - visual-communication:DEC-073#3
       artefact:
         - .pkit/capabilities/visual-communication/files.md#what-the-location-holds
         - .pkit/capabilities/visual-communication/files.md#shapes
@@ -342,7 +345,7 @@ parts:
 | `slot` | `x y width height` | |
 | `repeat` | `x y width height draw colour`, and `row` or `column` | `draw`, and one of `row` and `column`, except over a list of ties, which takes neither |
 
-- **Places and sizes** are formulas that give a length, in the component's own frame. A missing `x` or `y` is zero.
+- **Places and sizes** are formulas that give a length, in the component's own frame. A missing `x` or `y` is zero. A size that comes out below zero is held at zero, and every formula that reads the part reads it so (DEC-073 point 3). A component the part places that asks for no size there, given zero, is reported as [What an element asks for, and what it gets](#what-an-element-asks-for-and-what-it-gets) says.
 - **`when`** draws the part only while a condition holds. It names a field, and holds while the content fills it: the field is not missing, empty text, an empty list or an empty mapping. A field of runs is filled where one of its runs holds text, and a list of paths as [Fields](#fields) says. Or it is `{<option>: [<word>, ...]}`, and holds while the option takes one of the words. Or it is a switch on a size, or, in a drawing of a layout, on `:as`, each branch `true`, `false` or a `when` of the two forms above ([Switches](#switches)). A part not drawn has zero size, at its place, so a formula that reads its frame holds.
 - **`lies-over`** names the parts that this one lies over on purpose, such as a badge over a card's box, as a list: `lies-over: [box]` (DEC-066 point 1). Any part may take it, wherever parts are written: a component's `parts`, a layout's drawing and a brand's drawing. It names parts written before it in the same `parts`, and so drawn before it, since the check of overlaps compares only the parts one group holds directly. So it names no part inside a component a part places, and no item of a list: a part that places a component, holds a slot or repeats over a list is named whole. It speaks of the parts' boxes, as the check does, not of what is drawn in them. It takes no switch: wherever the two parts overlap, under any option, at any size and in any language, the overlap is meant. Where they do not overlap, or where the check does not compare them, as where one is a line or holds the other, it changes nothing.
 - **What `lies-over` refuses,** when the component is read: a name that is no part of the same `parts`, the part's own name, the name of a part written after it, and a name written a second time. Each is a finding (*checks*, `lies-over-refused`), and says nothing: at a pair no other writing names, the check asks for attention, as at any pair no one named. A name's first writing names its part.
@@ -767,7 +770,7 @@ The part's *layout operator*, `row` or `column`, lays the items along a line, ac
 | Setting | Takes | Default | What it does |
 |---|---|---|---|
 | `gap` | a formula that gives a length | zero | the space between two items along the line |
-| `sizes` | `own`, `equal`, `shares` | `own` | `own`: each item takes the size it asks for along the line. `equal`: the items share the part's size along the line, less the gaps, equally. `shares`: they share it in proportion to the shares their list's weight gives them, and equally where every share is the same ([Lists](#lists)). With `equal` or `shares`, the part must give that size. |
+| `sizes` | `own`, `equal`, `shares` | `own` | `own`: each item takes the size it asks for along the line. `equal`: the items share the part's size along the line, less the gaps, equally. `shares`: they share it in proportion to the shares their list's weight gives them, and equally where every share is the same ([Lists](#lists)). With `equal` or `shares`, the part must give that size. Where the gaps take the whole line or more, each item's share is zero or below, and is held at zero. An item that asks for no size along the line is then reported, and the list asks for the line it is given (DEC-073 points 1 and 3). |
 | `justify-content` | `start`, `center`, `end`, `space-between` | `start` | Where the items lie along a line longer than they ask for. `space-between` widens each gap instead. |
 | `align-items` | `stretch`, `start`, `center`, `end` | `stretch`, and `start` beside a `cross-size` that gives a size | `stretch`: each item is as large across as the line, that is the part's size across, else the largest size an item asks for. Where the stretch goes inside the item is in [What an element asks for, and what it gets](#what-an-element-asks-for-and-what-it-gets). Otherwise each item takes the size it asks for across, or the size `cross-size` gives it, at the start, the centre or the end of the line. A `stretch` written beside a `cross-size` that gives a size is refused, and drawn as `start`. |
 | `cross-size` | a formula that gives a length | none | Each item's size across the line, by its place: the formula reads `:place`, the item's place from 1, and `:places`, how many items the list draws, beside what the part's other formulas read. It reads nothing an item carries, and its part's size across the line only where the part gives one. It may switch, and a branch may give none, which leaves the list without it there ([Switches](#switches)). A part whose items are pages takes none (DEC-038 points 1 and 2). |
@@ -891,6 +894,11 @@ parts:
 - **A top with a physical size asks for its height through it,** wherever it lies: the width it asks for, in the size's proportion ([A physical size](#a-physical-size)). Its height names `engine` as its source, and so does the height of a page that gets it, or of a part that places it and gives none.
 - **Each value has one owner:** a part's formula, its measured text, or its parent's layout.
 - **A component that gets less than it asks for** is reported.
+- **A component that asks for no size** along an axis, width or height, takes what it is given there, and asks for more than zero (DEC-073 point 1). Where it is given zero or less, it gets less than it asks for, and is reported at the content, whatever gave it the size: a list that shares its line whose gaps take the whole line or more, a stretch across a line of no size, or a part's formula, such as `width: "=:width - 2 * @space.4"` in a component narrower than the insets.
+  - **Not inside one with no size.** A component that lies in one with no size there is not reported for it, since that one has none to give, and is reported itself where it was short (DEC-073 point 2). A component lies in the one whose part places it or repeats over its list, and a page in its top.
+  - **A tie is not judged so,** since it lies in its part's whole frame and is drawn between its ends.
+  - **Nor is a part that draws a primitive,** whose size is its component's own drawing. A text given a width of zero or less overflows, which is reported, and a box held at zero draws nothing.
+- **No frame is below zero** (DEC-073 point 3). The engine holds at zero each size it computes below zero: the size a component gets, the size a list gives an item and the size a part's formula gives its part. Every reader of frames reads the size so held.
 
 ## How the engine computes a scene
 

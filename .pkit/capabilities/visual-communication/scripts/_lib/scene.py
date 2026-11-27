@@ -114,6 +114,7 @@ from _lib.layout import (
     Node,
     PageHeight,
     Part,
+    Shortfall,
     Sizes,
     SmallestText,
     TextRun,
@@ -430,19 +431,20 @@ class _Emitter:
                 for s in ("width", "height")
             )
             element.children.append(self.group(page, (0.0, 0.0), (ENGINE, ENGINE), sizes))
-        for size, gets, asks in attempt(instance.shortfalls, []):
-            self._short(instance.trace, size, gets, asks)
+        for short in attempt(instance.shortfalls, []):
+            self._short(instance.trace, short)
         return element
 
-    def _short(self, trace: str, size: str, gets: float, asks: float | None) -> None:
-        """A component, or a list, that gets less than it asks for. An item its list sizes
-        by place asks for more than zero across its line, `asks` None (DEC-038 point 5)."""
-        asked = (
-            f"{length(asks)}" if asks is not None else "more than 0, as its list sizes it by place"
-        )
+    def _short(self, trace: str, short: Shortfall) -> None:
+        """A component, or a list, that gets less than it asks for. One that asks for more
+        than zero, `asks` None, says why: its list sizes it by place, or it takes the size it
+        is given (DEC-038 point 5, DEC-073 point 1). The finding lies at the content
+        (DEC-073 point 4)."""
+        asks = short.asks
+        asked = f"{length(asks)}" if asks is not None else f"more than 0, {short.why}"
         self.ctx.report(
             "gets-less",
-            f"{trace} gets {length(gets)} px of {size} and asks for {asked}",
+            f"{trace} gets {length(short.gets)} px of {short.size} and asks for {asked}",
             where=trace,
         )
 
@@ -818,4 +820,4 @@ class _Emitter:
                 gets = self.ctx.attempt(lambda s=size: instance.get("part", name, s), 0.0)
                 asks = self.ctx.attempt(lambda a=axis: instance.get(a, name).asked, 0.0)
                 if asks - gets > TOLERANCE:
-                    self._short(element.id, size, gets, asks)
+                    self._short(element.id, Shortfall(size, gets, asks))
