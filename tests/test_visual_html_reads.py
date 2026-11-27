@@ -466,10 +466,12 @@ def test_the_planted_file_in_a_dark_key_names_the_dark_scheme_alone() -> None:
 
 @real_browser
 def test_a_real_browser_names_a_dot_hidden_whole_where_its_loss_reaches_the_sliver() -> None:
-    """Each dot at an em of 20, at a scale of 1: the box hides it whole and no neighbour's
-    strong ink, the probe counts each span as the read does, and the read names each dot whose
-    loss reaches the sliver and no other. What the face draws, and so which dots those are, this
-    test leaves to the machine."""
+    """Each dot at an em of 20, at a scale of 1: the box hides it whole, the probe counts each
+    span as the read does, and the read names each dot whose loss reaches the sliver and no
+    other. What the face draws, and so which dots those are, this test leaves to the machine.
+    So it leaves too whether the box, a device pixel past the dot's ink, hides some of a
+    neighbouring run's strong ink, as where a face draws a digit of "3.5" that near its point:
+    the read judges each span alone, so a neighbour's loss bears on no dot's entry."""
     found = reads.modules()
     browser = found.look.viewing_browser
     program = browser.find()
@@ -491,7 +493,7 @@ def test_a_real_browser_names_a_dot_hidden_whole_where_its_loss_reaches_the_sliv
     ]
     assert len(read) == len(found.reads.DOTS)
     for each in read:
-        assert each.ink and each.whole and each.agrees and not each.neighbours
+        assert each.ink and each.whole and each.agrees
         assert each.em == pytest.approx(20.0)
         assert each.named == (each.found > 0 and each.lost >= each.sliver)
 
