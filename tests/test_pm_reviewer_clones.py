@@ -57,10 +57,13 @@ def _seat(capability_root: Path, seat: str | None) -> None:
 
 @pytest.fixture
 def clone(tmp_path: Path) -> Path:
-    """A repository with one commit."""
+    """A repository with one commit, by an identity of its own, so the commit needs
+    none from the machine's configuration."""
     root = tmp_path / "clone"
     root.mkdir()
     _git(root, "init", "-q")
+    _git(root, "config", "user.email", "clone@example.invalid")
+    _git(root, "config", "user.name", "Clone")
     (root / "README.md").write_text("x\n", encoding="utf-8")
     _git(root, "add", "README.md")
     _git(root, "commit", "-q", "--no-verify", "-m", "first")
