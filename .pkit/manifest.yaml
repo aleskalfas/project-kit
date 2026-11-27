@@ -27,3 +27,7 @@ components:
     name: visual-communication
     manifest: .pkit/capabilities/visual-communication/project/manifest.yaml
     origin: incubated-in-repo
+  - kind: capability
+    name: lean-business
+    manifest: .pkit/capabilities/lean-business/project/manifest.yaml
+    origin: incubated-in-repo
