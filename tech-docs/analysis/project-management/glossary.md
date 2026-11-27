@@ -255,9 +255,11 @@ TERM-directing-seat:
         path:
           - .pkit/capabilities/project-management/scripts/_lib/topology.py
           - .pkit/capabilities/project-management/schemas/topology.schema.json
+          - .pkit/capabilities/project-management/scripts/_lib/seat_sessions.py
         record:
           - project-management:DEC-081#3
           - project-management:DEC-059#2
+          - project-management:DEC-084#2
 TERM-epic:
   name: EPIC
   noun-forms: [EPICs]
@@ -427,6 +429,9 @@ TERM-loop:
           - .pkit/capabilities/project-management/skills/pm/work-loop.md
         record:
           - project-management:DEC-059#8
+          - COR-005
+          - COR-006
+          - COR-020
 TERM-merge-gate:
   name: merge gate
   status: active
@@ -458,6 +463,10 @@ TERM-messaging-address:
           - .pkit/capabilities/project-management/scripts/_lib/processes.py
         record:
           - project-management:DEC-084#1
+          - COR-006
+          - COR-047
+          - COR-010
+          - COR-059#1
 TERM-milestone:
   name: Milestone
   noun-forms: [Milestones]
@@ -586,6 +595,8 @@ TERM-recorded-session:
           - project-management:DEC-081#4
           - project-management:DEC-084#1
           - project-management:DEC-084#3
+          - COR-006
+          - COR-047
 TERM-required-reviewer:
   name: required reviewer
   noun-forms: [required reviewers]
