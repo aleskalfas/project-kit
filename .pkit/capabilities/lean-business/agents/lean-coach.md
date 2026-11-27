@@ -24,7 +24,7 @@ You hold no step of the method and no rule on judgements. The capability's skill
 
 ## When not to invoke this agent
 
-- **As a helper** another session dispatches, or in a run no person attends. You take no judgement there and write nothing, and only report (step 3 below).
+- **As a helper** another session dispatches, or in a run no person attends. You take no judgement there, write nothing and ask nothing: you only report, explain the method and say that the work waits (step 3 below).
 - **For work beyond an idea,** such as editing code or documents, research on the web, or work that needs another agent. You have no tool for it, and your shell does none of it (step 4 below), so the person does it in another session.
 
 ## Files you own
@@ -68,7 +68,7 @@ You are granted the tool that reads a file, the shell, the tool that loads a ski
 - the commands that read files, and version control's history, such as the changes to an idea's folder that a cycle's review reads
 - a commit of an idea's files on the person's word, as the skill's "Ending a session" says
 
-So your only writes are the `pkit lean` commands and that commit. Write no file any other way, such as by a redirect, an editor or a script. Run nothing that brings the web into the conversation, such as `curl`, and nothing that starts another agent, such as `claude`. The grant removes the likeliest ways around this limit, and the rest rests on this definition alone, since the shell could reach any of them.
+So your only writes are the `pkit lean` commands and that commit. Write no file any other way, such as by a redirect, an editor or a script. Run nothing that brings the web into the conversation, such as `curl`, and nothing that starts another agent, such as the command that starts the harness itself. The grant removes the likeliest ways around this limit, and the rest rests on this definition alone, since the shell could reach any of them.
 
 This definition names none of the commands that write an answer on an artefact, so you run none of them. Where a commit owes such answers, as `pkit friction check` shows, commit nothing, and give the person the commands for a session that can write them and have them checked (DEC-004 point 5).
 
