@@ -1,7 +1,8 @@
-"""Measure the HTML renderer's read of cover and cut through a browser, as visual-communication
-DEC-037 gives it, beside what visual-communication DEC-045's measure of islands would name of
-the same draws (project-kit#3262). A maintainer reruns it when the browser, the face or the read
-changes, and compares what it prints with the figures a record gives.
+"""Measure the HTML renderer's read of cover and cut through a browser, by visual-communication
+DEC-037's sliver, beside what the measure of islands names of the same draws, as DEC-045 gives
+it and DEC-054 has a browser's read take it (project-kit#3262). A maintainer reruns it when the
+browser, the face or the read changes, and compares what it prints with the figures a record
+gives.
 
     uv run python scripts/visual_html_reads.py dots [--mode MODE] [--from EM] [--to EM]
         [--step EM] [--em EM]... [--scale SCALE]... [--face FILE] [--browser PROGRAM]
@@ -30,13 +31,16 @@ or `--browser`, draws them through the viewing step's own module.
   in each palette the mode draws. The second lays a box drawn after each plant, and is the read
   as built. Both start with the step's first read of its planted file. Neither reads whether
   the probe's own spans left ink, which it never prints.
+- **The sliver beside the measure.** The read as built names a cause by its sliver or by an
+  island it takes (DEC-054 point 1). Where the probe says what the read names, it means the
+  entries the sliver names (`Dropped.by_size`), so that what the measure adds stays apart.
 - **What it reads.** Each tally the read makes is read again, from its own four images, for
   each pixel of each span's ink (`INKED`): how dark the span's letters alone make it, and how
   much of that the page drawn whole still shows. So the probe counts what the read counts, and
   says where it counts otherwise. Each tally's palette is named from the two colours it read
   in: light or dark, and forced where the start forced its colours.
 - **What DEC-045 would name.** For each span, beside what the read names, its measure of
-  islands (`viewing_tool._takes_an_island`), at the levels and joining the outputs page holds,
+  islands (`islands.takes_an_island`), at the levels and joining the outputs page holds,
   on the pixels the tally read: on the page, a pixel the page drawn whole does not change at all
   is hidden wholly, and how far it changes it is what shows; past the page's edge, each pixel
   is cut.
@@ -50,10 +54,11 @@ The commands:
   a line for each em, scale and palette: the em the read takes, the sliver's area there, and
   for each dot its pixels of strong ink and of any ink, the strong pixels the box hid of its
   span, whether the box hid every pixel of the dot and how many of the span's other pixels it
-  hid, and whether the read named the span as covered. Then, for each palette and dot, the
-  draws at which the box hid it whole, those at which it holds no strong ink, those the read
-  named and those it left unnamed, by em, and its strong ink as a share of the em squared; for
-  those left unnamed, what DEC-045's threshold, in whole pixels, and its measure would name.
+  hid, and whether the read named the span as covered by its sliver. Then, for each palette
+  and dot, the draws at which the box hid it whole, those at which it holds no strong ink,
+  those the read named and those it left unnamed, by em, and its strong ink as a share of the
+  em squared; for those left unnamed, what DEC-045's threshold, in whole pixels, and its
+  measure would name.
 - **grazes.** It sets words with descenders, DEC-045's graze plant "Typography gypsy" or,
   with `--words edge-control`, the edge control's "jogging" (DEC-037 point 5), each step a text
   of its own, so each lies at its own place among the device's pixels. The second draw lays a
@@ -66,10 +71,13 @@ The commands:
   least graze, the first step that hides a strong pixel wholly, how often each names it.
 - **planted.** At each scale, the planted file as each start's first read draws it, light and
   in each forced palette, and the same file in a dark key, its scheme dark, drawn as the file a
-  look draws. It prints each span of the háček plant and of the plants the read leaves
-  unnamed in each (`PLANTED`): the strong ink the page hid against the sliver, the counted ink
-  it hid wholly, and whether DEC-045's threshold and its measure would name it, or that the
-  pre-filter passed over it.
+  look draws. It prints each span of the háček plant, the dot plant and the plants the read
+  leaves unnamed in each (`PLANTED`): the strong ink the page hid against the sliver, the
+  counted ink it hid wholly, and whether DEC-045's threshold and its measure would name it, or
+  that the pre-filter passed over it. Each start's first read stops where it names a plant it
+  must leave unnamed, or the dot plant without `island`, or the háček plant under the sliver
+  (DEC-054 point 4); of the file in a dark key, which no start's first read draws, it prints
+  each entry the read as built names of those plants.
 - **deck.** One look of `PIECE` (the showcase deck, `showcase`, by default) through the HTML
   renderer, in each of its keys and its forced palettes, in its source language or each
   `--language`, the reads as built. For each file and palette it prints the spans the read
@@ -467,7 +475,7 @@ def captured(browser: ModuleType, every: bool) -> Iterator[Capture]:
         if function == browser.READ:
             capture.read(file, answer)
         elif function == browser.TALLY:
-            images, clip, spans = arguments
+            images, clip, spans, *_ = arguments
             inked = ask(self, INKED, images, clip, spans)
             capture.tallied(file, clip, self.scale, spans, answer, inked)
         return answer
@@ -628,11 +636,13 @@ def palette_shown(shown: Any, mode: str) -> str:
 
 @dataclass(frozen=True)
 class Drawn:
-    """One draw of the probe's pages at a scale: what the reads asked of the browser, and what
-    they named of the probe's file in each palette, by its name (`palette_shown`)."""
+    """One draw of the probe's pages at a scale: what the reads asked of the browser, what
+    they named of the probe's file by its sliver in each palette, by its name
+    (`palette_shown`), and each entry of `dropped` the read as built gave in each."""
 
     capture: Capture
     named: Mapping[str, frozenset[tuple[str, str, str]]]
+    dropped: Mapping[str, tuple[Any, ...]] = field(default_factory=dict)
 
 
 def drawn(
@@ -664,11 +674,12 @@ def drawn(
                 drawing = browser.draw(file, wanted, scale, program, local)
     named = {
         palette_shown(shown, mode): frozenset(
-            (each.element, each.text, each.why) for each in shown.read.dropped
+            (each.element, each.text, each.why) for each in shown.read.dropped if each.by_size
         )
         for shown in drawing.shown
     }
-    return Drawn(capture, named)
+    dropped = {palette_shown(shown, mode): shown.read.dropped for shown in drawing.shown}
+    return Drawn(capture, named, dropped)
 
 
 def _union(boxes: Sequence[Mapping[str, float]]) -> dict[str, float]:
@@ -775,7 +786,7 @@ def hidden_of(
         (plant.text, plant.dot.runs[plant.dot.at], covered) in named,
         apart,
         strong_hidden >= tool._least(em),
-        tool._takes_an_island(ink, list(hidden), spot.shows),
+        tool.takes_an_island(ink, list(hidden), spot.shows),
         spot.agrees(),
         sum(other.counted["hidden"] for other in others),
         reading.palette,
@@ -874,10 +885,10 @@ def palettes_of(every: Sequence[Any]) -> list[str]:
     return list(dict.fromkeys(each.palette for each in every))
 
 
-#: The planted file's plants the summary of each start reads (DEC-037 point 5): those the read
-#: leaves unnamed, the edge control, the text under a translucent fill, the text over another,
-#: the text in the colour of its ground and, in a start that forces its colours, the text left
-#: to forcing; and the háček plant, which it names.
+#: The planted file's plants the summary of each start reads (DEC-037 point 5, DEC-054 point
+#: 4): those the read leaves unnamed, the edge control, the text under a translucent fill, the
+#: text over another, the text in the colour of its ground and, in a start that forces its
+#: colours, the text left to forcing; and the háček plant and the dot plant, which it names.
 PLANTED = (
     "edge-control",
     "under-a-translucent-fill",
@@ -885,6 +896,7 @@ PLANTED = (
     "colour-of-its-ground",
     "no-paint-forced",
     "hacek-under-a-box",
+    "dot-under-a-box",
 )
 
 #: The file the planted file is written to, in a dark key, by `planted`.
@@ -926,7 +938,7 @@ def planted_line(tool: ModuleType, spot: Spot, text: str, scale: float, palette:
     strong = sum(spot.is_strong(pixel) for pixel in hidden)
     counted = sum(ink[pixel] <= tool.FAINT for pixel in hidden)
     named = strong >= least
-    taken = tool._takes_an_island(ink, hidden, spot.shows)
+    taken = tool.takes_an_island(ink, hidden, spot.shows)
     return (
         f"{text} at scale {scale:g}, {palette}: read em {em:.3f}, hid"
         f" {spot.counted['hidden']} of {spot.counted['strong']} strong against a sliver of"
@@ -1067,20 +1079,20 @@ class Grazed:
 
 
 def island_level(
-    tool: ModuleType,
+    measure: ModuleType,
     ink: Mapping[Pixel, int],
     hidden: Sequence[Pixel],
     shows: Mapping[Pixel, int],
 ) -> int:
-    """The first of the measure's levels at which a cause that hides `hidden` wholly takes an
-    island of `ink`, `shows` of each pixel still showing, or 0 at none: the measure asked at
-    each level alone, in its order."""
-    names = vars(tool)
+    """The first of the levels of the measure of islands, `measure`, at which a cause that hides
+    `hidden` wholly takes an island of `ink`, `shows` of each pixel still showing, or 0 at
+    none: the measure asked at each level alone, in its order."""
+    names = vars(measure)
     levels = names["LEVELS"]
     try:
         for level in levels:
             names["LEVELS"] = (level,)
-            if tool._takes_an_island(ink, hidden, shows):
+            if measure.takes_an_island(ink, hidden, shows):
                 return level
     finally:
         names["LEVELS"] = levels
@@ -1099,7 +1111,7 @@ def grazed_of(
     covered = found.look.viewing_browser.COVERED
     ink = spot.ink
     hidden = spot.hidden
-    level = island_level(tool, ink, hidden, spot.shows)
+    level = island_level(found.look.islands, ink, hidden, spot.shows)
     return Grazed(
         spot.em * scale,
         scale,
@@ -1242,6 +1254,24 @@ def planted_dark(browser: ModuleType, scale: float) -> str:
     return written.replace("<style>", "<style>:root{color-scheme:dark}", 1)
 
 
+def dark_lines(drawing: Any, scale: float) -> list[str]:
+    """Each entry the read as built names, in `drawing` of the planted file in a dark key, of
+    the plants `PLANTED` holds, with its share, whether its cause took an island and whether
+    the sliver names it; or that it names none of them."""
+    lines = []
+    for shown in drawing.shown:
+        for each in shown.read.dropped:
+            if each.element in PLANTED:
+                taken = ", island" if each.island else ""
+                by = "by its sliver" if each.by_size else "under its sliver"
+                lines.append(
+                    f"  {each.element} {each.text!r} at scale {scale:g}, in a dark key, as a"
+                    f" look's file: the read as built names it {each.why}, share"
+                    f" {each.share:.4f}{taken}, {by}"
+                )
+    return lines or [f"  at scale {scale:g}, in a dark key, the read as built names no plant"]
+
+
 def planted(args: argparse.Namespace) -> int:
     found = modules()
     browser = found.look.viewing_browser
@@ -1256,9 +1286,10 @@ def planted(args: argparse.Namespace) -> int:
                 local = Path(folder) / "local"
                 pages = browser.PLANTED_PAGES
                 with captured(browser, every=False) as capture:
-                    browser.draw(file, pages, scale, program, local)
+                    dark = browser.draw(file, pages, scale, program, local)
                     browser.draw_forced(file, pages, scale, program, local)
             print("\n".join(planted_lines(tool, browser, scale, capture)), flush=True)
+            print("\n".join(dark_lines(dark, scale)), flush=True)
     except browser.Stopped as stop:
         print(f"the browser stopped: {stop}", file=sys.stderr)
         return 1
@@ -1300,7 +1331,7 @@ def entries_of(tool: ModuleType, browser: ModuleType, spot: Spot, text: str) -> 
     )
     for why, lost, pixels, shows in causes:
         by_sliver = bool(strong) and lost >= least
-        island = tool._takes_an_island(ink, pixels, shows)
+        island = tool.takes_an_island(ink, pixels, shows)
         if by_sliver or island:
             if strong:
                 share = lost / strong

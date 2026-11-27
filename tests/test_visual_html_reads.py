@@ -1,14 +1,19 @@
 """`scripts/visual_html_reads.py`: the maintainer's measure of the HTML renderer's read of cover
-and cut through a browser (visual-communication DEC-037, project-kit#3262). It lays plants at
-each em on pages the renderer writes, in a light key, a dark key or the forced palettes, reads
-each tally the read makes from the tally's own images, lays a box over each plant, and says
-what the read names and what DEC-045's measure of islands would. The tests here read its parts
-in this process, and one draws through a real browser where the machine has one."""
+and cut through a browser (visual-communication DEC-037, DEC-054, project-kit#3262). It lays
+plants at each em on pages the renderer writes, in a light key, a dark key or the forced
+palettes, reads each tally the read makes from the tally's own images, lays a box over each
+plant, and says what the read names by its sliver and what the measure of islands names. The
+tests here read its parts in this process, and some draw through a real browser where the
+machine has one: those of DEC-054's Implications, which draw the dots, a full stop past the
+page's edge and a graze through the read as built, on the probe's pages."""
 
 from __future__ import annotations
 
+import contextlib
 import itertools
-from collections.abc import Mapping
+from collections import Counter
+from collections.abc import Iterator, Mapping, Sequence
+from dataclasses import dataclass, replace
 from types import ModuleType
 from typing import Any
 
@@ -19,7 +24,9 @@ from scripts import visual_svg_reads as svg_reads
 from tests.in_process import load
 from tests.test_visual_communication_viewing_browser import real_browser
 
-viewing_tool, viewing_browser = load("visual-communication", "viewing_tool", "viewing_browser")
+viewing_tool, viewing_browser, islands = load(
+    "visual-communication", "viewing_tool", "viewing_browser", "islands"
+)
 
 #: A tally's clip, drawn at two device pixels to a px, its images' size, and the page it lies
 #: on, in px of the document. A pixel's centre lies on the page from row 2 and column 2.
@@ -413,11 +420,11 @@ def test_island_level_asks_the_measure_at_each_level_alone_and_leaves_its_levels
     meets them, so a cause that hides it alone takes an island first at 127."""
     ink = {(0, 0): 100, (0, 1): 150, (1, 0): 150}
     shows = {(0, 1): 255, (1, 0): 255}
-    levels = viewing_tool.LEVELS
-    assert reads.island_level(viewing_tool, ink, [(0, 0)], shows) == 127
-    assert reads.island_level(viewing_tool, ink, [(0, 0)], {**shows, (0, 0): 0}) == 127
-    assert reads.island_level(viewing_tool, {(0, 0): 100, (0, 1): 100}, [(0, 0)], shows) == 0
-    assert levels == viewing_tool.LEVELS
+    levels = islands.LEVELS
+    assert reads.island_level(islands, ink, [(0, 0)], shows) == 127
+    assert reads.island_level(islands, ink, [(0, 0)], {**shows, (0, 0): 0}) == 127
+    assert reads.island_level(islands, {(0, 0): 100, (0, 1): 100}, [(0, 0)], shows) == 0
+    assert levels == islands.LEVELS
 
 
 def test_the_deck_names_a_cause_by_the_sliver_or_by_an_island_the_cause_takes() -> None:
@@ -487,3 +494,145 @@ def test_a_real_browser_names_a_dot_hidden_whole_where_its_loss_reaches_the_sliv
         assert each.ink and each.whole and each.agrees and not each.neighbours
         assert each.em == pytest.approx(20.0)
         assert each.named == (each.found > 0 and each.lost >= each.sliver)
+
+
+# The read as built, through a real browser (DEC-054's Implications).
+
+#: The ems the dots are drawn at, a tenth of a device pixel apart, at a scale of 1: where
+#: DEC-054's probe found the sliver leaving each of the three dots hidden whole, in the look's
+#: face, and some dots of ż holding no strong ink.
+LOW_EMS = tuple(10 + tenth / 10 for tenth in range(26))
+
+#: The dots DEC-054's Implications have a browser's read name as covered with `island`: a full
+#: stop and a decimal point, each a run of its own, and the dot of ż.
+NAMED_DOTS = tuple(
+    dot for dot in svg_reads.DOTS if dot.name in ("full stop", "decimal point", "dot of ż")
+)
+
+#: How far above its baseline the page's foot lies where the full stop is cut, in ems of its
+#: text: below the foot of its letters' line box and above the top of a full stop.
+CUT_ABOVE_THE_BASELINE = 0.4
+
+
+@contextlib.contextmanager
+def a_real_browser() -> Iterator[tuple[reads.Modules, Any]]:
+    """The probe's modules and the browser found; a test skips where a sandbox stops it."""
+    found = reads.modules()
+    browser = found.look.viewing_browser
+    try:
+        yield found, browser.find()
+    except browser.Stopped as stop:
+        if stop.sandbox:
+            pytest.skip(f"a sandbox stopped the browser: {stop}")
+        raise
+
+
+@dataclass(frozen=True)
+class UnderBoxes:
+    """The three dots at `LOW_EMS`, each under a box over all of it: each plant the box hid
+    whole, as the probe reads it, with the read's entry of its span as covered, if any."""
+
+    hidden: tuple[tuple[Any, Any, Any], ...]
+
+
+@pytest.fixture(scope="module")
+def under_boxes() -> UnderBoxes:
+    """Drawn once for the tests that read it, each marked `real_browser`, so none draws it on
+    a machine with no browser."""
+    with a_real_browser() as (found, program):
+        pages = reads.laid(NAMED_DOTS, LOW_EMS, 1.0)
+        first = reads.drawn(found, found.look.FONT, pages, 1.0, program, {}, every=True)
+        boxes = reads.boxes_over(found, pages, first)
+        second = reads.drawn(found, found.look.FONT, pages, 1.0, program, boxes, every=False)
+    [reading] = second.capture.of(reads.FILE)
+    covered = found.look.viewing_browser.COVERED
+    entries = {
+        (each.element, each.text, each.why): each for each in second.dropped[reading.palette]
+    }
+    held = []
+    for page in pages:
+        for plant in page.plants:
+            hidden = reads.hidden_of(found, plant, 1.0, reading, ())
+            if hidden.ink and hidden.whole:
+                entry = entries.get((plant.text, plant.dot.runs[plant.dot.at], covered))
+                held.append((plant, hidden, entry))
+    return UnderBoxes(tuple(held))
+
+
+@real_browser
+def test_a_real_browser_names_each_dot_hidden_whole_as_covered_with_island(
+    under_boxes: UnderBoxes,
+) -> None:
+    """A full stop and a decimal point, each a run of its own, and the dot of ż, each hidden
+    whole by a later box at each em from 10 to 12.5: the read names each as covered with
+    `island`, and each of the three at one em at least where its loss lies under the sliver,
+    so the measure alone names it (DEC-054 points 1 and 3). At which ems the sliver leaves each,
+    this test leaves to the machine."""
+    left: Counter[str] = Counter()
+    for plant, _, entry in under_boxes.hidden:
+        assert entry is not None and entry.island, (plant.dot.name, plant.em)
+        left[plant.dot.name] += not entry.by_size
+    assert set(left) == {dot.name for dot in NAMED_DOTS}
+    assert all(left.values()), left
+
+
+@real_browser
+def test_a_real_browser_names_a_faint_dot_of_z_hidden_whole(under_boxes: UnderBoxes) -> None:
+    """A dot of ż that holds no strong ink, hidden whole: the read names it as covered with
+    `island`, though it loses no strong ink (DEC-054 point 1). Whether the face draws such a
+    dot at these ems is the machine's: the test skips where it draws none."""
+    faint = [
+        (plant, entry)
+        for plant, hidden, entry in under_boxes.hidden
+        if plant.dot.name == "dot of ż" and not hidden.strong
+    ]
+    if not faint:
+        pytest.skip("the browser drew every dot of ż from an em of 10 to 12.5 with strong ink")
+    for plant, entry in faint:
+        assert entry is not None and entry.island, plant.em
+
+
+@real_browser
+def test_a_real_browser_names_a_full_stop_past_the_pages_edge_as_cut_with_island() -> None:
+    """A full stop, a run of its own, its page's foot laid between its letters' line box's foot
+    and its own top, so its span lies partly on the page and its ink wholly past it: the read
+    names it as cut with `island`, since the cut takes all of an island (DEC-054 point 1). The
+    page is as wide as the planted file's, so the window draws the first read's plants at the
+    start's own scale."""
+    full_stop = next(dot for dot in NAMED_DOTS if dot.name == "full stop")
+    with a_real_browser() as (found, program):
+        [page] = reads.laid((full_stop,), (12.0,), 1.0)
+        [plant] = page.plants
+        foot = reads.TEXT_TOP + reads.BASELINE - CUT_ABOVE_THE_BASELINE
+        width = max(page.width, found.look.viewing_browser.PLANTED_WIDTH)
+        cut = replace(page, width=width, height=plant.top + foot * plant.size)
+        drawn = reads.drawn(found, found.look.FONT, [cut], 1.0, program, {}, every=True)
+    [entries] = drawn.dropped.values()
+    [entry] = [each for each in entries if each.text == "."]
+    assert entry.why == found.look.viewing_browser.CUT
+    assert entry.island
+
+
+@real_browser
+def test_a_real_browser_leaves_unnamed_a_graze_under_the_sliver_that_takes_no_island() -> None:
+    """A box's top edge stepped across the foot of a p at an em of 20, an eighth of a device
+    pixel a step: at each step that hides strong ink wholly, under the sliver, and takes no
+    island by the measure on the tally's own pixels, the read names nothing; and one step at
+    least is such a graze (DEC-054 point 1)."""
+    stem = reads.Words("stem", ("p",))
+    with a_real_browser() as (found, program):
+        pages = reads.laid((stem,), (20.0,), 1.0, reads.GRAZE_STEPS)
+        first = reads.drawn(found, found.look.FONT, pages, 1.0, program, {}, every=True)
+        boxes = reads.graze_boxes(pages, first, islands.FAINT)
+        second = reads.drawn(found, found.look.FONT, pages, 1.0, program, boxes, every=False)
+    [reading] = second.capture.of(reads.FILE)
+    named = {each.element for each in second.dropped[reading.palette]}
+    grazes: Sequence[Any] = [
+        plant
+        for page in pages
+        for plant in page.plants
+        for grazed in [reads.grazed_of(found, plant, 1.0, reading, ())]
+        if grazed.lost and grazed.lost < grazed.sliver and not grazed.island
+    ]
+    assert grazes
+    assert not {plant.text for plant in grazes} & named
