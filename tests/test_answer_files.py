@@ -17,6 +17,7 @@ import pytest
 from click.testing import CliRunner
 
 from project_kit import answer_files as af
+from project_kit import friction_history as fh
 from project_kit import friction_report as frep
 from project_kit import friction_repository as fr
 from project_kit import friction_validate as fv
@@ -691,6 +692,103 @@ def test_a_deferral_moved_out_of_the_block_keeps_its_point(timeline: Timeline) -
     assert [(f.kind.value, f.origin.sha if f.origin else None) for f in found] == [
         ("deferred", deferred)
     ]
+
+
+#: The reason the deferral moved out of the block gives.
+MOVED_REASON = "until the rename lands"
+
+#: How a block may write `MOVED_REASON` in YAML text, each at an edge of the prefilter
+#: of the walk to a deferral's point (`Walker._may_carry_reason`): plain, folded over two
+#: lines, spelt by escapes, and joined across a line by an escaped line break.
+REASON_SPELLINGS = {
+    "plain": MOVED_REASON,
+    "folded": "until the\n            rename lands",
+    "escaped": '"unt\\x69l the ren\\u0061me lands"',
+    "escaped line break": '"until the re\\\n            name lands"',
+}
+
+
+def _deferring_guide(reason: str, *, body: str = "Body.") -> str:
+    """`bare_guide` revalidated at T1, its block deferring the CLI, written as YAML text
+    with the reason spelt as `reason` writes it."""
+    return (
+        "---\nid: guide\npkit:\n  friction:\n    anchors:\n      path:\n"
+        "        - src/cli/**\n        - src/core/**\n    revalidated:\n"
+        f"      at: '{T1}'\n      outcome: unchanged\n      unchanged-because: holds\n"
+        "      deferred:\n        - anchor:\n"
+        "            kind: path\n            value: src/cli/**\n"
+        f"          reason: {reason}\n---\n\n{body}\n"
+    )
+
+
+def _deferrals_found(result: fr.RepositoryCheck) -> list[tuple[str, str | None]]:
+    """(kind, origin commit) per finding but the over-broad, then each deferral point of
+    the guide's report."""
+    found = [
+        (f.kind.value, f.origin.sha if f.origin else None)
+        for f in without_over_broad(result.findings)
+    ]
+    points = [(a.value, p.sha if p else None) for a, p in _report(result).deferral_points]
+    return found + points
+
+
+def _read_exactly(timeline: Timeline, monkeypatch: pytest.MonkeyPatch) -> fr.RepositoryCheck:
+    """The whole check, the walk to a deferral's point parsing every version of the file
+    rather than those its prefilter passes: the exact reading the prefilter speeds."""
+    with monkeypatch.context() as patched:
+        patched.setattr(fh.Walker, "_may_carry_reason", lambda _self, _state, _words: True)
+        return _check(timeline)
+
+
+@pytest.mark.parametrize("spelling", sorted(REASON_SPELLINGS))
+def test_a_deferral_moved_out_of_the_block_keeps_its_point_however_the_block_spells_it(
+    timeline: Timeline, monkeypatch: pytest.MonkeyPatch, spelling: str
+) -> None:
+    """The block writes the reason in a form the prefilter of the walk must not pass over,
+    the escaped ones holding none of its words as written: the deferral moved out keeps
+    the block's point, as the exact reading finds."""
+    timeline.start({GUIDE: bare_guide(at=T1, outcome="unchanged", because="holds")})
+    timeline.commit("change the CLI", {"src/cli/main.py": "print('v2')\n"})
+    deferred = timeline.commit(
+        "defer in the block", {GUIDE: _deferring_guide(REASON_SPELLINGS[spelling])}
+    )
+    timeline.commit(
+        "move the answers",
+        {
+            GUIDE: bare_guide(),
+            answer_path("moved-0123456789ab"): answers(
+                entry(at=T1, because="holds", deferred=((CLI, MOVED_REASON),))
+            ),
+        },
+    )
+    found = _deferrals_found(_check(timeline))
+    assert found == [("deferred", deferred), (CLI.value, deferred)]
+    assert found == _deferrals_found(_read_exactly(timeline, monkeypatch))
+
+
+def test_a_reason_only_the_body_writes_puts_no_deferral_back(
+    timeline: Timeline, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The block deferred the CLI for another reason, and only the body writes the reason
+    the answer file gives. The prefilter of the walk searches the part of a version a parse
+    reads data from, never the body, so the answer file's deferral starts a point of its
+    own, as the exact reading finds."""
+    said = f"The guide is deferred {MOVED_REASON}."
+    timeline.start({GUIDE: bare_guide(at=T1, outcome="unchanged", because="holds", body=said)})
+    timeline.commit("change the CLI", {"src/cli/main.py": "print('v2')\n"})
+    timeline.commit("defer in the block", {GUIDE: _deferring_guide("waiting", body=said)})
+    moved = timeline.commit(
+        "move the answers",
+        {
+            GUIDE: bare_guide(body=said),
+            answer_path("moved-0123456789ab"): answers(
+                entry(at=T1, because="holds", deferred=((CLI, MOVED_REASON),))
+            ),
+        },
+    )
+    found = _deferrals_found(_check(timeline))
+    assert found == [("deferred", moved), (CLI.value, moved)]
+    assert found == _deferrals_found(_read_exactly(timeline, monkeypatch))
 
 
 def test_a_revalidation_made_apart_does_not_reach_a_deferral(timeline: Timeline) -> None:

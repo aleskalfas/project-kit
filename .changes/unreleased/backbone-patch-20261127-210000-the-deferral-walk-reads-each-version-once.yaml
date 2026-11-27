@@ -1,0 +1,16 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  The friction checks read each version of an artefact's file from git once in
+  the walk that tells whether a deferral in an answer file puts back one the
+  artefact's block carried, however many of its deferrals they walk for (#3537).
+  They read the file's versions again for every deferral, so a long document
+  with many deferrals and a long history, such as a CLI reference, cost most of
+  the documentation check's filler's time. The walk searches a version's front
+  matter alone for the reason's words, never its body, and parses every version
+  whose front matter writes a backslash. So a deferral moved out of a block that
+  spells its reason by an escape keeps the block's point, which it kept before
+  only where the document's body wrote the reason's words. What every friction
+  command reports is otherwise unchanged.
