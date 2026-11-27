@@ -48,7 +48,7 @@ from tests.in_process import load
     "cycle_lifecycle_gate_in_review_decided_decide.py",
 )
 
-FIXTURE = Path(__file__).resolve().parent / "fixtures/lean-business/repo"
+FIXTURE = Path(__file__).resolve().parent / "fixtures/lean-business/.repo"
 
 IDEA = "lean-business/meal-plan"
 GOAL = f"{IDEA}/goal.yaml"

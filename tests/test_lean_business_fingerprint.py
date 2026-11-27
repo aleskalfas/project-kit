@@ -16,7 +16,7 @@ from tests.in_process import load
 (fingerprint, reading) = load("lean-business", "fingerprint", "reading")
 
 SCHEMAS = Path(__file__).resolve().parent.parent / ".pkit/capabilities/lean-business/schemas"
-IDEA = Path(__file__).resolve().parent / "fixtures/lean-business/repo/lean-business/meal-plan"
+IDEA = Path(__file__).resolve().parent / "fixtures/lean-business/.repo/lean-business/meal-plan"
 
 GOAL = {
     "revenue": {"amount": 1000000, "per": "year"},

@@ -15,7 +15,7 @@ from tests.in_process import load
 
 (layout, listing, model) = load("lean-business", "layout", "listing", "model")
 
-FIXTURE = Path(__file__).resolve().parent / "fixtures/lean-business/repo"
+FIXTURE = Path(__file__).resolve().parent / "fixtures/lean-business/.repo"
 LOCATION = "lean-business"
 IDEA = f"{LOCATION}/meal-plan"
 

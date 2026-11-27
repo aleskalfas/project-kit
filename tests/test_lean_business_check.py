@@ -30,7 +30,7 @@ from tests.in_process import CAPABILITIES, load, run_main
 )
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-FIXTURE = Path(__file__).resolve().parent / "fixtures/lean-business/repo"
+FIXTURE = Path(__file__).resolve().parent / "fixtures/lean-business/.repo"
 
 IDEA = "lean-business/meal-plan"
 GOAL = f"{IDEA}/goal.yaml"
