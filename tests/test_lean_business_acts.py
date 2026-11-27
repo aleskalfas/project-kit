@@ -158,3 +158,34 @@ def test_its_currency_changes_only_while_no_declared_experiment_is_undecided() -
     years = {**GOAL, "years": 5}
     assert gates.setting_goal(years, on, cycles=[], previous=GOAL, experiments=[DECLARED]) == []
     assert gates.setting_goal(changed, on, cycles=[], experiments=[DECLARED]) == []
+
+
+# --- the planning -------------------------------------------------------------------------------
+
+
+#: A cycle whose window, as planned, runs from 2026-12-01 through 2026-12-30, and which a
+#: suspension of a month moves to end on 2027-01-30.
+SUSPENDED = {
+    "id": "idea--first",
+    "window": {"start": "2026-12-01", "days": 30},
+    "suspensions": [
+        {
+            "first-day": "2026-12-10",
+            "when": "2026-12-10",
+            "resumed": {"day": "2027-01-10", "when": "2027-01-10"},
+        }
+    ],
+}
+
+
+def test_a_cycle_is_planned_no_later_than_its_window_as_planned_ends() -> None:
+    # Its window may start before the day it is planned, and end on that day.
+    assert gates.planning(SUSPENDED, date(2026, 12, 30), goal=GOAL, others=[]) == []
+    # A suspension that moves the window's end later leaves the plan as it is.
+    [refused] = gates.planning(SUSPENDED, date(2026, 12, 31), goal=GOAL, others=[])
+    assert refused.pointer == "/planned/first"
+    assert refused.message == (
+        "it was planned on 2026-12-31, and its window, as planned, ended on 2026-12-30, before "
+        "that day: a window may start before the day its cycle is planned, but one that ended "
+        "by then leaves the cycle no day to run"
+    )

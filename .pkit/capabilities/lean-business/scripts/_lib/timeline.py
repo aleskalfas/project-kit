@@ -16,6 +16,9 @@ the check and the status all read it here, so none of them disagrees with anothe
   moves it only where it had not started by the suspension's first day, and adds no day to
   it. One whose start an ongoing suspension reaches has no start yet.
 
+- **A window as planned** counts no suspension: it runs from its declared start through its
+  declared days, as the plan's own rules read it (DEC-002 point 11).
+
 Every day is a calendar day, and a window or a time box runs from its first day through its
 last (DEC-003 point 1).
 
@@ -223,13 +226,34 @@ def time_box(start: date, end: date, covered: Sequence[Covered]) -> Span:
 def cycle_window(cycle: Mapping[str, object]) -> Span | None:
     """Where a cycle's window falls, under the suspensions its data holds. None where its
     declared window cannot be read."""
+    declared = _declared_window(cycle)
+    if declared is None:
+        return None
+    start, days = declared
+    return window(start, days, covered_by(cycle.get("suspensions")))
+
+
+def planned_window(cycle: Mapping[str, object]) -> Span | None:
+    """Where a cycle's window falls as planned, counting none of its suspensions: from its
+    declared start through its declared days. None where its declared window cannot be
+    read."""
+    declared = _declared_window(cycle)
+    if declared is None:
+        return None
+    start, days = declared
+    return window(start, days, ())
+
+
+def _declared_window(cycle: Mapping[str, object]) -> tuple[date, int] | None:
+    """A cycle's declared window, its first day and the days it holds, or None where it
+    cannot be read."""
     declared = cycle.get("window")
     if not isinstance(declared, Mapping):
         return None
     start, days = day(declared.get("start")), declared.get("days")
     if start is None or isinstance(days, bool) or not isinstance(days, int):
         return None
-    return window(start, days, covered_by(cycle.get("suspensions")))
+    return start, days
 
 
 def experiment_time_box(

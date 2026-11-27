@@ -501,6 +501,33 @@ def test_plan_cycle_warns_of_a_window_started_by_today(world: lb.World) -> None:
     assert "warning: its window started on 2027-03-01" in run.out
 
 
+#: What the planning gate says of a window that, as planned, ended before the day the cycle
+#: is first planned, the fixture's day.
+ENDED = (
+    "it was planned on 2027-03-01, and its window, as planned, ended on 2027-02-28, before "
+    "that day: a window may start before the day its cycle is planned, but one that ended by "
+    "then leaves the cycle no day to run"
+)
+
+
+def test_plan_cycle_refuses_a_window_that_ended_before_today(world: lb.World) -> None:
+    plan = [*PLAN]
+    plan[3], plan[5] = "2027-02-20", "9"
+    kept = lb.snapshot(world.root)
+    run = world.run("plan_cycle", SECOND, *plan, "--person-decided")
+    assert run.code == 1
+    assert ENDED in run.err
+    assert lb.snapshot(world.root) == kept
+
+
+def test_plan_cycle_takes_a_window_that_ends_today(world: lb.World) -> None:
+    plan = [*PLAN]
+    plan[3], plan[5] = "2027-02-20", "10"
+    run = world.run("plan_cycle", SECOND, *plan, "--person-decided")
+    assert run.code == 0, run.err
+    assert "warning: its window started on 2027-02-20, by today, 2027-03-01" in run.out
+
+
 def test_change_plan_replaces_what_it_gives_and_keeps_who_first_planned_it(
     world: lb.World,
 ) -> None:
@@ -558,6 +585,19 @@ def test_change_plan_on_the_day_of_the_first_planning_may_move_the_start_to_that
         f"warning: its window started on {DAY}, by today, {DAY}, so its plan is frozen from now"
         in run.out
     )
+
+
+def test_change_plan_on_the_day_of_the_first_planning_refuses_a_window_ended_before_it(
+    world: lb.World,
+) -> None:
+    planned(world)
+    kept = lb.snapshot(world.root)
+    argv = ("--start", "2027-02-20", "--days", "9", "--person-decided")
+    run = world.run("change_plan", SECOND, *argv)
+    assert run.code == 1
+    assert "[plan-refused]" in run.err
+    assert ENDED in run.err
+    assert lb.snapshot(world.root) == kept
 
 
 def test_change_plan_leaves_a_part_it_is_not_given_as_it_is_where_the_file_lacks_it(

@@ -138,6 +138,16 @@ def test_a_suspension_whose_day_of_resuming_cannot_be_read_is_read_as_ongoing() 
 )
 def test_a_window_that_cannot_be_read_falls_nowhere(window: object) -> None:
     assert timeline.cycle_window({"window": window}) is None
+    assert timeline.planned_window({"window": window}) is None
+
+
+def test_a_cycles_window_as_planned_counts_none_of_its_suspensions() -> None:
+    cycle = {
+        "window": {"start": "2026-12-01", "days": 10},
+        "suspensions": [{"first-day": "2026-12-05", "when": "2026-12-05"}],
+    }
+    assert timeline.cycle_window(cycle) == Span(START, None)
+    assert timeline.planned_window(cycle) == Span(START, on(10))
 
 
 def test_an_experiments_time_box_is_read_from_its_file_and_its_cycles() -> None:

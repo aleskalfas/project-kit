@@ -506,10 +506,13 @@ def planning(
 ) -> list[Refusal]:
     """Why planning `cycle` on `on` is refused, in an idea whose goal is `goal` and whose
     other cycles are `others` (DEC-002 points 3 and 11): the goal is set before the idea's
-    first cycle, and the next cycle is planned only once the last is decided, so no other
-    cycle planned by `on` is undecided then. A cycle decided on `on` leaves the next to be
-    planned that day, at its review. Each variant shortlisted is the command's to read when
-    it plans, and a key result for each variant the plan's own invariant."""
+    first cycle; the window, as planned (`timeline.planned_window`), ends no earlier than
+    `on`, since it may start before the day the cycle is planned, but a cycle whose window
+    ended by then could run no day; and the next cycle is planned only once the last is
+    decided, so no other cycle planned by `on` is undecided then. A cycle decided on `on`
+    leaves the next to be planned that day, at its review. Each variant shortlisted is the
+    command's to read when it plans, and a key result for each variant the plan's own
+    invariant."""
     found: list[Refusal] = []
     if goal is None:
         found.append(
@@ -517,6 +520,16 @@ def planning(
                 "/planned",
                 "it was planned in an idea with no goal: the goal is set before the idea's "
                 "first cycle",
+            )
+        )
+    window = timeline.planned_window(cycle)
+    if window is not None and window.end is not None and window.end < on:
+        found.append(
+            Refusal(
+                "/planned/first",
+                f"it was planned on {on}, and its window, as planned, ended on {window.end}, "
+                f"before that day: a window may start before the day its cycle is planned, but "
+                f"one that ended by then leaves the cycle no day to run",
             )
         )
     for other in others:

@@ -16,11 +16,12 @@ time the person can give it, and 3650 days, ten years, at most. A key result nam
 variant it is taken from, its step of the customer factory and the number to reach there.
 
 Refused: a variant that is not shortlisted, as the process engine places it; and, through
-the predicate the check shares (`gates.planning`), an idea with no goal and a cycle of the
-idea still undecided. The check, which every write is held to, refuses the rest: a window
-that overlaps another cycle's as worked out, a variant explored with no key result, and a
-key result naming a variant the cycle does not explore. A window that has started by today
-is warned of, since its plan is frozen from its first day.
+the predicate the check shares (`gates.planning`), an idea with no goal, a window that, as
+planned, ended before today, since that cycle could run no day, and a cycle of the idea
+still undecided. The check, which every write is held to, refuses the rest: a window that
+overlaps another cycle's as worked out, a variant explored with no key result, and a key
+result naming a variant the cycle does not explore. A window that has started by today is
+warned of, since its plan is frozen from its first day.
 
 Usage:
   pkit lean plan-cycle <idea>--<cycle> --variant <variant> [--variant <variant>]...

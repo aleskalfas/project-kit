@@ -1170,6 +1170,23 @@ def test_two_cycles_whose_windows_overlap(tmp_path: Path) -> None:
     assert found(root) == []
 
 
+def test_a_cycle_first_planned_after_its_window_as_planned_ended(tmp_path: Path) -> None:
+    """A window may start before the day its cycle is first planned, but a cycle whose
+    window ended by then could run no day."""
+    root = project(tmp_path)
+    second_cycle(root, "2027-02-16", planned="2027-05-17", review="2027-05-20")
+    assert found(root) == [("error", "plan-refused", f"{SECOND}#/planned/first")]
+    assert messages(root, "plan-refused") == [
+        "it was planned on 2027-05-17, and its window, as planned, ended on 2027-05-16, before "
+        "that day: a window may start before the day its cycle is planned, but one that ended "
+        "by then leaves the cycle no day to run"
+    ]
+    # Planned on its window's last day, the cycle has that day to run.
+    edit(root, SECOND, put("planned", "first", "when", "2027-05-16"))
+    edit(root, SECOND, put("planned", "when", "2027-05-16"))
+    assert found(root) == []
+
+
 def test_the_next_cycle_planned_before_the_last_was_decided(tmp_path: Path) -> None:
     root = project(tmp_path)
     second_cycle(root, "2027-02-20", planned="2027-02-14", review="2027-05-25")
