@@ -1,23 +1,29 @@
-"""The lean coach's tool access ([lean-business:DEC-004-lean-business-coach] point 5).
+"""The lean coach's definition ([lean-business:DEC-004-lean-business-coach]).
 
-The coach is granted its tools, so a tool its grant does not name is not given, one a
-later harness release adds among them (COR-013 point 7). Its definition is read through
-the agents area's reader, `.pkit/agents/tool_access.py`, as the deploy and the runner read
-it, and held to the grant DEC-004 decides:
+**Its tool access (point 5).** The coach is granted its tools, so a tool its grant does
+not name is not given, one a later harness release adds among them (COR-013 point 7). Its
+definition is read through the agents area's reader, `.pkit/agents/tool_access.py`, as the
+deploy and the runner read it, and held to the grant DEC-004 decides:
 
 - its tool access is a grant, never a withheld list, which would give every tool it
   leaves out;
 - the grant is the tool that reads a file, the shell, the tool that loads a skill and the
   tools that search files, each whole, with no argument;
-- it lacks every tool that edits a file, every web tool, every tool of a connected
-  server and every tool that starts another agent;
+- it lacks every tool that edits a file, the web tools, any connected server's tools and
+  the tool that starts another agent;
 - it lacks every other tool Claude Code's adapter knows, so a tool that fits none of
   those kinds is not given either.
+
+**The skill's sections it cites (point 1).** The definition cites the skill and never
+restates it, naming the sections it follows by their titles, in double quotes. Each
+quoted title is held to a heading of the skill, so a section the skill renames or
+removes fails here rather than leaving the coach pointed at nothing.
 """
 
 from __future__ import annotations
 
 import importlib.util
+import re
 from pathlib import Path
 from types import ModuleType
 from typing import Any
@@ -27,17 +33,27 @@ import pytest
 REPO = Path(__file__).resolve().parents[1]
 READER = REPO / ".pkit" / "agents" / "tool_access.py"
 CLAUDE_CODE = REPO / ".pkit" / "adapters" / "claude-code"
-COACH = REPO / ".pkit" / "capabilities" / "lean-business" / "agents" / "lean-coach.md"
+CAPABILITY = REPO / ".pkit" / "capabilities" / "lean-business"
+COACH = CAPABILITY / "agents" / "lean-coach.md"
+SKILL = CAPABILITY / "skills" / "lean-business" / "lean-business.md"
 
 #: The grant DEC-004 point 5 decides, by Claude Code's names.
 GRANTED = frozenset({"Read", "Bash", "Skill", "Glob", "Grep"})
 
-#: The tools the grant withholds, by the kind DEC-004 point 5 names, in Claude Code's names.
+#: The tools the grant withholds, in DEC-004 point 5's words, by Claude Code's names.
 WITHHELD = {
-    "edits a file": ("Edit", "MultiEdit", "Write", "NotebookEdit"),
-    "reaches the web": ("WebFetch", "WebSearch"),
-    "starts another agent": ("Agent", "Task"),
+    "every tool that edits a file": ("Edit", "MultiEdit", "Write", "NotebookEdit"),
+    "the web tools": ("WebFetch", "WebSearch"),
+    "the tool that starts another agent": ("Agent", "Task"),
 }
+
+#: A title the definition quotes, in straight or curly double quotes.
+QUOTED = re.compile(r"[\"“]([^\"“”]+)[\"”]")
+
+#: A Markdown heading, its title captured.
+HEADING = re.compile(r"#{1,6}\s+(.+?)\s*")
+
+FENCE = "```"
 
 
 def _load(path: Path, name: str) -> ModuleType:
@@ -46,6 +62,26 @@ def _load(path: Path, name: str) -> ModuleType:
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+def _body(path: Path) -> str:
+    """The text of `path` below its front matter."""
+    text = path.read_text(encoding="utf-8")
+    if text.startswith("---\n"):
+        _, _, text = text[len("---\n") :].partition("\n---\n")
+    return text
+
+
+def _headings(path: Path) -> set[str]:
+    """The titles of the headings of `path`, outside fenced code."""
+    titles: set[str] = set()
+    fenced = False
+    for line in _body(path).splitlines():
+        if line.startswith(FENCE):
+            fenced = not fenced
+        elif not fenced and (heading := HEADING.fullmatch(line)):
+            titles.add(heading.group(1))
+    return titles
 
 
 @pytest.fixture(scope="module")
@@ -101,3 +137,9 @@ def test_each_withheld_tool_is_one_the_adapter_knows(reader: ModuleType) -> None
         tool for tools in WITHHELD.values() for tool in tools if tool not in declaration.known_tools
     )
     assert unknown == []
+
+
+def test_each_section_the_definition_cites_is_a_heading_of_the_skill() -> None:
+    cited = set(QUOTED.findall(_body(COACH)))
+    assert cited, "the definition quotes no section of the skill"
+    assert sorted(cited - _headings(SKILL)) == []
