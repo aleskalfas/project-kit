@@ -15,7 +15,10 @@ checks it after the run, hands back the run's files and takes it all down.
   gives it (`recorded_processes`, ADR-103), stored whole. Each confined run first
   removes the folder of any run whose process the backbone reads as ended, as a
   killed run leaves its clone behind, and keeps one whose process runs or of which
-  the backbone cannot tell (ADR-066 point 7).
+  the backbone cannot tell (ADR-066 point 7). A reviewer's clone lies here too, in a
+  run's folder of its own, and its run sweeps the same way (`review_clones`, ADR-102
+  point 2). Where the root or a run's folder cannot be made or written, as from inside
+  a sandbox on Linux, the refusal's cause is `RUN_FOLDER`.
 - **The clone.** It is made with `git clone --no-local --no-hardlinks --no-checkout`,
   so it shares no object file with the person's repository, by link or by reference.
   Where the clone lacks the commit, as when only a remote-tracking reference holds it,
@@ -115,6 +118,10 @@ REFERENCES = ("HEAD", "packed-refs", "refs")
 #: `tempfile` finds and `$TMPDIR`. The run root lies in none of them.
 SHARED_TEMP_FOLDERS = ("/tmp", "/private/tmp", "/var/folders", "/private/var/folders")
 
+#: The cause of a refusal where the backbone's folder for the run, the run root or the
+#: run's own folder in it, cannot be made or written (`Refused.cause`).
+RUN_FOLDER = "run-folder"
+
 #: The check's verdicts.
 CLEAN = "clean"
 BREACH = "breach"
@@ -177,11 +184,14 @@ class Projection(Protocol):
 
 
 class Refused(Exception):
-    """A confined run cannot be made. The reason says why, for the run's document."""
+    """A run's folders cannot be made. The reason says why, for the run's document.
+    `cause` is `RUN_FOLDER` where the backbone's folder for the run cannot be made or
+    written, as from inside a sandbox on Linux, and None for any other cause."""
 
-    def __init__(self, reason: str) -> None:
+    def __init__(self, reason: str, *, cause: str | None = None) -> None:
         super().__init__(reason)
         self.reason = reason
+        self.cause = cause
 
 
 @dataclass(frozen=True)
@@ -254,7 +264,9 @@ def run_root(project_root: Path) -> Path:
             root.mkdir(mode=0o700)
         held = os.lstat(root)
     except OSError as exc:
-        raise Refused(f"the run root {root} cannot be made: {exc.strerror or exc}") from exc
+        raise Refused(
+            f"the run root {root} cannot be made: {exc.strerror or exc}", cause=RUN_FOLDER
+        ) from exc
     if stat.S_ISLNK(held.st_mode):
         raise Refused(f"the run root {root} is a symbolic link")
     if not stat.S_ISDIR(held.st_mode):
@@ -354,7 +366,7 @@ def _recorded(folder: Path) -> str | None:
     return raw.decode("utf-8", errors="replace").strip()
 
 
-def _make_run_folder(root: Path, asking: rp.Reader, system: rp.System) -> Path:
+def make_run_folder(root: Path, asking: rp.Reader, system: rp.System) -> Path:
     """A fresh folder for one run in `root`, its process file holding the name the
     backbone gives this command's process, whose life bounds the run's clone. Where
     the backbone gives it no name, the folder holds no file, and a later run keeps
@@ -363,14 +375,18 @@ def _make_run_folder(root: Path, asking: rp.Reader, system: rp.System) -> Path:
     try:
         folder = Path(tempfile.mkdtemp(prefix=RUN_PREFIX, dir=root))
     except OSError as exc:
-        raise Refused(f"the run's folder cannot be made in {root}: {exc.strerror or exc}") from exc
+        raise Refused(
+            f"the run's folder cannot be made in {root}: {exc.strerror or exc}", cause=RUN_FOLDER
+        ) from exc
     if named.name is None:
         return folder
     try:
         (folder / PROCESS_FILE).write_text(f"{named.name}\n", encoding="utf-8")
     except OSError as exc:
         remove_tree(folder)
-        raise Refused(f"the run's folder cannot be written: {exc.strerror or exc}") from exc
+        raise Refused(
+            f"the run's folder cannot be written: {exc.strerror or exc}", cause=RUN_FOLDER
+        ) from exc
     return folder
 
 
@@ -553,23 +569,33 @@ def make_workspace(clone: Path) -> tuple[Path, Path]:
     """Make the run's workspace in `clone`, and its temp folder inside it. Raises
     `Refused` when the commit holds anything at the workspace's path, or either
     folder cannot be made as a folder of its own."""
+    workspace = make_agent_workspace(clone)
+    temp = workspace / TEMP
+    try:
+        temp.mkdir(mode=0o700)
+    except OSError as exc:
+        raise Refused(f"the run's temp folder cannot be made: {exc.strerror or exc}") from exc
+    return workspace, temp
+
+
+def make_agent_workspace(clone: Path) -> Path:
+    """Make the agent workspace, `WORKSPACE`, at the root of `clone`, as a folder of
+    its own that only its owner uses, with the guards ADR-060 points 1 and 2 give.
+    Raises `Refused` when the commit holds anything at that path, or the folder cannot
+    be made so."""
     workspace = clone / WORKSPACE
     if os.path.lexists(workspace):
         raise Refused(
             f"the commit holds something at `{WORKSPACE}`, where the run's workspace goes"
         )
-    temp = workspace / TEMP
     try:
         workspace.mkdir(mode=0o700)
-        temp.mkdir(mode=0o700)
         held = os.lstat(workspace)
     except OSError as exc:
-        raise Refused(
-            f"the run's workspace or its temp folder cannot be made: {exc.strerror or exc}"
-        ) from exc
+        raise Refused(f"the run's workspace cannot be made: {exc.strerror or exc}") from exc
     if not stat.S_ISDIR(held.st_mode):
         raise Refused("the run's workspace is not a folder of its own")
-    return workspace, temp
+    return workspace
 
 
 def write_pkit(folder: Path, clone: Path) -> Path:
@@ -602,7 +628,7 @@ def confinement(project_root: Path, commit: str) -> Generator[Confinement]:
     system = rp.this_system()
     asking = reader(project_root, system)
     remove_stale(root, asking, system)
-    folder = _make_run_folder(root, asking, system)
+    folder = make_run_folder(root, asking, system)
     try:
         clone = folder / CLONE
         make_clone(project_root, commit, clone)

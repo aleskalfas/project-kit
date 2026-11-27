@@ -1,0 +1,28 @@
+component: project-management
+kind: minor
+custom:
+  category: Changed
+  requires_backbone: release
+body: >
+  In a seat's clone, `pkit pm review-pr` runs each reviewer in a clone of its
+  own, which the backbone's run command makes from the code host at the
+  default branch's head and removes once the reviewer's run ends (ADR-102).
+  So no reviewer works in the seat's checkout, or where another reviewer
+  works. A seat's clone is one whose runtime folder names a seat, never a
+  linked worktree of one; elsewhere reviewers run in your checkout, as
+  before. The command reads, from the code host, the base repository's
+  address and the default branch's head, and asks for the change's base and
+  its head through `refs/pull/<N>/head`, which must resolve to the head the
+  verdict's marker names. Each reviewer's brief says its working tree holds
+  the default branch's head, not the change, and to read the change by its
+  diff and by its files at the head's commit, and names the base through the
+  clone's remote. Where no clone can be asked for, no reviewer runs and the
+  command exits 2. On Linux, inside the sandbox, an agent's review in a
+  seat's clone is now refused, as its build is, since the backbone cannot
+  write its folder for the clone there: each reviewer's line names
+  `pkit pm review-pr <N>` at your own terminal, outside the sandbox, as the
+  way out, until project-kit#3427 places the run's folders there. This needs
+  the backbone this release ships, and the Claude Code adapter's runner this
+  release ships at your default branch's head, since the reviewer's clone
+  runs the runner its commit registers, and an older one refuses the run. A
+  reviewer the project keeps only in an uncommitted copy is refused there.

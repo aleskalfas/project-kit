@@ -18,6 +18,12 @@ yet (DEC-060). Held here:
 - **a released seat's Tasks in Review:** the loop says that `seats` names each
 - **batch planning names the shared choices before it slices,** and a first plan
   files the foundation only (DEC-060)
+- **a walking skeleton's conventions** (#2199): where software-engineering is
+  installed, batch planning plans the skeleton's Task with the step that writes
+  its conventions into the corpus, for a person to accept with its change. The
+  worker leaves their acceptance to the person, and the change waits in Review,
+  where its claim does not lapse, and merges only once they are accepted. The
+  README says so
 - **batch planning plans Tasks that share a file as one Task** (#2640): those of
   one parent, Milestone and priority, within what one review can read and one
   build can finish (DEC-066). The critic's count comes before the fold, the gate
@@ -341,6 +347,75 @@ def test_batch_planning_schedules_through_the_capability_s_audited_command() -> 
     assert '`pkit pm promote-issue <N> --reason "<the user\'s approval of the plan>"`' in filing
 
 
+# --- a walking skeleton's conventions ----------------------------------------------------
+
+#: The record that has the software-engineer write a walking skeleton's conventions
+#: into the conventions corpus, and that DEC-060 points to for what an entry is.
+SKELETON_CONVENTIONS = "[software-engineering:DEC-004-skeleton-conventions-in-corpus]"
+
+#: The records whose points a skeleton's change waiting in Review rests on.
+FOUNDATION = "[project-management:DEC-060-foundation-before-slices]"
+SEATS = "[project-management:DEC-059-topology-of-seats]"
+
+
+def test_batch_planning_plans_the_skeleton_s_task_with_its_conventions_step() -> None:
+    """Where software-engineering is installed, the skeleton's Task says that its
+    change writes the conventions it settles into the corpus, for a person to accept
+    with that change before it merges. A change to such a convention changes its
+    entry too (DEC-060 points 2 and 5)."""
+    slicing = _section(_text(BATCH_PLAN), "### 3. Propose the slicing")
+    step = "**Its conventions in the corpus, where software-engineering is installed,**"
+    assert slicing.index("**Then the walking skeleton:**") < slicing.index(step)
+    flat = _flat(slicing)
+    paragraph = flat.split(step, 1)[1].split("- **", 1)[0]
+    assert "`pkit status`" in paragraph
+    assert "beside authorising its merge, which accepts none" in paragraph
+    assert "The change merges only once they are accepted" in paragraph
+    assert "The skeleton's Task says so in its body." in paragraph
+    # The builder, not the planner, finds whether the corpus offers a location.
+    assert f"{SKELETON_CONVENTIONS} point 4" in paragraph
+    assert "the first slice that the skeleton is folded into" in paragraph
+    change = flat.split("So does a change to a convention a foundation set", 1)[1]
+    assert "that Task changes the entry too" in change.split("**", 1)[0]
+
+
+def test_the_worker_leaves_a_skeleton_s_entries_to_the_person_to_accept() -> None:
+    """The worker builds the entries with the skeleton, and leaves their acceptance
+    and status to the person, as it leaves a foundation's records (DEC-060 points 2
+    and 5)."""
+    worker = _section(_text(LOOP), "## 3. The worker's loop")
+    build = worker.split("4. **Build it**", 1)[1].split("5. **Open its pull request:**", 1)[0]
+    build = _flat(build)
+    skeleton = build.split("**A walking skeleton's Task,**", 1)[1]
+    assert "where software-engineering is installed" in skeleton
+    assert f"{SKELETON_CONVENTIONS} says what an entry is and where it goes" in skeleton
+    assert "Leave each entry's status, and their acceptance, to them." in skeleton
+    assert "**A Task that changes a convention a foundation set**" in build
+
+
+def test_a_change_that_waits_on_its_entries_waits_in_review_and_stays_the_worker_s() -> None:
+    """Its pull request names the entries for the person to accept, and waits in
+    Review, where its claim does not lapse (DEC-059 point 9). It merges only once
+    they are accepted, and an authorised merge accepts none (DEC-060 point 2)."""
+    text = _text(LOOP)
+    worker = _flat(_section(text, "## 3. The worker's loop"))
+    opening = worker.split("5. **Open its pull request:**", 1)[1]
+    opening = opening.split("6. **Take the next Task.**", 1)[0]
+    entries = opening.split("**A change that writes entries into the conventions corpus:**", 1)[1]
+    assert "its body names each entry, and asks the person to accept them" in entries
+    assert "The Task then waits in Review until they accept the entries" in entries
+    merge = worker.split("**The merge is the person's.**", 1)[1]
+    assert "their authorisation of the merge accepts none (DEC-060 point 2)" in merge
+    assert "ask them to accept the entries first" in merge
+    waiting = worker.split("**A change that waits on its entries.**", 1)[1].split("**", 1)[0]
+    assert "step 1 finds nothing in it to mend, and you take the next Task" in waiting
+    assert f"the Task stays yours while it waits ({SEATS} point 9)" in waiting
+    assert "name to them each entry that changes after they accepted it" in waiting
+    # No command holds the merge yet, and the loop says so.
+    later = _flat(_section(text, "## Not in the loop yet"))
+    assert "No command holds back the merge of a change whose entries" in later
+
+
 # --- batch planning plans Tasks that share a file as one Task ---------------------------
 
 #: The record that plans Tasks that share a file as one Task.
@@ -462,6 +537,16 @@ def test_the_readme_says_what_the_worker_does_in_each_situation() -> None:
     assert "a pull request of its own that conflicts with the default branch" in section
     assert "a fix round on one whose verdict asks for changes" in section
     assert "**A pull request that a released seat left in Review**" in section
+
+
+def test_the_readme_says_a_skeleton_s_change_waits_in_review_on_its_entries() -> None:
+    section = _flat(
+        _text(README).split("#### A seat's agent and its loop", 1)[1].split("\n#### ", 1)[0]
+    )
+    writes = "the skeleton's change also writes the conventions it settles into that corpus"
+    assert writes in section
+    assert f"its pull request waits in Review until then ({FOUNDATION} point 2)" in section
+    assert f"the Task stays the worker's while it waits ({SEATS} point 9)" in section
 
 
 def test_the_readme_lists_show_pr_s_mergeable_field_and_its_branch_form() -> None:
