@@ -1,7 +1,7 @@
 ---
 id: DEC-073
 title: A component placed below the top needs more than zero along each axis, whatever gives it the size
-status: proposed
+status: accepted
 date: 2026-11-27
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
