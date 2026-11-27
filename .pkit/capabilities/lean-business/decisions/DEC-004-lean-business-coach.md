@@ -45,7 +45,7 @@ DEC-001 point 10 has an agent read the briefing before it proposes anything, and
 
 Where no person answers in its conversation, as when another session dispatches it as a helper, or a run starts it with a prompt that no person attends, the coach writes nothing and asks no judgement:
 
-- it reports where the ideas stand and the check's findings, leaving out what point 9 leaves out
+- it reports where the ideas stand and the check's findings, leaving out the bar and the estimates of an experiment not yet declared (point 9)
 - it explains the method
 - it says that the work waits for a session with the person, started as the coach
 
@@ -54,7 +54,8 @@ Where no person answers in its conversation, as when another session dispatches 
 - **A grant.** The definition grants the tools the coach has, so a tool it does not name is not given, a later harness release's included (COR-013 point 7). It is granted the tool that reads a file, the session's shell, the tool that loads a skill, and the tools that search files where the harness has them.
 - **Withheld by the grant:** every tool that edits a file, the web tools, any connected server's tools, and the tool that starts another agent.
 - **A limit on what the shell does.** Through it the coach runs only the `pkit lean` commands, the methodology's read-only commands that core's rules ask before a change, the commands that read files and version control's history, and a commit of an idea's files on the person's word, as the skill's end of a session says. So its only writes are the `pkit lean` commands and that commit, and it runs nothing that brings the web into the conversation or starts another agent. The grant removes the likeliest ways around this limit; the rest rests on the definition alone. Its definition names none of the commands that write an answer on an artefact: where a commit owes such answers, the coach commits nothing, and gives the person the commands for a session that can write them and have them checked.
-- **Its costs are accepted.** The coach keeps no intermediate files, its drafts living in the conversation. A session it opens has no file editing, no web and no other agents, so a person who wants those works in another session, as they do for a commit that owes answers on artefacts. And a strict posture of the permission model does not suit it: no privilege recognizes the tool that loads a skill, and the person's words reach the commands as arguments, which a strict posture denies wherever they hold a construct it does not trust, such as a parenthesis or a dollar sign. So a project that runs the coach keeps the default, lenient posture.
+- **Its costs are accepted.** The coach keeps no intermediate files, its drafts living in the conversation. A session it opens has no file editing, no web and no other agents, so a person who wants those works in another session, as they do for a commit that owes answers on artefacts.
+- **The lenient posture.** The permission model's posture decides a call no grant covers: a lenient one leaves it to the harness's own rules, a strict one denies it (the permissions README, "Grants and verdicts"). A strict posture does not suit the coach. The person's words reach the commands as arguments, and a strict posture denies a command wherever they hold a construct it does not trust, such as a parenthesis or a dollar sign, whatever grants the project holds. So a project that runs the coach keeps the default, lenient posture.
 
 ### 6. Starting it
 
@@ -81,7 +82,7 @@ An agent that follows the skill, the coach or another, drafts nothing for the fi
 
 **Why an agent beside the skill.** A session opened as the coach is in the method from its first reply, with no need for the agent to load the skill on its own. The rule to read the skill again before each step and each judgement lives in the definition, which the harness keeps as the session's instructions. And the grant leaves out the file-editing tools, the likeliest way an agent writes around the commands.
 
-**Why it cites the skill and never restates it.** An agent references and does not embed (COR-006). Restated rules would drift from the skill's, and nothing would say which text wins. The rules for every agent that follows the skill (points 7 and 8) live in the skill, since a person may do the capability's work with any agent.
+**Why it cites the skill and never restates it.** An agent references and does not embed (COR-006). Restated rules would drift from the skill's, and nothing would say which text wins. The rules for every agent that follows the skill (points 7, 8 and 9) live in the skill, since a person may do the capability's work with any agent.
 
 **Why an answer only from the agent's own conversation.** The commands hold a judgement to the person through a run's claim that they decided in the session, and the skill has the agent show the person the command's own question before it records anything (DEC-003 point 5). An agent with no person in its conversation can neither check that an answer passed on is the person's nor show them the question.
 
@@ -105,13 +106,13 @@ An agent that follows the skill, the coach or another, drafts nothing for the fi
 
 - **The skill alone.** Rejected: a session would still open outside the method, and nothing would hold the habit of reading it again.
 - **The skill's rules restated in the definition.** Rejected: two texts would drift.
-- **Points 7 and 8 in the coach alone.** Rejected: a person may follow the skill with any agent, and that agent needs them too.
+- **Points 7, 8 and 9 in the coach alone.** Rejected: a person may follow the skill with any agent, and that agent needs them too.
 - **An agent for each step.** Rejected: one idea runs through one loop, and the steps are already the skill's sub-procedures.
 - **A withheld list, as project-manager's.** Rejected: a tool a later release adds would reach the coach until someone withheld it, and the coach needs few.
 - **A helper that drafts and returns questions.** Rejected, as the rationale says.
 - **The coach as default on install.** Rejected: it would take a project's sessions from the agent the project chose.
 - **Web tools, to research alternatives and markets for the person.** Rejected for now, as the rationale says. A later record may grant them once a use shows what research belongs in the loop.
-- **A deny on the shell's reach, shipped by the capability.** Not now: it binds only where the permission model judges a call as the coach's, which a session started with `--agent` may not be, and the definition's limit holds either way.
+- **A deny on the shell's reach, shipped by the capability.** Not now: it binds only where the permission model judges a call as the coach's. Where the coach is the project's default agent, the model judges the person's own typed commands as the coach's too, so the deny would bind on them, and a session started with the coach for that session alone may not be judged as the coach's at all (the permissions README, "Default-agent subject resolution"). The definition's limit holds either way.
 - **Holding a draft's bar out of the status's structured output.** Not now: the experiment's file holds the bar too, so point 9 is needed in any case.
 
 ## Implications
