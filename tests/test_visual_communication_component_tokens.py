@@ -40,8 +40,15 @@ from tests.visual_communication_project import (
     yaml_text,
 )
 
-tokens, findings, files, full_read, libraries, pl = load(
-    "visual-communication", "tokens", "findings", "files", "full_read", "libraries", "pipeline"
+tokens, findings, files, full_read, libraries, pl, checks = load(
+    "visual-communication",
+    "tokens",
+    "findings",
+    "files",
+    "full_read",
+    "libraries",
+    "pipeline",
+    "checks",
 )
 
 ROLES = FOUNDATIONS / "roles.yaml"
@@ -386,19 +393,6 @@ def test_a_token_under_the_component_group_of_a_library_the_brand_does_not_name_
     assert tokens.read_brand(folder, tokens.read_declarations(ROLES)).findings == ()
 
 
-def test_a_token_under_the_component_group_of_the_brands_own_name_stays_private(
-    tmp_path: Path, parts: Any
-) -> None:
-    given = {
-        "component": {
-            "test-brand": {"note": {"fill": {"$type": "color", "$value": "{palette.white}"}}}
-        }
-    }
-    brand = tokens.read_brand(brand_copy(tmp_path, names=True, given=given), parts)
-    assert brand.findings == ()
-    assert "component.test-brand.note.fill" not in brand.roles
-
-
 def test_a_token_under_the_foundations_component_group_that_names_none_of_theirs_fails(
     tmp_path: Path,
 ) -> None:
@@ -480,6 +474,321 @@ def test_a_base_that_does_not_name_the_library_opens_none_of_its_tokens(
     assert ("open-unknown", "test-brand@1.0.0") in found
     assert ("role-not-open", "test-edition@1.0.0") in found
     assert read.resolve(FILL, {}) == read.resolve("background", {})
+
+
+# --- a brand's own components (DEC-044) -----------------------------------------------------------
+
+#: The token of the note, a component the test brand holds, and of the stamp, one the test
+#: edition holds: each fills its box, and defaults to the shared background.
+NOTE = "component.test-brand.note.fill"
+STAMP = "component.test-edition.stamp.fill"
+
+
+def own_component(token: str, default: str, gap: str = "") -> dict[str, Any]:
+    """A component of a brand's own that declares the token `token`, defaulting to
+    `default`, and fills its box with it, under its label. Given `gap`, it declares the
+    dimension token `gap` too, defaulting to `gap`, and places its label by it."""
+    group = token.rpartition(".")[0]
+    declared = {token.rpartition(".")[2]: {"type": "color", "default": default}}
+    label: dict[str, Any] = {
+        "text": {"content": "label", "style": "type.body", "fill": "text-primary"},
+        "width": "=:width",
+    }
+    if gap:
+        declared["gap"] = {"type": "dimension", "default": gap}
+        label["x"] = f"=@{group}.gap"
+    return bound(
+        "component",
+        status="experimental",
+        about="A label on a box its own token fills.",
+        fields={
+            "type": "object",
+            "required": ["label"],
+            "properties": {"label": {"type": "string"}},
+        },
+        tokens=declared,
+        parts={
+            "box": {"box": {"fill": token}, "width": "=:width", "height": "=:height"},
+            "label": label,
+        },
+        preferred={"height": "=label.bottom"},
+    )
+
+
+def holding(folder: Path, token: str, default: str = "{background}", gap: str = "") -> Path:
+    """The brand at `folder`, holding the component of its own whose token `token` is
+    (`own_component`)."""
+    name = token.split(".")[2]
+    write(folder / "components" / f"{name}.yaml", yaml_text(own_component(token, default, gap)))
+    return folder
+
+
+def token_given(token: str, value: Any = WHITE, kind: str = "color") -> dict[str, Any]:
+    """A brand's tokens that give the component token `token` `value`."""
+    group, library, component, name = token.split(".")
+    return {group: {library: {component: {name: {"$type": kind, "$value": value}}}}}
+
+
+def stray(group: str) -> dict[str, Any]:
+    """A brand's tokens that give a colour at `<group>.x`."""
+    return {group: {"x": {"$type": "color", "$value": WHITE}}}
+
+
+def brands_scope(*folders: Path) -> Any:
+    """The scope of the foundations, the test library and the brands at `folders`, each
+    named by its version folder's parent."""
+    return tokens.read_scope({**PARTS, **{folder.parent.name: folder for folder in folders}})
+
+
+def own_chain(
+    tmp_path: Path, *, opens: str = "", given: Mapping[str, Any] | None = None
+) -> tuple[Path, Path]:
+    """The test brand holding the note, as a base that opens `opens` too, and the edition
+    over it holding the stamp, with `given` added to its tokens."""
+    base = holding(brand_copy(tmp_path, names=False), NOTE)
+    if opens:
+        opened = f"open: [accent, space, {opens}]"
+        replace_in(base / "library.yaml", "open: [accent, space]", opened)
+    edition = tmp_path / "test-edition" / "1.0.0"
+    shutil.copytree(TEST_EDITION, edition, ignore=shutil.ignore_patterns("__pycache__"))
+    holding(edition, STAMP)
+    if given:
+        add_tokens(edition / EDITION, given)
+    return base, edition
+
+
+def edition_read(tmp_path: Path, **chain_of: Any) -> Any:
+    """The edition of `own_chain`, read over its base against the scope that holds both."""
+    base, edition = own_chain(tmp_path, **chain_of)
+    return tokens.read_brand(edition, brands_scope(base, edition), locked={"test-brand": base})
+
+
+def test_a_scope_holds_a_brands_own_components_tokens_and_no_role_of_its_own(
+    tmp_path: Path,
+) -> None:
+    base = holding(brand_copy(tmp_path, names=False), NOTE)
+    scope = brands_scope(base)
+    declared = scope.libraries["test-brand"]
+    assert (declared.brand, declared.roles, list(declared.tokens)) == (True, {}, [NOTE])
+    assert (scope.owner[NOTE], scope.default_of(NOTE)) == ("test-brand", "background")
+    assert scope.findings_of("test-brand") == []
+
+
+def test_a_brand_with_no_base_gives_its_own_components_tokens_values_and_exports_them(
+    tmp_path: Path,
+) -> None:
+    base = holding(brand_copy(tmp_path, names=False, given=token_given(NOTE)), NOTE)
+    brand = tokens.read_brand(base, brands_scope(base))
+    assert brand.findings == ()
+    for combination in brand.combinations():
+        assert brand.resolve(NOTE, combination) == WHITE
+    assert NOTE in brand.roles
+
+
+def test_a_brands_own_components_token_it_gives_no_value_draws_at_its_default(
+    tmp_path: Path,
+) -> None:
+    base = holding(brand_copy(tmp_path, names=False), NOTE)
+    brand = tokens.read_brand(base, brands_scope(base))
+    assert brand.findings == ()
+    assert brand.resolve(NOTE, {}) == brand.resolve("background", {})
+    assert NOTE in brand.valued
+    assert NOTE not in brand.roles
+
+
+def test_a_brand_built_on_a_base_gives_its_own_components_tokens_values_with_no_base_opening_them(
+    tmp_path: Path,
+) -> None:
+    read = edition_read(tmp_path, given=token_given(STAMP))
+    assert read.findings == ()
+    assert read.resolve(STAMP, {}) == WHITE
+    assert STAMP in read.roles
+    # Its base reaches none of the edition's roles, so the stamp draws at its default there.
+    assert read.base is not None
+    assert read.base.resolve(STAMP, {}) == read.base.resolve("background", {})
+    assert STAMP not in read.base.roles
+
+
+@pytest.mark.parametrize(
+    ("given", "said"),
+    [
+        (token_given(f"{NOTE}l"), "the brand holds the components whose tokens lie there"),
+        (token_given(NOTE, "{space.2}", "dimension"), "but the component token"),
+    ],
+    ids=["misspelt", "type"],
+)
+def test_a_token_under_the_brands_own_component_group_that_gives_nothing_fails(
+    tmp_path: Path, given: Any, said: str
+) -> None:
+    base = holding(brand_copy(tmp_path, names=False, given=given), NOTE)
+    brand = tokens.read_brand(base, brands_scope(base))
+    (finding,) = brand.findings
+    assert (finding.code, finding.level, finding.library) == (
+        "library-token",
+        findings.FAILS,
+        "test-brand@1.0.0",
+    )
+    assert finding.where.startswith("component.test-brand.note.")
+    assert said in finding.message
+    assert brand.resolve(NOTE, {}) == brand.resolve("background", {})
+
+
+def test_a_token_under_the_brands_own_name_outside_the_component_group_asks_nothing(
+    tmp_path: Path,
+) -> None:
+    base = holding(brand_copy(tmp_path, names=False, given=stray("test-brand")), NOTE)
+    brand = tokens.read_brand(base, brands_scope(base))
+    assert brand.findings == ()
+    assert "test-brand.x" not in brand.roles
+
+
+@pytest.mark.parametrize(
+    ("given", "said"),
+    [
+        (token_given(f"{NOTE}l"), "`test-brand` is a brand along its chain"),
+        (stray("test-brand"), "since the capability reads no brand's own roles"),
+    ],
+    ids=["its-components", "its-roles"],
+)
+def test_a_token_under_a_brand_along_the_chain_that_gives_nothing_fails(
+    tmp_path: Path, given: Any, said: str
+) -> None:
+    read = edition_read(tmp_path, given=given)
+    (finding,) = read.findings
+    assert (finding.code, finding.level, finding.library) == (
+        "library-token",
+        findings.FAILS,
+        "test-edition@1.0.0",
+    )
+    assert said in finding.message
+
+
+@pytest.mark.parametrize("opens", [NOTE, "component.test-brand"], ids=["token", "group"])
+def test_a_base_opens_its_own_components_token_and_a_brand_built_on_it_gives_it_a_value(
+    tmp_path: Path, opens: str
+) -> None:
+    read = edition_read(tmp_path, opens=opens, given=token_given(NOTE))
+    assert read.findings == ()
+    assert read.base is not None and NOTE in read.base.opened
+    assert read.resolve(NOTE, {}) == WHITE
+    assert read.base.resolve(NOTE, {}) == read.base.resolve("background", {})
+    assert NOTE in read.roles
+
+
+def test_a_value_for_a_token_of_a_brand_along_the_chain_its_base_does_not_open_fails(
+    tmp_path: Path,
+) -> None:
+    read = edition_read(tmp_path, given=token_given(NOTE))
+    (finding,) = read.findings
+    assert (finding.code, finding.level, finding.library) == (
+        "role-not-open",
+        findings.FAILS,
+        "test-edition@1.0.0",
+    )
+    assert "does not open it to the brand" in finding.message
+    assert read.resolve(NOTE, {}) == read.resolve("background", {})
+
+
+@pytest.mark.parametrize("opens", ["", NOTE], ids=["closed", "open"])
+def test_an_alias_to_a_token_of_a_brand_along_the_chain_its_base_does_not_export_fails(
+    tmp_path: Path, opens: str
+) -> None:
+    """The base gives the note's token no value, so it does not export it, open or not,
+    and a private token of the edition's that aliases it fails (DEC-044 point 2)."""
+    aliasing = {"mine": {"x": {"$type": "color", "$value": f"{{{NOTE}}}"}}}
+    base, edition = own_chain(tmp_path, opens=opens, given=aliasing)
+    assert NOTE not in tokens.read_brand(base, brands_scope(base)).roles
+    with pytest.raises(tokens.TokenError) as raised:
+        tokens.read_brand(edition, brands_scope(base, edition), locked={"test-brand": base})
+    (finding,) = raised.value.findings
+    assert (finding.code, finding.library, finding.where) == (
+        "alias-private",
+        "test-edition@1.0.0",
+        "mine.x",
+    )
+    assert f"aliases `{NOTE}`, a token of the brand test-brand along its chain" in finding.message
+    assert "that its base does not export" in finding.message
+
+
+def test_an_alias_to_a_token_of_a_brand_along_the_chain_its_base_exports_takes_its_value(
+    tmp_path: Path,
+) -> None:
+    base, edition = own_chain(tmp_path, given=token_given(STAMP, f"{{{NOTE}}}"))
+    add_tokens(base / BASE, token_given(NOTE))
+    read = tokens.read_brand(edition, brands_scope(base, edition), locked={"test-brand": base})
+    assert read.findings == ()
+    assert read.base is not None and NOTE in read.base.roles
+    assert read.resolve(STAMP, {}) == WHITE
+
+
+def test_a_brand_built_on_a_base_opens_its_own_components_tokens_and_no_wider_than_its_base(
+    tmp_path: Path,
+) -> None:
+    base, edition = own_chain(tmp_path)
+    replace_in(edition / "library.yaml", "open: [accent]", f"open: [accent, {STAMP}, {NOTE}]")
+    read = tokens.read_brand(edition, brands_scope(base, edition), locked={"test-brand": base})
+    (finding,) = read.findings
+    assert (finding.code, finding.level, finding.library) == (
+        "open-wider",
+        findings.FAILS,
+        "test-edition@1.0.0",
+    )
+    assert f"opens `{NOTE}`, which its base test-brand@1.0.0 does not open" in finding.message
+    assert STAMP in read.opened
+    assert NOTE not in read.opened
+
+
+@pytest.mark.parametrize(
+    ("entry", "said"),
+    [
+        ("component.test-brand.nothing", "names no role the brand exports"),
+        (STAMP, "a brand that is neither this brand nor one along its chain"),
+    ],
+    ids=["own-unknown", "outside-the-chain"],
+)
+def test_an_open_role_that_names_none_the_brand_adds_or_a_brand_outside_its_chain_fails(
+    tmp_path: Path, entry: str, said: str
+) -> None:
+    base, edition = own_chain(tmp_path, opens=entry)
+    brand = tokens.read_brand(base, brands_scope(base, edition))
+    (finding,) = brand.findings
+    assert (finding.code, finding.level, finding.library) == (
+        "open-unknown",
+        findings.FAILS,
+        "test-brand@1.0.0",
+    )
+    assert said in finding.message
+    assert STAMP not in brand.opened
+
+
+@pytest.mark.parametrize(
+    ("given", "where"),
+    [(token_given(STAMP), STAMP), (stray("test-edition"), "test-edition.x")],
+    ids=["its-components", "its-roles"],
+)
+def test_a_token_under_a_brand_outside_the_chain_stays_private_and_asks_for_attention(
+    tmp_path: Path, given: Any, where: str
+) -> None:
+    """The edition is no brand along its base's chain, so its base reaches none of its
+    roles: read under a lock that holds both, a token the base writes under the edition's
+    name asks the base's owner for attention, and the stamp draws at its default."""
+    base, edition = own_chain(tmp_path)
+    add_tokens(base / BASE, given)
+    brand = tokens.read_brand(base, brands_scope(base, edition))
+    (finding,) = brand.findings
+    assert (finding.code, finding.level, finding.where) == (
+        "library-token-private",
+        findings.ATTENTION,
+        where,
+    )
+    assert "of the brand test-edition@1.0.0, which is neither this brand nor one" in (
+        finding.message
+    )
+    assert finding.who == "the owner of the brand test-brand"
+    assert brand.resolve(STAMP, {}) == brand.resolve("background", {})
+    assert STAMP not in brand.roles
+    # Checked alone, with no scope that holds the edition, it asks nothing.
+    assert tokens.read_brand(base, brands_scope(base)).findings == ()
 
 
 # --- what reads a token --------------------------------------------------------------------------
@@ -693,6 +1002,118 @@ def test_a_part_reading_a_token_with_no_value_under_the_brand_fails_at_the_lock(
     assert (finding.where, finding.library, finding.extra) == ("lock", "", {"piece": True})
     assert f"`@{GAP_TOKEN}`" in finding.message
     assert GAP_TOKEN not in project_.values()["tokens"]
+
+
+#: A base brand of its own beside the test brand, a copy of it that names the test library,
+#: and the token of the stamp it holds.
+OTHER = "other-brand"
+OTHER_STAMP = "component.other-brand.stamp.fill"
+OTHER_GAP = "component.other-brand.stamp.gap"
+
+
+def other_brand_project(
+    tmp_path: Path, *, brand: str = "test-brand", gives: bool = True, far: bool = False
+) -> Any:
+    """The foundations, the test brand, the test library and `other-brand`, which holds the
+    stamp, its token defaulting to the shared surface, and gives it a value where `gives`;
+    and the draft `tags` under `brand`, a figure of the stamp, under a lock of the four.
+    With `far`, the library has a dimension role with no default, `test-parts.far`, which
+    `other-brand` gives a value, and the stamp places its label by a token `gap` that
+    defaults to it."""
+    root = project(tmp_path)
+    copy_library(root, RELEASED_FOUNDATIONS, "foundations", "1.0.0")
+    copy_library(root, TEST_BRAND, "test-brand", "1.0.0")
+    parts_folder = copy_library(root, TEST_PARTS, "test-parts", "1.0.0")
+    other = naming(copy_library(root, TEST_BRAND, OTHER, "1.0.0"))
+    replace_in(other / "library.yaml", "name: test-brand\n", f"name: {OTHER}\n")
+    given: dict[str, Any] = {"warning": {"$type": "color", "$value": "{scheme.ink}"}}
+    if far:
+        replace_in(
+            parts_folder / "roles.yaml", "pairs:\n", "  test-parts.far: {type: dimension}\npairs:\n"
+        )
+        given["far"] = {"$type": "dimension", "$value": {"value": 8, "unit": "px"}}
+    add_tokens(other / BASE, {"test-parts": given})
+    if gives:
+        add_tokens(other / BASE, token_given(OTHER_STAMP))
+    holding(other, OTHER_STAMP, "{surface}", gap="{test-parts.far}" if far else "")
+    names = ("foundations", "test-brand", "test-parts", OTHER)
+    unreleased = {"1.0.0": {"released": False}}
+    write_list(
+        root,
+        {
+            name: {
+                "source": {"kind": "shipped" if name == "foundations" else "project"},
+                "versions": unreleased,
+            }
+            for name in names
+        },
+    )
+    write_piece(root, "tags", brand=brand, lock=dict.fromkeys(names, "1.0.0"))
+    content = bound("content", body={"use": f"{OTHER}/stamp", "label": "Ready"})
+    write(root / "visual" / "pieces" / "tags" / "content.en.yaml", yaml_text(content))
+    piece = pl.read_piece(root, "visual", "tags")
+    return pl.Project(piece, piece.lock, pl.Held(root, "visual"))
+
+
+def test_a_part_of_a_brand_outside_the_pieces_brands_chain_draws_its_defaults_and_asks_its_author(
+    tmp_path: Path,
+) -> None:
+    project_ = other_brand_project(tmp_path)
+    [(_, result)] = project_.scenes(facts=project_.piece.stand_ins)
+    assert [f for f in result.findings if f.code == "unknown-role"] == []
+    assert project_.env.role(OTHER_STAMP) == project_.env.role("surface")
+    (finding,) = checks.other_brand_parts(project_)
+    assert (finding.code, finding.level, finding.who) == (
+        checks.PART_OF_OTHER_BRAND,
+        findings.ATTENTION,
+        findings.AUTHOR,
+    )
+    assert (finding.file, finding.where) == ("visual/pieces/tags/piece.yaml", "brand")
+    assert finding.message == (
+        f"the part `{OTHER}/stamp` is a component of the brand {OTHER}@1.0.0, which gives "
+        f"`{OTHER_STAMP}` a value, and the piece's brand test-brand@1.0.0 is neither that brand "
+        "nor built on it: the part draws each of its tokens at its default, in the values of "
+        "test-brand@1.0.0"
+    )
+    # The check finds it at the piece, and it fails nothing.
+    judged = checks.check(project_.root).judged
+    assert [(f.file, level) for f, level in judged if f.code == checks.PART_OF_OTHER_BRAND] == [
+        ("visual/pieces/tags/piece.yaml", findings.ATTENTION)
+    ]
+
+
+@pytest.mark.parametrize(
+    ("brand", "gives"), [(OTHER, True), ("test-brand", False)], ids=["its-brand", "no-value"]
+)
+def test_a_part_of_a_brand_draws_under_it_or_where_it_gives_its_tokens_no_value_asks_nothing(
+    tmp_path: Path, brand: str, gives: bool
+) -> None:
+    project_ = other_brand_project(tmp_path, brand=brand, gives=gives)
+    assert checks.other_brand_parts(project_) == []
+    expected = WHITE if gives else project_.env.role("surface")
+    assert project_.env.role(OTHER_STAMP) == expected
+
+
+def test_a_part_of_a_brand_outside_the_chain_reading_a_token_with_no_value_fails_at_the_lock(
+    tmp_path: Path,
+) -> None:
+    """The stamp's gap defaults to a role of the test library with no default, which
+    `other-brand` names and gives a value, and the piece's brand does not: under it the
+    token reaches no value, which only the lock's combination shows (DEC-044 point 4)."""
+    under_other = other_brand_project(tmp_path / "other", brand=OTHER, far=True)
+    [(_, drawn_there)] = under_other.scenes(facts=under_other.piece.stand_ins)
+    assert [f for f in drawn_there.findings if f.code == "unknown-role"] == []
+    project_ = other_brand_project(tmp_path, far=True)
+    [(_, result)] = project_.scenes(facts=project_.piece.stand_ins)
+    (finding,) = [f for f in result.findings if f.code == "unknown-role"]
+    assert (finding.where, finding.level, finding.extra) == (
+        "lock",
+        findings.FAILS,
+        {"piece": True},
+    )
+    assert f"`@{OTHER_GAP}`, a component token of the brand {OTHER}@1.0.0" in finding.message
+    assert f"the piece's brand is neither `{OTHER}` nor built on it" in finding.message
+    assert f"draw the piece under `{OTHER}` or a brand built on it" in finding.fix
 
 
 # --- a version read in full ----------------------------------------------------------------------

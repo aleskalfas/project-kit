@@ -61,16 +61,20 @@ class UnknownConcept(KeyError):
 class UnvaluedRole(KeyError):
     """A library's own role that has no value under the brand: its chain of defaults reaches
     none, and the brand gives it none (DEC-008 point 1). `library` names the library whose
-    role it is, and `named` says whether the brand, or a brand it builds on, names that
-    library (point 4). Where one does, it owes the role a value, and that is its finding.
-    Where none does, neither the brand nor the library alone is at fault, so a part that
-    reads the role is found at the lock that combines them (point 9)."""
+    role it is, and `of_brand` says whether that library is a brand, whose own component's
+    token the role is (DEC-044 point 1). `reached` says whether the brand, or a brand it
+    builds on, reaches that library's roles: names it, is it, or has it along its chain
+    (DEC-008 point 4). Where one does, what leaves the role with no value is that brand's
+    finding, or the library's. Where none does, neither the brand nor the library alone is
+    at fault, so a part that reads the role is found at the lock that combines them (DEC-008
+    point 9, DEC-044 point 4)."""
 
-    def __init__(self, role: str, library: str, *, named: bool) -> None:
+    def __init__(self, role: str, library: str, *, reached: bool, of_brand: bool = False) -> None:
         super().__init__(role)
         self.role = role
         self.library = library
-        self.named = named
+        self.reached = reached
+        self.of_brand = of_brand
 
 
 class OrderRoles(Protocol):

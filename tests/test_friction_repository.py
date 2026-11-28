@@ -2593,6 +2593,35 @@ def test_the_walk_to_where_each_entry_was_added_reads_each_version_of_its_file_o
     assert set(blobs.reads.values()) == {1}
 
 
+def test_the_walk_to_a_deferral_s_point_reads_each_version_of_its_file_once(
+    timeline: Timeline,
+) -> None:
+    """Whether a deferral in an answer file puts back one its document's block carried is a
+    walk back through the document's versions, one per deferral (`Walker.deferral_point`).
+    However many deferrals it walks for, each version is read from git once — the file
+    having more versions than the walker keeps between a prefilter and a parse."""
+    repo = timeline.adopter
+    anchored = document("guide", anchors={"path": ["src/cli/**", "src/core/**"]}, body="v0")
+    timeline.start({"docs/guide.md": anchored})
+    for count in range(1, fh._RECENT + 3):
+        # Committed by git alone: the file holds no answer to take into answer files.
+        (repo.root / "docs/guide.md").write_text(anchored.replace("v0", f"v{count}"), "utf-8")
+        repo.git("commit", "-q", "-m", f"edit the guide, {count}", "--", "docs/guide.md")
+    history = fh.read_history(repo.root, repo.head())
+    (guide_doc,) = [a for a in discover_artefacts(repo.root).artefacts if a.id == "guide"]
+    walked = [(CLI, "until the rename lands"), (Anchor("path", "src/core/**"), "until #12")]
+    blobs = _CountingBlobs(repo.root)
+    try:
+        walker = fh.Walker(history, blobs)
+        points = [walker.deferral_point(guide_doc, anchor, reason) for anchor, reason in walked]
+    finally:
+        blobs.close()
+    assert [p.point for p in points] == [None, None]
+    versions = {v.entry.after[1] for v in history.versions("docs/guide.md") if v.entry.after}
+    assert len(versions) == fh._RECENT + 3 and set(blobs.reads) == versions
+    assert set(blobs.reads.values()) == {1}
+
+
 def test_a_mode_change_is_a_change_in_both_checks(timeline: Timeline) -> None:
     repo = timeline.adopter
     timeline.start({"docs/guide.md": guide()})

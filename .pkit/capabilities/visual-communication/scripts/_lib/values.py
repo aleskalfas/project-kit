@@ -8,11 +8,12 @@ point 4).
 It holds each token of a brand with a value, resolved over its chain, in each combination
 asked for, named by token path and key; keys in key order, tokens in path order. Under a
 lock these are the roles the brand exports, and every other role of the libraries locked
-with it, at the brand's value or at its default (DEC-008 point 5). Each
-value is in its DTCG form, canonical: a colour without `hex` and with `alpha`, a font
-family a list. The engine computes it and never commits it; a producer and a code writer
-read it. Its version is apart from the format number of the files a project keeps: it
-rises only when a reader must read it differently.
+with it, at the brand's value or at its default (DEC-008 point 5), the tokens of each
+locked brand's own components among them (DEC-044 point 1). Each value is in its DTCG
+form, canonical: a colour without `hex` and with `alpha`, a font family a list. The
+engine computes it and never commits it; a producer and a code writer read it. Its version
+is apart from the format number of the files a project keeps: it rises only when a reader
+must read it differently.
 
 **Version 2** holds, beside them, each picture role the brand gives a file (DEC-025 point
 4), of the type `picture`. Its value in a combination is the file's bare name and the

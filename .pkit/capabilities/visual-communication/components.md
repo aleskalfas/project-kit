@@ -111,6 +111,10 @@ pkit:
         - visual-communication:DEC-035#3
         - visual-communication:DEC-035#4
         - visual-communication:DEC-035#5
+        - visual-communication:DEC-044#1
+        - visual-communication:DEC-044#2
+        - visual-communication:DEC-044#3
+        - visual-communication:DEC-044#4
         - visual-communication:DEC-036#1
         - visual-communication:DEC-036#2
         - visual-communication:DEC-036#3
@@ -142,6 +146,10 @@ pkit:
         - visual-communication:DEC-055#7
         - visual-communication:DEC-055#8
         - visual-communication:DEC-055#10
+        - visual-communication:DEC-073#1
+        - visual-communication:DEC-073#2
+        - visual-communication:DEC-073#3
+        - visual-communication:DEC-073#4
         - visual-communication:DEC-075#1
         - visual-communication:DEC-075#2
         - visual-communication:DEC-075#3
@@ -152,6 +160,7 @@ pkit:
         - .pkit/capabilities/visual-communication/files.md#pieceyaml
         - .pkit/capabilities/visual-communication/files.md#the-lock
         - .pkit/capabilities/visual-communication/files.md#the-foundations
+        - .pkit/capabilities/visual-communication/files.md#brands
         - .pkit/capabilities/visual-communication/files.md#rolesyaml
         - .pkit/capabilities/visual-communication/files.md#picture-roles
         - .pkit/capabilities/visual-communication/files.md#picture-files
@@ -322,11 +331,12 @@ parts:
     box: {fill: component.ui.card.fill, stroke: line}
 ```
 
-- **`tokens`** maps each token's name to `{type, default}`. The name is one segment of the name shape ([Shapes](files.md#shapes)), and the component's file gives the rest of its path, `component.<library>.<component>.<name>`. The card's tokens above are `component.ui.card.fill` and `component.ui.card.gap`.
-- **Its type** is any type a role takes but `picture`. **Its default** is always given, and aliases a role of that type: an own role of the component's library, or a role of a library it builds on, the shared roles included. It never aliases a component token, the component's own included, nor a role of an order, which a brand tunes for an order's steps alone (DEC-032 point 6; [The foundations](files.md#the-foundations)).
+- **`tokens`** maps each token's name to `{type, default}`. The name is one segment of the name shape ([Shapes](files.md#shapes)), and the component's file gives the rest of its path, `component.<library>.<component>.<name>`, a brand's own component's under the brand's own name. The card's tokens above are `component.ui.card.fill` and `component.ui.card.gap`.
+- **Its type** is any type a role takes but `picture`. **Its default** is always given, and aliases a role of that type: an own role of the component's library, or a role of a library it builds on, the shared roles included. In a brand's own component, it aliases a role of a library whose roles the brand reaches, the shared roles included, and never one of the brand's private tokens, which is no role (DEC-044 point 1). It never aliases a component token, the component's own included, nor a role of an order, which a brand tunes for an order's steps alone (DEC-032 point 6; [The foundations](files.md#the-foundations)).
 - **A token names what it styles, not a part.** Several of the component's parts may read one token, such as a box's edge and a divider line that a brand restyles as one.
 - **Its own parts read it by its full path,** wherever they read a role. A paint names it, as in `fill: component.ui.card.fill`. So does a text's style, and a formula reads it as `@component.ui.card.gap` ([References](#references)). No other component reads it, and nothing a piece writes names one. A part that reads a token its own component does not declare, in a paint, a text's style or a formula, is reported as `component-token-undeclared`, and the engine keeps what the part reads, the formula included (*checks*).
-- **Its value** is a brand's, where the brand names the library and gives it one, and else its default's, as for a library's own role ([`roles.yaml`](files.md#rolesyaml)).
+- **Its value** is a brand's, where the brand, or a base below it, reaches the library's roles and gives it one, and else its default's, as for a library's own role ([`roles.yaml`](files.md#rolesyaml)). A brand reaches a component library's roles by naming it, and a brand's as the next bullet has it ([A library's roles](files.md#a-librarys-roles)).
+- **A brand's own component's token** takes the brand's value, whether or not the brand has a base, since no base holds it. A brand built on that brand, directly or along its chain, gives it a value only where its own base opens it, and names no brand for it but its base. Under any other brand it draws at its default, in that brand's values where its default leads to one; a formula or a text's style that reads it where its default leads to none fails at the lock ([Errors](#errors), *checks*; DEC-044 points 1 to 3; [A library's roles](files.md#a-librarys-roles), [Open roles](files.md#open-roles)).
 - **A local component declares no token.** Where it would want one, let its parts read the role the token's default would alias.
 
 ### Parts
@@ -345,7 +355,7 @@ parts:
 | `slot` | `x y width height` | |
 | `repeat` | `x y width height draw colour`, and `row` or `column` | `draw`, and one of `row` and `column`, except over a list of ties, which takes neither |
 
-- **Places and sizes** are formulas that give a length, in the component's own frame. A missing `x` or `y` is zero.
+- **Places and sizes** are formulas that give a length, in the component's own frame. A missing `x` or `y` is zero. A size that comes out below zero is held at zero, and every formula that reads the part reads it so (DEC-073 point 3). A component the part places that asks for no size there, given zero, is reported as [What an element asks for, and what it gets](#what-an-element-asks-for-and-what-it-gets) says.
 - **`when`** draws the part only while a condition holds. It names a field, and holds while the content fills it: the field is not missing, empty text, an empty list or an empty mapping. A field of runs is filled where one of its runs holds text, and a list of paths as [Fields](#fields) says. Or it is `{<option>: [<word>, ...]}`, and holds while the option takes one of the words. Or it is a switch on a size, or, in a drawing of a layout, on `:as`, each branch `true`, `false` or a `when` of the two forms above ([Switches](#switches)). A part not drawn has zero size, at its place, so a formula that reads its frame holds.
 - **`lies-over`** names the parts that this one lies over on purpose, such as a badge over a card's box, as a list: `lies-over: [box]` (DEC-066 point 1). Any part may take it, wherever parts are written: a component's `parts`, a layout's drawing and a brand's drawing. It names parts written before it in the same `parts`, and so drawn before it, since the check of overlaps compares only the parts one group holds directly. So it names no part inside a component a part places, and no item of a list: a part that places a component, holds a slot or repeats over a list is named whole. It speaks of the parts' boxes, as the check does, not of what is drawn in them. It takes no switch: wherever the two parts overlap, under any option, at any size and in any language, the overlap is meant. Where they do not overlap, or where the check does not compare them, as where one is a line or holds the other, it changes nothing.
 - **What `lies-over` refuses,** when the component is read: a name that is no part of the same `parts`, the part's own name, the name of a part written after it, and a name written a second time. Each is a finding (*checks*, `lies-over-refused`), and says nothing: at a pair no other writing names, the check asks for attention, as at any pair no one named. A name's first writing names its part.
@@ -697,7 +707,7 @@ A formula is refused with a message that names it and says why, such as "the for
 - **It reads what it may not:** a value, a part or an option the component lacks, an option that names an item of a list over which not exactly one part repeats, below where a step may reach, `:place` or `:places` in any formula but a `cross-size`, or `own-center` or `own-middle` of a part of its own that is no line, of an item or of an end.
 - **It reads the size it gives:** a `cross-size` that reads its part's size across the line where the part gives none, itself or through a named value, as a loop (DEC-038 point 7).
 - **Its dimensions disagree,** or it gives another dimension than its key needs.
-- **It reads a role** that has no value under the brand, a length in a unit other than `px`, or a role that is neither a length nor a number. A role has none where no library the piece locks declares it, or where it is a library's role that neither the brand nor its chain of defaults gives a value ([`roles.yaml`](files.md#rolesyaml)). A part reads no value from a picture role, whether the brand gives it a file or not ([Picture roles](files.md#picture-roles)). A library's role with no value, a component token among them, is found at the piece's lock, not in the component. Where the brand, or a base below it, names the library, the part takes no finding: that brand's `library-role-missing`, or its library's own finding where a default does not hold, reports it.
+- **It reads a role** that has no value under the brand, a length in a unit other than `px`, or a role that is neither a length nor a number. A role has none where no library the piece locks declares it, or where it is a library's role that neither the brand nor its chain of defaults gives a value ([`roles.yaml`](files.md#rolesyaml)). A part reads no value from a picture role, whether the brand gives it a file or not ([Picture roles](files.md#picture-roles)). A library's role with no value, a component token among them, is found at the piece's lock, not in the component. Where the brand, or a base below it, reaches the library's roles, the part takes no finding: that brand's `library-role-missing`, or its library's own finding where a default does not hold, reports it. So a token of a brand's own component with no value is found at the lock where the piece's brand is neither that brand nor built on it, even where it names that brand, since naming it reaches none of its roles (DEC-044 points 3 and 4).
 
 Beside a formula, it refuses then a `cross-size` on a part whose items are pages, and a `stretch` written beside a `cross-size` that gives a size, as a second writer of the size ([Repeating over a list](#repeating-over-a-list-row-and-column)). It judges that loop and that `stretch` for each set of options, sizes and `:as` that holds together, so a pair only some options would draw is found in the library's own check.
 
@@ -770,7 +780,7 @@ The part's *layout operator*, `row` or `column`, lays the items along a line, ac
 | Setting | Takes | Default | What it does |
 |---|---|---|---|
 | `gap` | a formula that gives a length | zero | the space between two items along the line |
-| `sizes` | `own`, `equal`, `shares` | `own` | `own`: each item takes the size it asks for along the line. `equal`: the items share the part's size along the line, less the gaps, equally. `shares`: they share it in proportion to the shares their list's weight gives them, and equally where every share is the same ([Lists](#lists)). With `equal` or `shares`, the part must give that size. |
+| `sizes` | `own`, `equal`, `shares` | `own` | `own`: each item takes the size it asks for along the line. `equal`: the items share the part's size along the line, less the gaps, equally. `shares`: they share it in proportion to the shares their list's weight gives them, and equally where every share is the same ([Lists](#lists)). With `equal` or `shares`, the part must give that size. Where the gaps take the whole line or more, each item's share is zero or below, and is held at zero. An item that asks for no size along the line is then reported, and the list asks for the line it is given (DEC-073 points 1 and 3). Each item's place advances by its held size and the gap, so the last items lie past the line's end. With `own`, an item that asks for less than zero is held at zero too, and the list asks for its items' held sizes and its gaps. |
 | `justify-content` | `start`, `center`, `end`, `space-between` | `start` | Where the items lie along a line longer than they ask for. `space-between` widens each gap instead. |
 | `align-items` | `stretch`, `start`, `center`, `end` | `stretch`, and `start` beside a `cross-size` that gives a size | `stretch`: each item is as large across as the line, that is the part's size across, else the largest size an item asks for. Where the stretch goes inside the item is in [What an element asks for, and what it gets](#what-an-element-asks-for-and-what-it-gets). Otherwise each item takes the size it asks for across, or the size `cross-size` gives it, at the start, the centre or the end of the line. A `stretch` written beside a `cross-size` that gives a size is refused, and drawn as `start`. |
 | `cross-size` | a formula that gives a length | none | Each item's size across the line, by its place: the formula reads `:place`, the item's place from 1, and `:places`, how many items the list draws, beside what the part's other formulas read. It reads nothing an item carries, and its part's size across the line only where the part gives one. It may switch, and a branch may give none, which leaves the list without it there ([Switches](#switches)). A part whose items are pages takes none (DEC-038 points 1 and 2). |
@@ -894,6 +904,14 @@ parts:
 - **A top with a physical size asks for its height through it,** wherever it lies: the width it asks for, in the size's proportion ([A physical size](#a-physical-size)). Its height names `engine` as its source, and so does the height of a page that gets it, or of a part that places it and gives none.
 - **Each value has one owner:** a part's formula, its measured text, or its parent's layout.
 - **A component that gets less than it asks for** is reported.
+- **A component placed below the top needs more than zero** along each axis, width and height, unless it asks for zero there (DEC-073 point 1). One that gets zero or less is reported as a component that gets less than it asks for.
+  - **One that asks for no size there** takes what it is given, whatever gives it: a list that shares its line whose gaps take the whole line or more, a stretch across a line of no size, a part's formula, such as `width: "=:width - 2 * @space.4"` in a component narrower than the insets, or a top's slot of pages.
+  - **One whose own formula asks for less than zero,** such as `=@space.1 - @space.2`, is reported where it gets no more than zero. Where its part gives it more, it draws at that size.
+  - **Not inside one with no size.** A component that asks for no size there, and lies in one with no size there, is not reported for it, since that one asked for zero, is reported itself or lies in turn in one of no size there, save in the top and a tie (DEC-073 point 2). An item that `cross-size` sizes is reported wherever it lies (DEC-038 point 5). A component lies in the one whose part places it or repeats over its list, and a page in its top.
+  - **The top and a tie are not judged so.** The top gets what it asks for. A tie lies in its part's whole frame and is drawn between its ends.
+  - **Nor is a part that draws a primitive,** whose size is its component's own drawing. A text given a width of zero or less overflows, which is reported. A box, an ellipse, an image or a sign held at zero draws nothing, with no finding.
+  - **Where the finding lies** (DEC-073 point 4). It lies at the content where the size rests on what the content placed: a list given more items than its gaps leave room for, or a formula that reads, itself, through a named value or through a part of its own, the size its component takes from where it is placed, its place in its list, a list, an item or what the content places in a slot. A size its component asks for and gets as asked, as the top does, rests on its own formula. Otherwise the finding lies in the component that gave the size, or, for one that asks for less than zero, in its own, and in a released version it asks for attention (*checks*, `gets-less`). Its message names what gave the size.
+- **No frame is below zero** (DEC-073 point 3). The engine holds at zero each size it computes below zero: the size a component gets, the size a list gives an item and the size a part's formula gives its part. Every reader of frames reads the size so held.
 
 ## How the engine computes a scene
 

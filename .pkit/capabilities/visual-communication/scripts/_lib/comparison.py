@@ -36,7 +36,7 @@ and the record that sets it), the segment, and whether the later number allows i
   deprecated, as its component promises them (DEC-035 point 6): a token removed, of
   another type, or whose chain of defaults no longer ends at a shared role where it did,
   breaks; a new one is an addition, whatever its chain ends at. A brand's own components'
-  tokens are read from their files, since no scope reads them (DEC-035 point 7);
+  tokens are read as the brand's resolution reads them, from the scope (DEC-044 point 1);
 - *a library's own roles:* those its stable and deprecated components read, directly or
   through a default, a token's default among them, and a new one such a component reads
   (DEC-008 point 7, DEC-035 point 4);
@@ -293,13 +293,10 @@ def _component(
 
 
 def _tokens_of(read: FullRead, component: str) -> dict[str, tokens.ComponentToken]:
-    """The component tokens the component `component` of the version declares, by path: as
-    the scope reads them, or, in a brand, whose own components' tokens no scope reads
-    (DEC-035 point 7), as its file declares them."""
-    assert read.scope is not None and read.library is not None
-    if read.library.kind == "brand":
-        declared, _ = tokens.read_component_tokens(read.library.folder, name=read.name)
-        return {path: token for path, token in declared.items() if token.component == component}
+    """The component tokens the component `component` of the version declares, by path, as
+    the scope reads them, a brand's own components' as its resolution reads them (DEC-044
+    point 1)."""
+    assert read.scope is not None
     return {
         path: token
         for path, token in read.scope.tokens.items()
@@ -326,7 +323,7 @@ def _tokens(where: str, name: str, earlier: FullRead, later: FullRead, found: _F
                 f"is of type `{now.type}`, where it was `{token.type}`",
                 "DEC-003 point 6, DEC-035 point 6",
             )
-        if _token_ends_shared(earlier.scope, token) and not _token_ends_shared(later.scope, now):
+        if _ends_shared(earlier.scope, path) and not _ends_shared(later.scope, path):
             found.broken(
                 at, "no longer ends its chain of defaults at a shared role", "DEC-035 point 6"
             )
@@ -835,13 +832,6 @@ def _ends_shared(scope: tokens.Scope, path: str) -> bool:
         seen.add(step)
         step = scope.default_of(step)
     return False
-
-
-def _token_ends_shared(scope: tokens.Scope, token: tokens.ComponentToken) -> bool:
-    """Whether a component token's chain of defaults ends at a shared role: followed from
-    the token where the scope holds it, and else, as for a brand's own component, from the
-    role its default aliases."""
-    return _ends_shared(scope, token.path if token.path in scope.roles else token.default)
 
 
 def _own_roles(earlier: FullRead, later: FullRead, found: _Found) -> None:
