@@ -79,7 +79,7 @@ A clone under a credential that names no user's account takes no seat that build
 
 By default, a worker takes the next ready Task from one pool that every seat shares, the highest in priority first ([project-management:DEC-012-classification-axes]). The owner keeps two agents off one Task ([project-management:DEC-035-instance-ownership] point 6). A ready Task is one of two kinds:
 
-- an open Task in Backlog, with no owner, that names no open issue among its dependencies ([project-management:DEC-005-linking-and-containment])
+- an open Task in Backlog, with no owner, that declares its waits and has none open, its ancestors' among them, and whose waits could be read in full ([project-management:DEC-085-issue-waits]). Until a project turns on DEC-085's checks, the Task is instead one whose `## Dependencies` section names no open issue
 - a Task In Progress whose claim no longer counts, since it lapsed or its seat was released (point 9). The worker takes it over and goes on from its branch ([project-management:DEC-035-instance-ownership] point 4).
 
 A directive from a worker's directing seat may wake it, or name the ready Task it takes next, which it takes and claims as any other (refinement per [project-management:DEC-081-delegation-between-seats]).
