@@ -283,6 +283,7 @@ The edits this record makes to accepted records, once a person accepts it, each 
 - **DEC-010 is refined in place.**
   - **Its universal body rules** then add that, on a Task body, a hint of a wait is reported as a warning where no wait of the Task names its issue, for a record the issue whose change proposes it.
   - **Its optional sections** then say that a Task that records no wait declares in the `## Dependencies` section that it waits for nothing, which point 6 checks outside the floor its schema holds.
+- **DEC-013 is refined in place.** Its "PR target dictated by marker" then says that, once a project turns this record's checks on, a marked Task's change that targets the default branch by the bypass is refused at its merge while a wait of the Task's own has ended only on its integration branch.
 - **DEC-036 point 4** then lists waits beside containment: degradable to typed lines, by the `waits: native | textual` selector.
 - **DEC-059 point 7** then defines a ready Task in Backlog as one that declares its waits and has none open, its ancestors' among them, and whose waits could be read in full, citing this record. It says too that until a project turns this record's checks on, such a Task is instead one whose `## Dependencies` section names no open issue.
 - **DEC-060 is refined in place.**
