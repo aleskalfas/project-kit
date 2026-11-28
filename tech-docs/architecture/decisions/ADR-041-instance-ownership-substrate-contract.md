@@ -413,13 +413,21 @@ What it reads:
 - **A Task In Progress,** whose claim alone lapses: the seam folds its whole log
   (point 1).
 - **Any other issue:** the seam may read the issue's mirror in place of its log
-  (point 4). It judges the mirror's seat and key against the holders itself, and
-  gives the result a fold gives, with the mirror named as its source.
+  (point 4). It judges the mirror's seat and key against the holders itself, with
+  the mirror named as its source. The mirror carries no claim's comment id, so the
+  seam cannot judge the claim by its take. Where the clone the mirror names took its
+  seat again, a claim made before that take shows as counting, though a fold finds
+  it void. So a mirror read does not give the result a fold gives.
 - **What a mirror read allows:** a consumer may pass over an issue whose claim the
   mirror shows counting, and a listing may show a person what the mirror reads. Before
   a consumer offers an issue as free, treats it as free or acts on it as its owner,
   the seam folds the whole log. A missing or garbled mirror never makes an issue free
   without that fold.
+- **What passing over by the mirror costs:** an issue whose claim a later take of
+  its seat voided stays passed over by a consumer that reads its mirror alone.
+  Neither the seat's release nor the take writes to the issue (DEC-059 point 5), so
+  its mirror still names the claim. The issue loses its owner, as DEC-059 point 5
+  has a released seat's work do, only once a consumer folds its log.
 - **The claim path's re-read** folds the whole log, whatever the Task's state
   (DEC-035 point 6).
 
@@ -486,8 +494,10 @@ stand for the fold of a Task In Progress, whose claim lapses by the time of read
 so the guard and the pool ask the seam to fold that Task's log (point 7). A
 seat's release writes nothing to the issues its clone claimed (DEC-059 point 5), so
 the seam judges the mirror's seat and key against the seats' holders before the
-mirror stands in for any other issue. The mirror carries no author, so it only ever
-lets a consumer pass over an issue, never treat one as free.
+mirror stands in for any other issue. That judgement leaves out the claim's take,
+since the mirror carries no claim's comment id: where the clone took its seat
+again, a void claim shows as counting (point 7). The mirror carries no author
+either, so it only ever lets a consumer pass over an issue, never treat one as free.
 
 ### 5. Failure-posture neutrality — the constructors report, the caller decides
 
@@ -643,8 +653,11 @@ claim costs a retry, never a takeover.
 **Why the mirror only lets a consumer pass over an issue.** DEC-043 keeps a
 listing's cost at one call by reading the mirror, and DEC-059 makes the mirror unfit
 to stand for a fold that lapses. A mirror that names a counting claim can only make
-a consumer leave an owned issue alone, which is safe whatever made it stale. Acting
-on an issue, or treating it as free, rests on the folded log alone.
+a consumer leave an issue alone. The issue may no longer be owned: where the
+claim's clone took its seat again, the mirror has no comment id to judge the take
+by. Leaving it alone is safe whatever made the mirror stale, and costs the issue's
+return to its pool until a fold, never a second owner. Acting on an issue, or
+treating it as free, rests on the folded log alone.
 
 **Why one event builder for two seams.** An ownership event and a state issue's
 event are the same shape of comment, a hidden stamp and a line a person reads.
