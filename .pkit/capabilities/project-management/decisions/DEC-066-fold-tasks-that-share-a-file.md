@@ -30,9 +30,9 @@ Two Tasks *share a file* when their implementation notes, an optional section of
 
 For a Task not yet filed, its notes are those the plan gives it. A Task whose notes name no file it changes shares a file with no Task.
 
-Of two Tasks that share a file, the one planned or widened later names the earlier among its dependencies. It says there that they share a file ([project-management:DEC-005-linking-and-containment]). It starts only once the earlier has merged, whether the earlier is in the same plan or already open. Tasks that share no file may be built at once.
+Of two Tasks that share a file, the one planned or widened later names the earlier among its dependencies. Its `## Dependencies` section says that they share a file (refinement per [project-management:DEC-085-issue-waits] point 1). It starts only once the earlier has merged, whether the earlier is in the same plan or already open. Tasks that share no file may be built at once.
 
-This is an order of building, for a conflict over code, not a dependency of one outcome on another. Saying so in the dependency lets a reader, and the record that builds lanes, tell the two apart (DEC-025).
+This is an order of building, for a conflict over code, not a dependency of one outcome on another. Saying so in that section lets a reader, and the record that builds lanes, tell the two apart (DEC-025).
 
 ### 2. Tasks of one parent, Milestone and priority that share a file are planned as one Task
 
@@ -89,4 +89,4 @@ A Task already filed takes in folded work only while it has not started: while i
 - **Filing a Task outside a plan** applies point 1, and asks the person before it widens a filed Task as point 4 says.
 - **The project manager's storyboard** shows Tasks that share a file planned as one.
 - **The analysis** gains the fold in its use case of planning across scopes. Its use case of planning an intent counts the critic's issues before the fold. In its use case of landing beside other agents, how review rounds of parallel landings are kept down is settled here.
-- **No command changes.** Point 1 rests on dependencies, which stay prose (DEC-005). A filed Task takes in work through the capability's command that edits a body and a title.
+- **No command changes.** Point 1 rests on dependencies, as [project-management:DEC-085-issue-waits] point 1 defines them. A filed Task takes in work through the capability's command that edits a body and a title.
