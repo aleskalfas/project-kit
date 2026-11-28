@@ -15,7 +15,6 @@ the check and the status all read it here, so none of them disagrees with anothe
   and from then runs its declared days in the calendar, covered or not. So a suspension
   moves it only where it had not started by the suspension's first day, and adds no day to
   it. One whose start an ongoing suspension reaches has no start yet.
-
 - **A window as planned** counts no suspension: it runs from its declared start through its
   declared days, as the plan's own rules read it (DEC-002 point 11).
 
