@@ -1,7 +1,7 @@
 ---
 id: DEC-076
 title: A mark centred on another's edge is not compared with it at that edge
-status: proposed
+status: accepted
 date: 2026-11-27
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
