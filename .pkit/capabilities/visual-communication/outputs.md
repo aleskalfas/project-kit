@@ -175,6 +175,8 @@ pkit:
         - visual-communication:DEC-074#1
         - visual-communication:DEC-074#2
         - visual-communication:DEC-074#3
+        - visual-communication:DEC-077#1
+        - visual-communication:DEC-077#2
         - ADR-097
       artefact:
         - .pkit/capabilities/visual-communication/components.md#exposes
@@ -942,7 +944,7 @@ A run replaces what an earlier run left in its own folder, so a folder never mix
 |---|---|
 | `<piece>.<language>.<key>.png` | one page drawn. A piece of more than one page adds the page's number, from 1, to this name and the next: `<piece>.<language>.<key>.<n>.png` |
 | `<piece>.<language>.<key>.band-<k>.png` | one [band](#the-viewing-step) of a page, numbered from 1 at the page's top, in place of the page's one image. A piece of more than one page puts the page's number first: `<piece>.<language>.<key>.<n>.band-<k>.png` |
-| `<piece>.<language>.<key>.frames.json` | beside each image, its language, key, page and pixels, and the lock it was drawn under. Then each element's frame in the image's pixels, with its [trace id](components.md#trace-ids). Beside a band, it names the band. It frames each element the band shows, in part or whole, so a frame a band's edge crosses reaches past the image |
+| `<piece>.<language>.<key>.frames.json` | beside each image, its language, key, page and pixels, and the lock it was drawn under. Then each element's frame in the image's pixels, with its [trace id](components.md#trace-ids). A text's frame names too its anchor, `text-anchor`, `start`, `middle` or `end`; how many lines it has, `line-count`, 0 for a text of no lines; and whether its component gave it its width, `given-width`, false where the engine made it as wide as its widest line. Each is what the scene holds, read where the checks read it, so the lines the image shows may differ from its count (DEC-077 points 1 and 2). Beside a band, it names the band. It frames each element the band shows, in part or whole, so a frame a band's edge crosses reaches past the image |
 | `<piece>.<language>.<key>.html` | through the HTML renderer, the [page file](#the-html-renderer) the images were drawn from, whichever pages and keys the run draws. Its `<key>` is the file's key ([Modes](#modes)). Open it in Chrome, the one browser the capability supports. It is no export, and is never committed |
 | `report.json` | [What the report says](#what-the-report-says) |
 
