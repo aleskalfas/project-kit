@@ -1,12 +1,16 @@
 """What the SVG renderer draws: its declaration, plain data (visual-communication DEC-005
-points 9 and 10, DEC-018 points 1 and 4).
+points 9 and 10, DEC-018 points 1 and 4, DEC-078 points 1 and 2).
 
-A renderer declares, for each primitive and each property of the scene, whether it draws
-it, updates it in place, recreates it, or reads it back. The SVG renderer writes files, so
-it draws, and only draws: it updates nothing in place and reads nothing back. A primitive
-or a property it does not name here is a loss the capability knows before it runs: a
-primitive it refuses, a property it leaves out. It draws in the default font profile,
-from the brand's committed font files, calls no outside program and reaches no service.
+A renderer declares, for each primitive and each drawn property of the scene, whether it
+draws it, updates it in place, recreates it, or reads it back. The SVG renderer writes
+files, so it draws, and only draws: it updates nothing in place and reads nothing back. It
+names each drawn property. What no element draws, such as which component drew a group,
+the check's list holds (`checks.NOT_DRAWN`), and it declares none of it drawn. It writes an
+element's trace id, and a group's component and version, into its file as handles, which
+draw nothing. A primitive or a drawn property it does not name here is a loss the
+capability knows before it runs: a primitive it refuses, a property it leaves out. It draws
+in the default font profile, from the brand's committed font files, calls no outside
+program and reaches no service.
 
 It draws two formats. `svg` is a file for each page, language and combination, read as one
 chosen mode. `svg-modes` is a *switching file* for each page, language and set of
@@ -67,10 +71,7 @@ DECLARATION = {
     "holds-modes": HOLDS_MODES,
     "physical-size": {"page": False, "maps": False},
     "draws": {
-        "group": dict.fromkeys(
-            (*_FRAME, "component", "version", "options", "page"),
-            DRAWS,
-        ),
+        "group": dict.fromkeys((*_FRAME, "page"), DRAWS),
         "box": dict.fromkeys((*_FRAME, "fill", "stroke", "stroke-width", "rx"), DRAWS),
         "ellipse": dict.fromkeys((*_FRAME, "fill", "stroke", "stroke-width"), DRAWS),
         "line": dict.fromkeys(

@@ -182,6 +182,8 @@ pkit:
         - visual-communication:DEC-074#3
         - visual-communication:DEC-077#1
         - visual-communication:DEC-077#2
+        - visual-communication:DEC-078#1
+        - visual-communication:DEC-078#2
         - ADR-097
       artefact:
         - .pkit/capabilities/visual-communication/components.md#exposes
@@ -246,7 +248,7 @@ Every plugin is the capability's, and a project adds none (DEC-005 point 12): no
 
 No producer ships yet.
 
-Each plugin declares what it can take, so the capability knows it without running the plugin. A renderer declares each primitive it draws, and each property of it. Under `physical-size` it also declares whether its format has a physical page, `page`, and whether it maps a top's physical size onto it, `maps` (DEC-034 point 3). A producer declares its inputs, each a role of one *value type* (a token's DTCG type, such as `color`), and the value types it uses. A code writer declares the value types its language has a form for, the forms of its spelling, the kinds of axis it spells, and whether it takes a `prefix`.
+Each plugin declares what it can take, so the capability knows it without running the plugin. A renderer declares each primitive it draws, and each drawn property of it. No renderer declares that it draws a property no element draws, such as which component drew a group, and none reports a loss of one ([What a scene holds](components.md#what-a-scene-holds), DEC-078 point 2). A renderer may still write such a property into its file as a *handle*, for a tool to read, as the SVG renderer writes each element's trace id: writing it draws nothing. Under `physical-size` it also declares whether its format has a physical page, `page`, and whether it maps a top's physical size onto it, `maps` (DEC-034 point 3). A producer declares its inputs, each a role of one *value type* (a token's DTCG type, such as `color`), and the value types it uses. A code writer declares the value types its language has a form for, the forms of its spelling, the kinds of axis it spells, and whether it takes a `prefix`.
 
 Each plugin also declares what it needs beyond the project's files: the outside programs it calls (`programs`) and the services it reaches (`services`), each a list of names (DEC-005 point 9). The SVG, PDF and HTML renderers and the CSS and JSON code writers call no outside program and reach no service. A producer that names a service is refused before it runs, since a plugin that reaches a service runs only where the project's configuration turns it on, and format 1's configuration turns none on (DEC-002 point 8). So is a producer that names a program the machine lacks.
 
@@ -345,7 +347,7 @@ A *switching file* is one SVG file that holds several combinations of modes, and
 
 ### What the SVG renderer loses
 
-Before it draws, the capability compares each scene with the renderer's declaration. An element of a type the declaration does not name is `refused`, and left out of the file. A property the declaration does not name for its type is `left-out`. The declaration names every primitive and property a scene of format 1 holds, so this finds no loss in format 1. While it draws, the renderer reports four losses of its own. Two are `left-out`:
+Before it draws, the capability compares each scene with the renderer's declaration. An element of a type the declaration does not name is `refused`, and left out of the file. A drawn property the declaration does not name for its type is `left-out`. The declaration names every primitive and drawn property a scene of format 1 holds, so this finds no loss in format 1. While it draws, the renderer reports four losses of its own. Two are `left-out`:
 
 - **a fill or a stroke** whose role has no colour under the brand in the combination drawn, a run's fill included. A fill is then `none`. A library's role the brand gives no value is drawn at its default ([`roles.yaml`](files.md#rolesyaml)), so it is lost only where its chain of defaults reaches no colour.
 - **an image** with no picture for the combination drawn: a produced picture with no variant for it, or a picture file that is missing or cannot be read. The message says which.
@@ -381,7 +383,7 @@ The file is PDF 1.7. In the later version that tags it, three of the cases DEC-0
 
 ### What the PDF renderer loses
 
-Before it draws, the capability compares each scene with the renderer's declaration, as for the SVG renderer ([What the SVG renderer loses](#what-the-svg-renderer-loses)). The declaration names every primitive and property a scene of format 1 holds, the image among them, so this finds no loss in format 1.
+Before it draws, the capability compares each scene with the renderer's declaration, as for the SVG renderer ([What the SVG renderer loses](#what-the-svg-renderer-loses)). The declaration names every primitive and drawn property a scene of format 1 holds, the image among them, so this finds no loss in format 1.
 
 While it draws, the renderer reports six losses of its own:
 
@@ -462,7 +464,7 @@ The renderer prints a page file as DEC-026 decides: its pages follow one another
 
 ### What the HTML renderer declares
 
-The renderer draws in the default font profile, and it declares each primitive and property the SVG renderer declares. It calls no outside program and reaches no service. Under `pages`, its declaration names each choice a scene leaves open (DEC-001 point 2). They are how pages lie, the gap between two of them, 24 px, and how a page scales.
+The renderer draws in the default font profile, and it declares each primitive and drawn property the SVG renderer declares. It calls no outside program and reaches no service. Under `pages`, its declaration names each choice a scene leaves open (DEC-001 point 2). They are how pages lie, the gap between two of them, 24 px, and how a page scales.
 
 - **`holds-modes`** names the format `html`, with each signal pair it reads ([Modes](#modes)). `colour-scheme`'s `light` and `dark` pair with the same values of `prefers-color-scheme`. `contrast`'s `standard` and `high` pair with `prefers-contrast`'s `no-preference` and `more`. No pair lies in the foundations or in a scene.
 - **`forced-colours`** names what each paint takes under a reader's forced colours: lines, opaque fills, their edge with its width, 1 px, translucent fills, and the grounds of lines, with their colour and their margin, 1 px (DEC-039).
