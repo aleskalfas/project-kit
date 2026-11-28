@@ -20,9 +20,9 @@ listing, the mirror renderer — none re-scans comments itself), and **one place
 each that constructs an ownership-event comment write and regenerates the
 description mirror. The comment log is **authoritative**; the description mirror
 is a **derived** view the read seam regenerates by full overwrite, never a source
-of truth, and only a view shown to a person reads it (point 4). Where a repo carries both
-a lingering `instance:N` label and a comment-log marker, the seam resolves
-**comment-log-wins**, once, for every consumer. In a project with a topology of seats, the fold also takes from its caller
+of truth, and no command of the capability takes ownership from it (point 4).
+Where a repo carries both a lingering `instance:N` label and a comment-log marker,
+the seam resolves **comment-log-wins**, once, for every consumer. In a project with a topology of seats, the fold also takes from its caller
 the time of reading, the limit, the Task's state and the seats' holders, and reads
 no other seam (point 7). That is the whole decision; everything below is the rigor
 behind it.
@@ -189,11 +189,10 @@ The signed listing is not built. No function reads the mirror back, and every fo
 reads comments. The contract binds each participant below, built or not:
 
 1. **The ownership fold** (a single ownership-substrate `_lib` seam) — the one read
-   point. Reads the mirror only for a view shown to a person, at one call (point 4, DEC-043
-   Implications), and the issue's whole comment log, paged to its end,
-   whenever it folds one, so a fold never reads a log cut short. Keeps only comments carrying
-   the hidden ownership stamp **authored by the expected assignee account**
-   (`author.login` authenticity, DEC-043 point 3), folds the append-only claim / handoff
+   point. Reads the issue's whole comment log, paged to its end, whenever it folds
+   one, so a fold never reads a log cut short, and never reads the mirror (point 4).
+   Keeps only comments carrying the hidden ownership stamp **authored by the
+   expected assignee account** (`author.login` authenticity, DEC-043 point 3), folds the append-only claim / handoff
    / abandon / release sequence to current ownership, and — over a mixed repo —
    applies comment-log-wins against any lingering `instance:N` label. In a project
    with a topology, it takes the seats' holders, the time of reading, the limit and
@@ -254,10 +253,9 @@ log — trusting only comments the expected account authored — to current owne
 and over a repo that still carries an old `instance:N` label resolves
 comment-log-wins. Every ownership *write* — the event comment, the description
 mirror — is constructed in *one place*, the mirror always by full overwrite, never
-appended. The mirror is derived, and only a view shown to a person reads it; the
-comment log is the truth, and whatever a command or an agent acts on comes from its
-fold. In a project with a
-topology, the caller passes in what decides whether a claim counts, and the seam
+appended. The mirror is derived, text on the issue's page for a person; the comment
+log is the truth, and every command takes ownership from its fold. In a project
+with a topology, the caller passes in what decides whether a claim counts, and the seam
 reads no other seam.
 
 ### 1. One ownership read seam — resolution lives in exactly one auditable place
@@ -268,10 +266,9 @@ listing (DEC-035 point 7), and the description-mirror renderer all resolve throu
 none re-scans comments directly. In a project with a topology, the pool a worker
 takes from (DEC-059's shared pool, or the seat's pools where the topology declares
 pools of workers, DEC-061), the check before writing and the seat's release resolve
-through it too (point 7). A
-view shown to a person may read each issue's mirror through the seam, so its cost
-stays one call (DEC-043 Implications), and no other reader may (point 4). Whenever
-the seam folds a log, it reads the whole log, paged to its end. The fold itself is a function of that log, any lingering label
+through it too (point 7). No consumer takes ownership from the mirror (point 4).
+Whenever the seam folds a log, it reads the whole log, paged to its end. The fold
+itself is a function of that log, any lingering label
 and, in a project with a topology, the inputs point 7 names. It returns the resolved
 current owner, the substrate it came from, the authenticated event history, and
 each claim it cannot judge, with its reason: one whose author the backbone's one
@@ -411,17 +408,6 @@ What it returns:
   - the caller could not read the issue's state
   - the caller has no time of reading
 
-What it reads:
-
-- **For what a command or an agent acts on,** the whole log, in any state (point 4).
-- **For a view shown to a person,** the mirror in place of the log, except on a Task In Progress,
-  whose claim alone lapses: there the whole log. A seat's release writes nothing to
-  the issues its clone claimed (DEC-059 point 5), so the seam judges the claim the
-  mirror names against the holders, as it judges any claim, with the mirror named as
-  its source. Where the mirror carries no claim's comment id and the clone it names
-  holds its seat, the seat's take decides the claim, so the mirror read leaves it
-  unjudged, as a fold leaves a claim whose comment id it could not read.
-
 ### 3. One write construction point per side — sole-constructor
 
 Each ownership write has **exactly one construction point**, and every write routes
@@ -478,17 +464,11 @@ render-on-demand view and the native panel / child-side ref is the spine; here t
 differs; the invariant (derived view, single-source full-overwrite, spine
 elsewhere) is the same.
 
-The seam reads the mirror back through one function of its own, and no consumer
-parses it. **Whatever a command or an agent acts on, an agent's narrowing to its own
-issues among it, comes from the fold of the issue's whole log** (point 1), in every
-project, and never from the mirror. Only a view shown to a person may read
-the mirror, to show who owns an issue. So the signed listing (DEC-035 point 7) reads
-the mirror only for the view it shows a person, and folds for its flag that narrows
-to this instance's own and for any sign an agent acts on. The listing of seats
-(DEC-059 Implications), which an agent reads at the start of each session, takes
-from the fold each claim it shows, such as one a released seat left. In a project
-with a topology, the mirror names the claim's seat, the seat's number and the
-clone's key too, and point 7 says how a view shown to a person judges them.
+The mirror is text on the issue's page, for a person who opens it, and shows the
+owner as of its last rewrite. **No command of the capability takes ownership from
+it:** every command, a listing among them, takes ownership from the fold of the
+issue's whole log (point 1), in every project. So a listing costs a read of the log
+of each issue it shows, not one call (DEC-043 Implications).
 
 ### 5. Failure-posture neutrality — the constructors report, the caller decides
 
@@ -556,13 +536,8 @@ realm-blind.
   "the ownership event log is that facility specialised"). DEC-043's Implications
   place the description region's format in instance-ownership's own schema home.
   This ADR pins that the event write and the mirror render each have one constructor,
-  that the mirror is overwrite-not-append, which consumer reads it (point 4) and, in
-  a project with a topology, what it names (point 7).
-- **Not whether the mirror carries the claim's comment id.** With the id, a view
-  shown to a person could judge the claim's take, and show the claim counting or
-  void where it shows it unjudged without. That changes what a person is shown and
-  nothing a command or an agent acts on, which folds whatever the mirror carries
-  (point 4). The signed listing is not built (Context), so its build weighs that gain.
+  that the mirror is overwrite-not-append, and that no command takes ownership from
+  it (point 4).
 - **Not DEC-009's rule for derived regions.** The description-mirror region is
   capability-owned, do-not-edit, **derived** body content, the third class
   [project-management:DEC-009](../../../.pkit/capabilities/project-management/decisions/DEC-009-living-documents.md)
@@ -648,28 +623,21 @@ tell a claim made after the take from one made before. Counting such a claim cou
 revive a released one, and voiding it could hand a live Task to the pool. An unjudged
 claim costs a retry, never a takeover.
 
-**Why a mirror read leaves a claim unjudged where its seat's take decides it.** A
-mirror that carries no claim's comment id is a read of a claim whose comment id was
-not read, and point 7's rule for such a claim decides it, so the mirror and the fold
-judge one claim by one rule. Counting the claim would show a person, as the owner, a
-clone whose claim a seat's release voided, and voiding it would show a live clone's
-claim as released. Leaving it unjudged shows the person that the log decides.
-
-**Why only a view shown to a person reads the mirror.** A mirror can stay stale with no
+**Why no command takes ownership from the mirror.** A mirror can stay stale with no
 limit, because no event need rewrite it. A failed write of it is only a warning
 (Context), so a release or an abandon whose mirror write failed, or a lapse, which
 writes nothing, leaves the mirror naming an owner the log does not count, until a
 later ownership event on the issue rewrites it. A guard that refused on that owner
 would refuse as long, and on a container, which no pool reaches, perhaps for good. A
-pool, or an agent narrowing to its own issues, that passed the Task over would keep
-it out as long. The mirror also has no
-author a consumer can check, as a marker has (point 2), so it cannot make an issue
-free. Both reasons hold in every project, whatever the mirror's region carries, a
-claim's comment id among them. A person who acts on what such a view shows acts
-through a command, which folds, so a stale mirror misleads no command and no agent,
-and the view keeps its one call (DEC-043 Implications). Folding costs each command
-or agent a read of the log of each issue it acts on. The
-commands already pay it, since no function reads the mirror back (Context).
+pool or a listing that passed the Task over would keep it out as long. The mirror
+also has no author a consumer can check, as a marker has (point 2), so it cannot
+make an issue free. Both reasons hold in every project, whatever the mirror's region
+carries. A stale mirror on the issue's page hides the issue from no command, since
+each folds:
+a person who looks for work through a listing, or acts through any command, meets
+the owner the log gives. Folding costs a listing a read of the log of each issue it
+shows, not one call. The commands built already pay it, since no function reads the
+mirror back (Context).
 
 **Why one event builder for two seams.** An ownership event and a state issue's
 event are the same shape of comment, a hidden stamp and a line a person reads.
@@ -771,23 +739,10 @@ enforced by the seam having no engine-side caller.
   another seat took over while the seat was free would have two owners.
 - **A claim whose comment id was not read counts, or is void.** Rejected — counting
   it could revive a released claim, and voiding it could hand a live Task to the pool.
-- **A mirror read shows a claim counting where its clone holds its seat,** judging
-  its seat and key alone. Rejected — it counts a claim whose comment id was not read,
-  which the fold leaves unjudged (point 7), so the mirror and the fold would judge one
-  claim by two rules, and the mirror would show counting a claim the fold finds void.
-- **A mirror read folds the log where the holder's take is later than the mirror's
-  last rewrite.** Rejected — the rewrite has no comment id, so the seam would order it
-  and the take by time, where point 7 orders a claim and a take by comment id. A time
-  the mirror's region holds is a clone's clock, against DEC-059 point 9, and GitHub's
-  time of the description's last edit moves with any edit to the description, so a
-  mirror naming a claim the take voided could read as rewritten after the take and
-  show the claim counting.
-- **A command or an agent reads the mirror first, and folds only where the mirror
-  settles nothing,** in every project or only in one with a topology. Rejected — a
-  stale mirror would hold an issue with no limit, and it frees none, since it has no
-  author a consumer can check ("Why only a view shown to a person reads the mirror" above).
-- **Each consumer judges the mirror against the holders.** Rejected — a second
-  resolver in every consumer, the scatter point 1 forbids.
+- **A command reads the mirror first, and folds only where the mirror settles
+  nothing,** in every project or only in one with a topology. Rejected — a stale
+  mirror would hold an issue with no limit, and it frees none, since it has no author
+  a consumer can check ("Why no command takes ownership from the mirror" above).
 - **The mirror stands for the fold of a Task In Progress.** Rejected — the claim
   lapses by the time of reading, which the mirror's last rewrite cannot know.
 - **The stamp's time orders the fold in a project with a topology.** Rejected — a
@@ -800,9 +755,9 @@ enforced by the seam having no engine-side caller.
   guard (DEC-035 point 6), the signed listing (DEC-035 point 7), and the description-mirror
   renderer resolve through, and in a project with a topology the pool, the
   check before writing and the seat's release; no consumer re-scans comments or
-  parses the mirror directly. Reads the mirror only for a view shown to a person (point 4),
-  and the issue's whole comment log, paged to its end, whenever it folds one,
-  filters by `author.login` authenticity (DEC-043 point 3), and folds the append-only
+  parses the mirror directly. Reads the issue's whole comment log, paged to its end,
+  whenever it folds one, and never the mirror (point 4), filters by `author.login`
+  authenticity (DEC-043 point 3), and folds the append-only
   claim/handoff/abandon/release sequence to current ownership. The lifecycle commands
   resolve through it, as do the pool in `next-task` and, for the seat's
   release, `seats`. The signed listing is not built, no function reads the mirror back, and
@@ -846,10 +801,9 @@ enforced by the seam having no engine-side caller.
   ADR-035, where the closure fold *is* a containment-seam consumer. Wiring
   ownership into the engine fold would cross the content-free boundary and require
   its own authorisation (DEC-035 point 8 / DEC-035 Implications).
-- **In a project with a topology,** the fold must take four inputs from its caller,
-  and a view shown to a person folds each Task In Progress's whole log (point 7).
-  The pool, the check before writing and the seat's release must resolve through it (DEC-059
-  Implications), the pool being DEC-059's shared pool, or the seat's pools where the
+- **In a project with a topology,** the fold must take four inputs from its caller
+  (point 7). The pool, the check before writing and the seat's release must resolve
+  through it (DEC-059 Implications), the pool being DEC-059's shared pool, or the seat's pools where the
   topology declares pools of workers (DEC-061). The ownership stamp has a version carrying the seat, the seat's
   number and the clone's key, and readers accept the earlier version (DEC-044 point
   2). Point 7 says how the fold judges renewal and lapse, and point 5 leaves parking
@@ -883,13 +837,16 @@ enforced by the seam having no engine-side caller.
   three prior seam invariants staying scoped to their own substrates. Composes with
   DEC-014 (the guard's severity token) and DEC-026 (the event log aligns with the
   handoff audit comment). Does not restate DEC-043; cites it as the decision. Point 4
-  refines DEC-043's Implication on read cost in place, so that it says the one call
-  is for a view shown to a person, and whatever a command or an agent acts on comes
-  from the fold, whatever the issue's state. DEC-059's Implication on this record's
-  fold points here for that rule.
+  refines DEC-043's Implication on read cost in place: no command takes ownership
+  from the mirror, so a listing costs a read of the log of each issue it shows, not
+  one call. DEC-043's decision stands at that cost, since correctness under
+  concurrency, not read cost, chose its substrate (DEC-043 Rationale). DEC-059's
+  Implication on this record's fold points to point 4 for the mirror.
 - **Acceptance.** This ADR pins the contract for the comment substrate, by which
   DEC-043 refines the **foundational DEC-035**. So accepting it needs the
   maintainer's sign-off, not the architect's alone. The seam, its two constructors
-  and its guard cite this ADR for the invariant. Point 7, and the event builder that
-  point 3 shares with state issues, rest on the maintainer's sign-off on DEC-059,
-  which DEC-058 and DEC-059 record.
+  and its guard cite this ADR for the invariant. Point 7 rests on DEC-059, with the
+  refinements its pointers name, save its rules on a seat's take and on a claim whose
+  comment id was not read. Those rest on this record, as does point 4's rule that no
+  command takes ownership from the mirror. The event builder that point 3 shares with
+  state issues rests on DEC-058 and DEC-059.
