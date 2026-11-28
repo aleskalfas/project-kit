@@ -1,6 +1,6 @@
 """The viewing step's browser: a page file as images, and what the browser dropped
 (visual-communication DEC-020 points 6 to 9, DEC-023 point 6, DEC-031 point 5, DEC-015 point 2,
-DEC-024 points 1 and 4, DEC-027 points 2 to 4, DEC-037, DEC-039 point 5).
+DEC-024 points 1 and 4, DEC-027 points 2 to 4, DEC-037, DEC-039 point 5, DEC-054).
 
 This module alone calls the browser. It reads the HTML renderer's page files. It stands on the
 standard library and on the marks the renderer's declaration holds, so every other format
@@ -34,16 +34,20 @@ pays nothing for it. What it asks of a page it asks in JavaScript, which the bro
   family it names has one at its weight, since the engine may have measured it in any of
   them. A span drawn, even in part, in a font of the machine is named with that font.
   *Requests:* each but the page file's own and a `data:` address is refused, and named.
-- **What the page shows of a span** (DEC-037). The ink read gives each page room past each
-  of its edges, enough for every span's box widened by its em, and keeps each page's size. A
-  span is *off the page* where its box lies wholly past its page, and is named so alone. Its
+- **What the page shows of a span** (DEC-037, DEC-054). The ink read gives each page room past
+  each of its edges, enough for every span's box widened by its em, and keeps each page's size.
+  A span is *off the page* where its box lies wholly past its page, and is named so alone. Its
   *strong ink* is measured where its letters alone are drawn, in `CanvasText` on `Canvas`,
   with no other text and no text's ground: a pixel is strong where the two draws differ by
-  more than half those two colours do. What the page shows of it is what changes in the page
-  drawn whole when its letters alone change between those two colours. Strong ink past the
-  page's edge is *cut*, and strong ink on the page that the page drawn whole does not show is
-  *covered*. Each is named, with the share of the span's strong ink it loses, where it is at
-  least `SLIVER` of the span's em², in device px. The *pre-filter* passes over a span whose
+  more than half those two colours do. Its *counted ink* is its pixels at `islands.FAINT` or
+  darker, each pixel's darkness the share of those two colours' difference its letters alone
+  change it by. What the page shows of it is what changes in the page drawn whole when its
+  letters alone change between those two colours. Counted ink past the page's edge is *cut*,
+  and counted ink on the page that the page drawn whole does not show is *covered*. Each cause
+  is named where its loss of strong ink is at least `SLIVER` of the span's em², in device px,
+  or where it takes an island of the counted ink (`islands`), the one measure resvg's read
+  takes: with the share of the span's strong ink it loses, or of its counted ink where it holds
+  none, and whether it took an island. The *pre-filter* passes over a span whose
   box, widened by its em, stays inside its page and meets no other text's and no box of a
   part painted after it, by z-index and then by the document's order. Spans whose widened
   boxes do not meet are drawn alone, and their colours changed, at once.
@@ -54,11 +58,13 @@ pays nothing for it. What it asks of a page it asks in JavaScript, which the bro
   (DEC-037 point 5). A read that names anything else stops the start, so a fault there shows
   as a stop, never as a clean report. Its first page carries no z-index; a page of its own
   holds the text a part covers by z-index, so each start meets the pre-filter on both kinds of
-  page. The edge control and the háček plant are set in device pixels, from the start's
-  device scale and the page's drawn width, so each holds the same share of its em in every
-  start. The first page also holds a mode for each signal the file reads, a box of its own,
-  and the start stops where setting the signal does not repaint that box, since the keys that
-  signal parts would read as one.
+  page. The edge control, the háček plant and the *dot plant*, a full stop of its own under a
+  later box, are set in device pixels, from the start's device scale and the page's drawn
+  width, so each holds the same share of its em in every start. The start stops too where the
+  read names the dot plant without `island`, or the háček plant for a loss under the sliver
+  (DEC-054 point 4). The first page also holds a mode for each signal the file reads, a box of
+  its own, and the start stops where setting the signal does not repaint that box, since the
+  keys that signal parts would read as one.
 - **Under forced colours.** `draw_forced` draws a file in each of the browser's forced
   palettes (`PALETTES`), in a start of its own: the browser's flag forces its colours
   (`FORCING`), and every emulation sets `forced-colors: active` with the palette's signals.
@@ -110,6 +116,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, NoReturn
 
+from _lib import islands
 from _lib.plugins import html_declaration
 
 #: The marks of the file, as the renderer that writes them declares them.
@@ -220,8 +227,9 @@ COVERED = "covered"
 #: The order of the causes among a span's entries.
 CAUSES = (OFF_THE_PAGE, NO_INK, CUT, COVERED)
 
-#: The least a cut or a cover must lose of a span's strong ink to be named, in the span's em²
-#: (DEC-037 point 1). Each cause is judged alone.
+#: The least a cut or a cover must lose of a span's strong ink to be named by its size, in the
+#: span's em² (DEC-037 point 1). A cause that takes an island of the span's counted ink is named
+#: whatever it loses (DEC-054 point 1). Each cause is judged alone.
 SLIVER = 0.01
 
 #: The colours a span's letters take where its strength is measured, and between which they
@@ -374,8 +382,15 @@ MEASURED_MARK = "data-pkit-measured"
 #: is strong where its letters alone change it by more than half the two colours'
 #: difference. One on the page counts as hidden where the page drawn whole does not change
 #: as the letters change. Each span is read within its box, widened by its em, which meets
-#: no other's.
-TALLY = """async (images, clip, spans) => {
+#: no other's (DEC-037 point 3).
+#: Where some pixel of a span's counted ink, at `faint` or darker, lies past its page's edge or
+#: is hidden, it gives each such pixel too, for the measure of islands: its row and its column,
+#: its darkness, and how much of its ink the page drawn whole shows, `null` past the edge
+#: (DEC-054 points 1 and 2). Its darkness is `islands.ALL` less the share of the two colours'
+#: difference its letters alone change it by, in 255ths rounded down, and what shows is the
+#: share the page drawn whole changes it by, so rounded. So a pixel is strong ink exactly
+#: where its darkness is `islands.STRONG` or darker, the difference being at most 255.
+TALLY = """async (images, clip, spans, faint) => {
   const decode = async (data) => {
     const bytes = Uint8Array.from(atob(data), (character) => character.charCodeAt(0));
     const bitmap = await createImageBitmap(new Blob([bytes], {type: 'image/png'}), {
@@ -397,33 +412,39 @@ TALLY = """async (images, clip, spans) => {
   probe.remove();
   const apart = Math.max(...text.map((value, index) => Math.abs(value - behind[index])));
   const wide = strong.width, across = strong.width / clip.width, down = strong.height / clip.height;
+  const most = (one, other, at) => Math.max(
+    Math.abs(one.data[at] - other.data[at]),
+    Math.abs(one.data[at + 1] - other.data[at + 1]),
+    Math.abs(one.data[at + 2] - other.data[at + 2]),
+  );
   return spans.map(({box, page}) => {
     const left = Math.max(0, Math.floor((box.x - clip.x) * across));
     const right = Math.min(wide, Math.ceil((box.x + box.width - clip.x) * across));
     const top = Math.max(0, Math.floor((box.y - clip.y) * down));
     const bottom = Math.min(strong.height, Math.ceil((box.y + box.height - clip.y) * down));
-    let found = 0, past = 0, hidden = 0;
+    let found = 0, past = 0, hidden = 0, lost = false;
+    const pixels = [];
     for (let row = top; row < bottom; row++) {
       const y = clip.y + (row + 0.5) / down;
       const outside = y < page.y || y >= page.y + page.height;
       for (let column = left; column < right; column++) {
         const at = (row * wide + column) * 4;
-        let most = 0;
-        for (let channel = 0; channel < 3; channel++) {
-          most = Math.max(most, Math.abs(strong.data[at + channel] - ground.data[at + channel]));
-        }
-        if (2 * most <= apart) continue;
-        found++;
+        const alone = most(strong, ground, at);
+        const dark = 255 - Math.floor((255 * alone) / apart);
+        if (dark > faint) continue;
         const x = clip.x + (column + 0.5) / across;
-        if (outside || x < page.x || x >= page.x + page.width) past++;
-        else if (
-          shown.data[at] === unshown.data[at] &&
-          shown.data[at + 1] === unshown.data[at + 1] &&
-          shown.data[at + 2] === unshown.data[at + 2]
-        ) hidden++;
+        const beyond = outside || x < page.x || x >= page.x + page.width;
+        const whole = beyond ? 0 : most(shown, unshown, at);
+        const gone = beyond || whole === 0;
+        lost = lost || gone;
+        pixels.push([row, column, dark, beyond ? null : Math.floor((255 * whole) / apart)]);
+        if (2 * alone <= apart) continue;
+        found++;
+        if (beyond) past++;
+        else if (gone) hidden++;
       }
     }
-    return {strong: found, past, hidden};
+    return {strong: found, past, hidden, pixels: lost ? pixels : null};
   });
 }"""
 
@@ -524,13 +545,18 @@ class Differs:
 class Dropped:
     """A span the page does not show in full, and why: `NO_INK`, `OFF_THE_PAGE`, `CUT` or
     `COVERED`, one cause an entry. A cut or covered entry gives the share of the span's strong
-    ink its cause loses, from 0 to 1 (DEC-037 point 2)."""
+    ink its cause loses, from 0 to 1, or of its counted ink where it holds no strong ink; whether
+    its cause takes an island of the span's counted ink, `island`; and whether its loss passes
+    the sliver, so that its size alone names it, `by_size` (DEC-037 point 2, DEC-054 points 1
+    and 3). The first read holds the háček plant to its size (DEC-054 point 4)."""
 
     page: str
     element: str
     text: str
     why: str
     share: float | None = None
+    island: bool = False
+    by_size: bool = False
 
 
 @dataclass(frozen=True)
@@ -835,11 +861,11 @@ def _machine_fonts(started: _Started, found: Sequence[Mapping[str, Any]]) -> Ite
 
 def _dropped(started: _Started, found: Sequence[Mapping[str, Any]]) -> Iterator[Dropped]:
     """Each span the page does not show in full, one cause an entry, in the document's order
-    (DEC-020 point 6, DEC-037 points 1 to 3). Each page is read with room past its edges, as
-    the document holds it then. A span wholly off its page is named so alone. Each other is
-    read for ink in its own paint, alone, on one ground and then on another, since what one
-    shows the next need not; and, where the pre-filter does not pass over it, for its strong
-    ink past its page's edge and hidden on its page."""
+    (DEC-020 point 6, DEC-037 points 1 to 3, DEC-054 points 1 to 3). Each page is read with
+    room past its edges, as the document holds it then. A span wholly off its page is named so
+    alone. Each other is read for ink in its own paint, alone, on one ground and then on
+    another, since what one shows the next need not; and, where the pre-filter does not pass
+    over it, for its ink past its page's edge and hidden on its page."""
     room = _room(found)
     started.ask(STYLE, ROOM_STYLE, _room_sheet(found, room))
     held = {page["id"]: page for page in started.ask(READ, MARKS)}
@@ -854,8 +880,8 @@ def _dropped(started: _Started, found: Sequence[Mapping[str, Any]]) -> Iterator[
         else:
             waiting.append((page, element, span))
     named += [
-        _entry(page, element, span, why, share)
-        for page, element, span, why, share in _lost(started, laid, waiting, room)
+        _entry(page, element, span, why, lost)
+        for page, element, span, why, lost in _lost(started, laid, waiting, room)
     ]
     started.ask(STYLE, DRAW_STYLE, "")
     started.ask(MARKED, MARKS["span"], MEASURED_MARK, [])
@@ -875,11 +901,16 @@ def _entry(
     element: str,
     span: Mapping[str, Any],
     why: str,
-    share: float | None = None,
+    lost: Lost | None = None,
 ) -> tuple[int, int, Dropped]:
     """An entry of `dropped`, with the span's place in the document and its cause's, which
-    order the entries."""
-    dropped = Dropped(page["id"], element, span["text"], why, share)
+    order the entries. A cut or covered entry takes what its cause `lost`."""
+    if lost is None:
+        dropped = Dropped(page["id"], element, span["text"], why)
+    else:
+        dropped = Dropped(
+            page["id"], element, span["text"], why, lost.share, lost.island, lost.by_size
+        )
     return span["index"], CAUSES.index(why), dropped
 
 
@@ -1018,11 +1049,11 @@ def _lost(
     found: Sequence[Mapping[str, Any]],
     waiting: Sequence[tuple[Mapping[str, Any], str, Mapping[str, Any]]],
     room: int,
-) -> Iterator[tuple[Mapping[str, Any], str, Mapping[str, Any], str, float]]:
-    """Each span of `waiting` whose strong ink past its page's edge, or hidden on its page,
-    passes the sliver, with its cause and its share of the span's strong ink (DEC-037 points
-    1 and 3). The pre-filter passes over a span that can lose none, and the others are drawn
-    in batches."""
+) -> Iterator[tuple[Mapping[str, Any], str, Mapping[str, Any], str, Lost]]:
+    """Each span of `waiting` that a cause, cut past its page's edge or covered on its page,
+    names, with the cause and what it lost (`_causes`, DEC-037 points 1 and 3, DEC-054 points
+    1 to 3). The pre-filter passes over a span that can lose none, and the others are drawn in
+    batches."""
     on = {page["id"]: [span for _, _, span in _spans([page])] for page in found}
     measured = [each for each in waiting if not _passed_over(each[0], each[2], on[each[0]["id"]])]
     draws = _strength_draws()
@@ -1049,13 +1080,47 @@ def _lost(
                 }
                 for page, _, span in spans
             ]
-            counted = started.ask(TALLY, images[held], clips[held], asked)
+            counted = started.ask(TALLY, images[held], clips[held], asked, islands.FAINT)
             for (page, element, span), count in zip(spans, counted, strict=True):
                 least = SLIVER * (span["em"] * started.scale) ** 2
-                strong = count["strong"]
-                for why, lost in ((CUT, count["past"]), (COVERED, count["hidden"])):
-                    if strong and lost >= least:
-                        yield page, element, span, why, lost / strong
+                for why, lost in _causes(count, least):
+                    yield page, element, span, why, lost
+
+
+@dataclass(frozen=True)
+class Lost:
+    """What a cut or a cover of a span lost: the share of the span's strong ink, or of its
+    counted ink where it holds no strong ink; whether it takes an island of the span's counted
+    ink; and whether its loss of strong ink passes the sliver (DEC-054 points 1 and 3)."""
+
+    share: float
+    island: bool
+    by_size: bool
+
+
+def _causes(count: Mapping[str, Any], least: float) -> Iterator[tuple[str, Lost]]:
+    """Each cause, `CUT` then `COVERED`, that the tally `count` of one span names, with what it
+    lost: a cause whose loss of the span's strong ink is at least `least`, the sliver in device
+    pixels, or that takes an island of its counted ink, however few its pixels (DEC-054 point
+    1). Its counted ink past the page's edge is cut, and a cut takes an island only by cutting
+    all of it. Its counted ink on the page that the page drawn whole hides is covered, and a
+    cover takes an island where it leaves none of it showing at the island's level
+    (`islands.takes_an_island`). Each cause is judged alone."""
+    pixels = count.get("pixels") or ()
+    ink = {(row, column): dark for row, column, dark, _ in pixels}
+    shows = {(row, column): shown for row, column, _, shown in pixels if shown is not None}
+    beyond = [pixel for pixel in ink if pixel not in shows]
+    hidden = [pixel for pixel, shown in shows.items() if not shown]
+    strong = count["strong"]
+    for why, lost, gone, showing in (
+        (CUT, count["past"], beyond, None),
+        (COVERED, count["hidden"], hidden, shows),
+    ):
+        by_size = bool(strong) and lost >= least
+        island = bool(gone) and islands.takes_an_island(ink, gone, showing)
+        if by_size or island:
+            share = lost / strong if strong else len(gone) / len(ink)
+            yield why, Lost(share, island, by_size)
 
 
 def _outside(span: Mapping[str, Any], page: Mapping[str, Any]) -> bool:
@@ -1427,9 +1492,9 @@ DESCENT = 0.273
 FOOT = 0.224
 UNDER_THE_HACEK = 0.53
 
-#: The edge control's em, and the command's text floor, which the háček plant's em takes, in
-#: device pixels (DEC-037 point 5, DEC-015 point 5). The outputs page states the first, and a
-#: test holds the second to the viewing step's.
+#: The edge control's em, and the command's text floor, which the ems of the háček plant and
+#: the dot plant take, in device pixels (DEC-037 point 5, DEC-015 point 5, DEC-054 point 4).
+#: The outputs page states the first, and a test holds the second to the viewing step's.
 CONTROL_EM = 40
 TEXT_FLOOR = 10
 
@@ -1468,7 +1533,8 @@ class _Planted:
 #: unnamed by where they lie: a text whose document lacks a span of the scene's, one cut past
 #: its page's top edge, one under a later box, one wholly under another text, whose run's
 #: ground covers it, with a part between them, one under a translucent fill, the háček plant,
-#: the edge control, and the text a part covers by z-index (DEC-037 point 5).
+#: the dot plant, the edge control, and the text a part covers by z-index (DEC-037 point 5,
+#: DEC-054 point 4).
 UNPAINTED = "transparent"
 SPAN_TAKEN_OUT = "span-taken-out"
 CUT_PAST_THE_TOP = "cut-past-the-top"
@@ -1477,6 +1543,7 @@ UNDER_ANOTHER = "under-another-text"
 OVER_ANOTHER = "over-another-text"
 UNDER_A_TRANSLUCENT_FILL = "under-a-translucent-fill"
 HACEK = "hacek-under-a-box"
+DOT = "dot-under-a-box"
 EDGE_CONTROL = "edge-control"
 RAISED = "covered-by-z-index"
 
@@ -1509,12 +1576,16 @@ PLANTED_TEXTS: Mapping[str, tuple[tuple[_Planted, ...], ...]] = {
     OVER_ANOTHER: ((_Planted("beneath", grounded=True),),),
     UNDER_A_TRANSLUCENT_FILL: ((_Planted("faint"),),),
     HACEK: ((_Planted("ž"),),),
+    # A full stop, a run of its own, so its ink is all of its span's.
+    DOT: ((_Planted("."),),),
     EDGE_CONTROL: ((_Planted("jogging"),),),
 }
 
 #: The texts set in rows, in order. The text over another lies in the row of the one under it.
 ROWED = tuple(
-    element for element in PLANTED_TEXTS if element not in (CUT_PAST_THE_TOP, HACEK, EDGE_CONTROL)
+    element
+    for element in PLANTED_TEXTS
+    if element not in (CUT_PAST_THE_TOP, HACEK, DOT, EDGE_CONTROL)
 )
 
 #: Where the texts not set in rows lie, by their first baselines in px of the page, and how far
@@ -1522,6 +1593,7 @@ ROWED = tuple(
 #: sets it. Each place leaves room for the plants set in device pixels at any device scale
 #: down to 0.4.
 CUT_BASELINE = 6
+DOT_BASELINE = 486
 HACEK_BASELINE = 520
 CONTROL_BASELINE = 640
 FORCED_BASELINE = 720
@@ -1600,7 +1672,9 @@ NO_FONT_HOLDS = (
 
 #: What the four reads must name of the planted file, in `_named`'s form, and nothing else.
 #: The edge control, the text under a translucent fill, the text over another and the text in
-#: the colour of its ground are left unnamed (DEC-037 point 5).
+#: the colour of its ground are left unnamed (DEC-037 point 5). The dot plant must be named
+#: with `island`, and the háček plant by its size (`DOT_FINDING`, `HACEK_FINDING`, DEC-054
+#: point 4).
 PLANTED_FINDINGS = frozenset(
     {
         (WORDS, "run-swallowed"),
@@ -1614,6 +1688,7 @@ PLANTED_FINDINGS = frozenset(
         (COVERED, UNDER_A_BOX, "covered"),
         (COVERED, UNDER_ANOTHER, "beneath"),
         (COVERED, HACEK, "ž"),
+        (COVERED, DOT, "."),
         (COVERED, RAISED, "raised"),
         (NO_FACE, "face-left-out", LEFT_OUT, "400"),
         (NO_FACE, "face-broken", BROKEN, "400"),
@@ -1625,6 +1700,12 @@ PLANTED_FINDINGS = frozenset(
         (REFUSED, BESIDE),
     }
 )
+
+
+#: The dot plant's finding, which the first read must name with `island`, and the háček
+#: plant's, which it must name for a loss that passes the sliver (DEC-054 point 4).
+DOT_FINDING = (COVERED, DOT, ".")
+HACEK_FINDING = (COVERED, HACEK, "ž")
 
 
 def _first_read(
@@ -1648,7 +1729,9 @@ def _first_read(
     found = _opened(started, file, pages)
     _repaints(started, found[0], signals, FORCED if forced else {})
     if not forced:
-        _names_the_plants(started, _named(_read(started, pages, found)))
+        read = _read(started, pages, found)
+        _names_the_plants(started, _named(read))
+        _holds_the_measure(started, read.dropped)
         return
     for palette in PALETTES:
         _forced_read(started, pages, found, palette)
@@ -1672,7 +1755,8 @@ def _forced_read(
             f"{colours['ground']}, not {than} than its text of {colours['text']}, so its "
             f"images would show what their name denies"
         )
-    named = _named(_read(started, pages, found))
+    read = _read(started, pages, found)
+    named = _named(read)
     if named & FORCED_FINDINGS:
         raise started.stop(
             f"the first read set {where}, and a span with no paint, left to forcing, left no "
@@ -1685,6 +1769,7 @@ def _forced_read(
             f"left to forcing, so a ground or a backplate covers its lines"
         )
     _names_the_plants(started, named, f" in {where}")
+    _holds_the_measure(started, read.dropped, f" in {where}")
     started.ask(UNGROUND, READ_STYLES, READ_MARKS)
 
 
@@ -1699,6 +1784,25 @@ def _names_the_plants(started: _Started, named: set[tuple[str, ...]], where: str
         raise started.stop(
             f"the first read{where} {' and '.join(each for each in said if each)}{why}"
         )
+
+
+def _holds_the_measure(started: _Started, dropped: Sequence[Dropped], where: str = "") -> None:
+    """Raise Stopped where the read, of the planted file `where`, named the dot plant without
+    `island`, so its measure of islands did not take a mark the plant's box hides whole, or
+    named the háček plant for a loss under the sliver, so the sliver no longer lies below a
+    háček's loss (DEC-054 point 4)."""
+    for each in dropped:
+        finding = (each.why, each.element, each.text)
+        if finding == DOT_FINDING and not each.island:
+            raise started.stop(
+                f"the first read{where} named the dot plant without `island`, so its measure of "
+                "islands did not take the full stop its box hides whole"
+            )
+        if finding == HACEK_FINDING and not each.by_size:
+            raise started.stop(
+                f"the first read{where} named the háček plant for an island alone, its loss "
+                "under the sliver, so the sliver no longer lies below a háček's loss"
+            )
 
 
 #: The colours a forced palette gives the planted file: the ground of the box it forces, and
@@ -1901,21 +2005,23 @@ def _first_page(device: float, forced: bool) -> list[_Laid | _Layer]:
             # A part between the two texts, which meets neither, so they lie in two runs.
             drawn.append(_Layer(((PLANTED_WIDTH - 40, baseline - SIZE, 16, 6, BOX),)))
         row += len(lines) - 1
-    hacek, control = TEXT_FLOOR / device, CONTROL_EM / device
-    over_the_hacek = HACEK_BASELINE - ASCENT * hacek
+    floor, control = TEXT_FLOOR / device, CONTROL_EM / device
+    over_the_hacek = HACEK_BASELINE - ASCENT * floor
     drawn += [
-        _Laid(HACEK, PLANTED_TEXTS[HACEK], HACEK_BASELINE, hacek),
+        _Laid(HACEK, PLANTED_TEXTS[HACEK], HACEK_BASELINE, floor),
         _Layer(
             (
                 (
                     0.0,
                     over_the_hacek,
                     float(PLANTED_WIDTH),
-                    HACEK_BASELINE - UNDER_THE_HACEK * hacek - over_the_hacek,
+                    HACEK_BASELINE - UNDER_THE_HACEK * floor - over_the_hacek,
                     BOX,
                 ),
             )
         ),
+        _Laid(DOT, PLANTED_TEXTS[DOT], DOT_BASELINE, floor),
+        _Layer((_over(DOT_BASELINE, floor),)),
         _Laid(EDGE_CONTROL, PLANTED_TEXTS[EDGE_CONTROL], CONTROL_BASELINE, control),
         _Layer(((0.0, CONTROL_BASELINE + FOOT * control, float(PLANTED_WIDTH), control / 2, BOX),)),
     ]

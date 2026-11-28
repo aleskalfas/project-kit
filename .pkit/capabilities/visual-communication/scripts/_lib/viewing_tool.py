@@ -35,8 +35,9 @@ step works today, not what the step is, so nothing else of the step reads an SVG
   then white, cropped to the span's ink: what the two draws show alike is covered. A cause is
   named where it hides at least the threshold of the span's strong ink, or takes an island of
   its ink, such as a dot: it hides some of the island wholly and leaves none of it showing at
-  the island's level. Else it names nothing (DEC-045 point 1). The reads follow a group's move
-  alone, so a page whose group does more fails (`_move_of`).
+  the island's level. Else it names nothing (DEC-045 point 1). The measure of islands is
+  `islands`', which a browser's read takes too (DEC-054 point 2). The reads follow a group's
+  move alone, so a page whose group does more fails (`_move_of`).
 - **Regions.** The caller hands it the bands of a page too tall for one image, each a top
   and a height in the page's px, and it draws each as an image as wide as the page, at the
   one scale the caller gives (DEC-022 point 7). Handed none, it draws the page whole. What
@@ -63,6 +64,7 @@ import resvg_py
 from fontTools.ttLib import TTFont
 
 from _lib import png
+from _lib.islands import FAINT, STRONG, Pixel, takes_an_island
 from _lib.viewing_browser import COVERED, CUT, NO_INK, OFF_THE_PAGE
 
 #: The tool and what it reaches the capability through, as a report names them.
@@ -92,26 +94,6 @@ SPAN = f"{{{SVG_NAMESPACE}}}tspan"
 #: The colours a span's letters take where its strong ink is measured, and between which they
 #: change where the page drawn whole is read (DEC-045 point 1).
 INKS = ("#000000", "#ffffff")
-
-#: The darkest a sample of a pixel may be for the pixel to be strong ink, drawn black on white:
-#: the pixel lies nearer black than white.
-STRONG = 127
-
-#: The levels at which a span's ink falls into islands, each the lightest a pixel's darkest
-#: sample may be, drawn black on white, for the pixel to be ink at that level: strong ink, and
-#: two lighter. A small dot may hold no strong ink, and at a lighter level it may meet its
-#: letter, so a cause that takes an island at any of them is named (DEC-045 point 1).
-LEVELS = (STRONG, 159, 191)
-
-#: The lightest ink the reads take of a span: its lightest level.
-FAINT = LEVELS[-1]
-
-#: How much of a pixel's ink the page drawn whole shows where it shows all of it: the whole
-#: difference between black and white, the span's two colours in the cover read.
-ALL = 255
-
-#: Where the pixels of an island meet one another: by a side or by a corner.
-NEIGHBOURS = ((-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1))
 
 #: The attributes that make a span's letters less than opaque.
 OPACITIES = ("opacity", "fill-opacity")
@@ -185,11 +167,6 @@ class Lost:
     why: str
     share: float
     island: bool = False
-
-
-#: A pixel of a swath: its row, and its column of the page, before the page's first column or
-#: past its last where the swath holds room past a side.
-Pixel = tuple[int, int]
 
 
 @dataclass(frozen=True)
@@ -279,50 +256,6 @@ def _least(em: float) -> int:
     to the whole pixels it holds. The product is rounded to six places before it is cut, so an
     em whose threshold falls on a whole pixel, such as 20 or 40, takes that pixel."""
     return max(math.floor(round(THRESHOLD * em**2, 6)), FEWEST)
-
-
-def _takes_an_island(
-    ink: Mapping[Pixel, int],
-    lost: Collection[Pixel],
-    shows: Mapping[Pixel, int] | None = None,
-) -> bool:
-    """Whether a cause that hides `lost` of `ink` wholly takes an island of it at any of
-    `LEVELS`: of its pixels no lighter than the level, a set each of which meets another by a
-    side or a corner, and meets no other such pixel (DEC-045 point 1). The cause hides wholly
-    some pixel of the island, and leaves none of it showing at the level: where `shows` gives
-    how much of each pixel's ink the page drawn whole still shows, a pixel shows at the level
-    where it shows enough for it to be that dark (`_shows_at`); where it gives none, as past
-    the page's edge, every pixel the cause does not hide shows. Only the islands that hold a
-    pixel of `lost` are walked."""
-    gone = set(lost)
-    for level in LEVELS:
-        seen: set[Pixel] = set()
-        for start in gone:
-            if start in seen or ink.get(start, level + 1) > level:
-                continue
-            seen.add(start)
-            island = [start]
-            unseen = True
-            for row, column in island:
-                for down, across in NEIGHBOURS:
-                    near = (row + down, column + across)
-                    if near not in seen and ink.get(near, level + 1) <= level:
-                        seen.add(near)
-                        island.append(near)
-                        if shows is None:
-                            unseen = unseen and near in gone
-                        else:
-                            unseen = unseen and not _shows_at(shows.get(near, ALL), level)
-            if unseen:
-                return True
-    return False
-
-
-def _shows_at(shown: int, level: int) -> bool:
-    """Whether a pixel of a span's ink, of which the page drawn whole shows `shown` of `ALL`,
-    still shows at `level`: whether, drawn black on white, so much of its ink would make it
-    that dark or darker (DEC-045 point 1)."""
-    return ALL - shown <= level
 
 
 def _share(strong: _Strong, lost: Collection[Pixel]) -> float:
@@ -660,7 +593,7 @@ class _Page:
         if not strong.ink:
             return
         least = _least(strong.em)
-        cut = _takes_an_island(strong.ink, strong.beyond)
+        cut = takes_an_island(strong.ink, strong.beyond)
         if strong.past >= least or cut:
             yield Lost(element, span.text or "", CUT, _share(strong, strong.beyond), cut)
         if len(strong.beyond) == len(strong.ink):
@@ -668,7 +601,7 @@ class _Page:
         shows = self._shown(span, strong)
         hidden = [pixel for pixel, shown in shows.items() if not shown]
         lost = sum(strong.ink[pixel] <= STRONG for pixel in hidden)
-        covered = _takes_an_island(strong.ink, hidden, shows)
+        covered = takes_an_island(strong.ink, hidden, shows)
         if lost >= least or covered:
             yield Lost(element, span.text or "", COVERED, _share(strong, hidden), covered)
 
@@ -676,7 +609,7 @@ class _Page:
         """How much of each pixel of `span`'s ink on the page the page drawn whole shows, each
         pixel as a row of the swath and a column of the page: drawn on the span's ink, its
         letters black and then white, the greatest difference of the pixel's samples between
-        the two, from 0, hidden, to `ALL`."""
+        the two, from 0, hidden, to `islands.ALL`."""
         shown_here = [pixel for pixel in strong.ink if pixel not in strong.beyond]
         rows, columns = zip(*shown_here, strict=True)
         top, left = min(rows), min(columns)
@@ -709,8 +642,8 @@ class _Page:
         `ink` and all else as it stands. The span's opacities are set to 1, not taken off: a
         span in the look of its text's first run carries no paint of its own, and inherits the
         `fill-opacity` the canvas writes on the text for a translucent colour. So a pixel the
-        page shows whole changes by `ALL`, whatever the alpha of the span's paint (DEC-045
-        point 1)."""
+        page shows whole changes by `islands.ALL`, whatever the alpha of the span's paint
+        (DEC-045 point 1)."""
         held = {name: span.get(name) for name in ("fill", *OPACITIES)}
         for name in OPACITIES:
             span.set(name, "1")

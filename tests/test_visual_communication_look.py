@@ -79,6 +79,7 @@ from tests.visual_communication_project import (
     viewing,
     viewing_tool,
     viewing_browser,
+    islands,
     names,
     pl,
     exports,
@@ -93,6 +94,7 @@ from tests.visual_communication_project import (
     "viewing",
     "viewing_tool",
     "viewing_browser",
+    "islands",
     "names",
     "pipeline",
     "exports",
@@ -1162,13 +1164,13 @@ def test_an_island_is_ink_at_a_level_each_pixel_meeting_another_by_a_side_or_a_c
     faint = {(0, 2): 150, (0, 3): 150}
     near = {(0, 1): 180}
     ink = {**stroke, **speck, **faint, **near}
-    assert not viewing_tool._takes_an_island(ink, speck)
-    assert viewing_tool._takes_an_island(ink, [*stroke, *speck])
-    assert viewing_tool._takes_an_island(ink, faint)
-    assert not viewing_tool._takes_an_island(ink, [(0, 2)])
-    assert not viewing_tool._takes_an_island({(0, 0): 230}, [(0, 0)])
-    assert not viewing_tool._takes_an_island(ink, [])
-    assert viewing_tool.LEVELS == (viewing_tool.STRONG, 159, 191)
+    assert not islands.takes_an_island(ink, speck)
+    assert islands.takes_an_island(ink, [*stroke, *speck])
+    assert islands.takes_an_island(ink, faint)
+    assert not islands.takes_an_island(ink, [(0, 2)])
+    assert not islands.takes_an_island({(0, 0): 230}, [(0, 0)])
+    assert not islands.takes_an_island(ink, [])
+    assert islands.LEVELS == (islands.STRONG, 159, 191)
 
 
 def test_a_cover_takes_an_island_it_hides_in_part_and_leaves_showing_at_its_level_nowhere() -> None:
@@ -1180,20 +1182,20 @@ def test_a_cover_takes_an_island_it_hides_in_part_and_leaves_showing_at_its_leve
     dot = {(0, 0): 0, (0, 1): 0, (1, 0): 0, (1, 1): 0}
     stroke = {(row, 4): 0 for row in range(4)}
     ink = {**dot, **stroke}
-    shown = {pixel: viewing_tool.ALL for pixel in ink}
+    shown = {pixel: islands.ALL for pixel in ink}
     edge = {**shown, (0, 1): 0, (1, 1): 0, (0, 0): 100, (1, 0): 100}
-    assert viewing_tool._takes_an_island(ink, [(0, 1), (1, 1)], edge)
-    assert not viewing_tool._takes_an_island(ink, [(0, 1), (1, 1)])
+    assert islands.takes_an_island(ink, [(0, 1), (1, 1)], edge)
+    assert not islands.takes_an_island(ink, [(0, 1), (1, 1)])
     kept = {**edge, (1, 0): 160}
-    assert not viewing_tool._takes_an_island(ink, [(0, 1), (1, 1)], kept)
+    assert not islands.takes_an_island(ink, [(0, 1), (1, 1)], kept)
     veiled = {**shown, **dict.fromkeys(dot, 51)}
-    assert not viewing_tool._takes_an_island(ink, [], veiled)
+    assert not islands.takes_an_island(ink, [], veiled)
     past = {pixel: shows for pixel, shows in edge.items() if pixel != (1, 0)}
-    assert not viewing_tool._takes_an_island(ink, [(0, 1), (1, 1)], past)
-    assert viewing_tool._takes_an_island(ink, list(dot), {**shown, **dict.fromkeys(dot, 0)})
-    assert viewing_tool._shows_at(160, viewing_tool.STRONG)
-    assert not viewing_tool._shows_at(100, viewing_tool.STRONG)
-    assert viewing_tool._shows_at(100, 159)
+    assert not islands.takes_an_island(ink, [(0, 1), (1, 1)], past)
+    assert islands.takes_an_island(ink, list(dot), {**shown, **dict.fromkeys(dot, 0)})
+    assert islands.shows_at(160, viewing_tool.STRONG)
+    assert not islands.shows_at(100, viewing_tool.STRONG)
+    assert islands.shows_at(100, 159)
 
 
 #: Dots a reader needs, each hidden whole under a later box at a scale of 1: the runs of its
@@ -1279,7 +1281,7 @@ def test_a_box_whose_edge_leaves_a_dot_a_faint_line_takes_the_dot_and_is_named(
     assert sum(strong.ink[pixel] <= viewing_tool.STRONG for pixel in hidden) < viewing_tool._least(
         strong.em
     )
-    assert not viewing_tool._takes_an_island(strong.ink, hidden)
+    assert not islands.takes_an_island(strong.ink, hidden)
     assert [(each.text, each.why, each.island) for each in drawing.lost] == [
         (dot, viewing_tool.COVERED, True)
     ]
@@ -1296,7 +1298,7 @@ def test_a_box_whose_edge_leaves_a_dot_showing_at_its_level_is_left_unnamed(
     pixels = on_the_page(strong)
     drawing, shows = shown_under(tmp_path, runs, em, dot, box_into(pixels, strong, width, side, 7))
     assert any(
-        viewing_tool._shows_at(shows[pixel], viewing_tool.STRONG)
+        islands.shows_at(shows[pixel], viewing_tool.STRONG)
         for pixel in pixels
         if strong.ink[pixel] <= viewing_tool.STRONG
     )
@@ -2962,6 +2964,7 @@ def test_the_report_holds_each_read_of_the_browser_and_each_loss_of_the_renderer
             viewing_browser.Dropped("figure", label, "Set", viewing_browser.OFF_THE_PAGE),
             viewing_browser.Dropped("figure", label, "Go", viewing_browser.CUT, 0.36322869955),
             viewing_browser.Dropped("figure", label, "Go", viewing_browser.COVERED, 0.004),
+            viewing_browser.Dropped("figure", label, ".", viewing_browser.COVERED, 1.0, True),
         ),
         no_face=(viewing_browser.NoFace("figure", label, "Ready", "Held", "700"),),
         machine_fonts=(viewing_browser.MachineFont("figure", label, "Ready", ("Times",)),),
@@ -2984,6 +2987,7 @@ def test_the_report_holds_each_read_of_the_browser_and_each_loss_of_the_renderer
         {**place, "text": "Set", "why": "off the page"},
         {**place, "text": "Go", "why": "cut", "share": 0.363},
         {**place, "text": "Go", "why": "covered", "share": 0.004},
+        {**place, "text": ".", "why": "covered", "share": 1.0, "island": True},
     ]
     assert report["drawn-otherwise"] == [
         {**place, "text": "Ready", "why": "no face", "family": "Held", "weight": "700"},
@@ -3007,6 +3011,8 @@ def test_the_report_holds_each_read_of_the_browser_and_each_loss_of_the_renderer
         f"{span} lies off its page: 'Set'",
         f"{span} is cut by its page's edge, past which 36% of its ink lies: 'Go'",
         f"{span} is covered by a part over it, which hides under 1% of its ink: 'Go'",
+        f"{span} is covered by a part over it, which hides 100% of its ink"
+        " (one island of it gone, such as a dot): '.'",
     ]
     assert any(each.endswith("a font of the machine: 'Ready'") for each in lines)
     assert any("has no face of Held at weight 700" in each for each in lines)
@@ -3086,6 +3092,34 @@ def test_the_schema_holds_each_entry_the_svg_renderer_drops_to_the_fields_of_its
     assert refused({**in_part, "whole": False})
     assert refused({**in_part, viewing.ISLAND: False})
     assert "'why' is a required property" in refused(without(in_part, "why"))
+
+
+def test_the_schema_holds_each_entry_the_html_renderer_drops_to_the_fields_of_its_cause(
+    tmp_path: Path, browser: Browser
+) -> None:
+    """A cut or covered span gives `share`, with `island` only as true, and an entry of another
+    cause gives neither (DEC-037 point 2, DEC-054 point 3)."""
+    root = html_flow(tmp_path)
+    assert run_look(root, PIECE, "--renderer", "html").returncode == 0
+    report = html_report(root)
+    place = {
+        "language": "en",
+        "key": "default",
+        viewing.FORCED: None,
+        "page": "page",
+        "element": "page/text",
+    }
+    no_ink = {**place, "text": "Go", "why": viewing_browser.NO_INK}
+    in_part = {**place, "text": "Go", "why": viewing_browser.COVERED, "share": 0.5}
+
+    def refused(*entries: Mapping[str, Any]) -> str:
+        return refused_of({**report, "dropped": list(entries)})
+
+    assert refused(no_ink, in_part, {**in_part, viewing.ISLAND: True}) == ""
+    assert refused({**no_ink, "share": 0.5})
+    assert refused({**no_ink, viewing.ISLAND: True})
+    assert refused(without(in_part, "share"))
+    assert refused({**in_part, viewing.ISLAND: False})
 
 
 # --- the modes a page file holds (DEC-023 point 6) -----------------------------------------------
