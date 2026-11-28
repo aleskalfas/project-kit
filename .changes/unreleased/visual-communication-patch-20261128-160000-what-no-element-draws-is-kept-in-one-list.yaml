@@ -1,0 +1,18 @@
+component: visual-communication
+kind: patch
+custom:
+  category: Changed
+body: >
+  What no element draws is kept in one list, and no renderer declares it
+  drawn (DEC-078, #3407). A property of an element that describes nothing an
+  output shows its reader or gives a reader's tools is one no element draws:
+  an element's trace id, its sources and its `lies-over`, on any type, and a
+  group's `component`, `version` and `options`. The comparison that finds a
+  renderer's losses before it runs holds that list, and passes over each on
+  an element of the types it names, and over an element's type and a group's
+  children as the tree. The SVG, PDF and HTML renderers' declarations no
+  longer list a group's `component`, `version` and `options` under `group`,
+  and keep `page`, which is drawn. No renderer reports a loss of any of them,
+  as none did before, so no scene, output or loss changes, and neither the
+  seam's version nor any renderer's moves. The page on components lists what
+  no element draws, each with its types, under what a scene holds.

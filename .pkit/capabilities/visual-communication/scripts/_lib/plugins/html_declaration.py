@@ -1,13 +1,16 @@
 """What the HTML renderer draws: its declaration, plain data (visual-communication DEC-005
 points 9 and 10, DEC-020 points 1 to 4, DEC-023 points 2, 5 and 7, DEC-031 points 3 and 5,
-DEC-026 point 6, DEC-039 points 1 to 4).
+DEC-026 point 6, DEC-039 points 1 to 4, DEC-078 points 1 and 2).
 
 The HTML renderer writes one page file for each language and each key over the size axes,
 its pages in order, holding the modes a reader's signal names. So it draws, and only draws:
-it updates nothing in place and reads nothing back. A primitive or a property it does not
-name here is a loss the capability knows before it runs: a primitive it refuses, a property
-it leaves out. It draws in the default font profile, from the brand's committed font files,
-calls no outside program and reaches no service. Writing a page file takes no browser.
+it updates nothing in place and reads nothing back. It names each drawn property. What no
+element draws, such as which component drew a group, the check's list holds
+(`checks.NOT_DRAWN`), and it declares none of it drawn. A primitive or a drawn property it
+does not name here is a loss the capability knows before it runs: a primitive it refuses, a
+property it leaves out. It draws in the default font profile, from the brand's committed
+font files, calls no outside program and reaches no service. Writing a page file takes no
+browser.
 
 - `holds-modes`: each format of the renderer that holds several modes in one file, with the
   signal pairs it reads (DEC-023 point 5). For each value axis, the reader's signal that names
@@ -47,10 +50,11 @@ calls no outside program and reaches no service. Writing a page file takes no br
 - `not-carried`: what the file does not carry yet. What a reader who does not see the page
   gets (DEC-005 point 5) comes with a later version.
 - `marks`: the attribute that marks each thing the file holds (`MARKS`), so the viewing
-  step reads the words the renderer writes. A page and a text hold their trace id. A shape
-  keeps the canvas's `data-id`, so a text takes a mark of its own. A run's sign is marked
-  within its span (DEC-036 point 3). A line's ground holds its text's trace id (DEC-039
-  point 1).
+  step reads the words the renderer writes. Each is a handle, which draws nothing, so it is
+  named here, apart from what the renderer draws (DEC-078 point 2). A page and a text hold
+  their trace id. A shape keeps the canvas's `data-id`, so a text takes a mark of its own. A
+  run's sign is marked within its span (DEC-036 point 3). A line's ground holds its text's
+  trace id (DEC-039 point 1).
 
 Standard library only: the check and the viewing step read it without importing the
 renderer.
@@ -138,10 +142,7 @@ DECLARATION = {
     "not-carried": ["alternative text", "reading order", "structure"],
     "marks": MARKS,
     "draws": {
-        "group": dict.fromkeys(
-            (*_FRAME, "component", "version", "options", "page"),
-            DRAWS,
-        ),
+        "group": dict.fromkeys((*_FRAME, "page"), DRAWS),
         "box": dict.fromkeys((*_FRAME, "fill", "stroke", "stroke-width", "rx"), DRAWS),
         "ellipse": dict.fromkeys((*_FRAME, "fill", "stroke", "stroke-width"), DRAWS),
         "line": dict.fromkeys(
