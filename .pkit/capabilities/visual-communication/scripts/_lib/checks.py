@@ -29,9 +29,10 @@ and 5, DEC-019 point 8, DEC-030 point 5).
 - each library version checked alone, once: the newest version the project holds of
   each major of each library, resolved with the newest version the project holds of each
   major it names. A brand is read over its base, a component library's own roles and its
-  components' tokens are judged, and so is each arrangement field of its patterns that its
-  list's default component also declares, and each token a component declares and its
-  file reads nowhere (`unread_tokens`, DEC-035 point 9), the components read through an
+  components' tokens are judged, a brand's own components' tokens as a library's (DEC-044
+  point 4), and so is each arrangement field of its patterns that its list's default
+  component also declares, and each token a component declares and its file reads nowhere
+  (`unread_tokens`, DEC-035 point 9), the components read through an
   environment of the engine that no piece or brand stands behind (`pipeline.LibraryEnv`,
   DEC-010 point 9); the foundations' declarations are read, and their components' tokens
   judged as a library's. What it shows lies in the version; a version that names majors
@@ -55,6 +56,10 @@ and 5, DEC-019 point 8, DEC-030 point 5).
   words of its field's run styles, the nearest known key or word named (DEC-012 points 1, 2
   and 8), and each path a field of paths gives against the files version control lists,
   on every run, never from the findings record (DEC-056 points 2 and 5);
+- each part a piece's content places, of a brand that is neither the piece's brand nor one
+  along its chain, whose holding brand gives one of its tokens a value: the part draws its
+  tokens at their defaults, which asks the piece's author for attention
+  (`other_brand_parts`, DEC-044 points 3 and 4);
 - each page and key path a piece's brief names, against the content of its source language
   (`briefs.findings`, DEC-029 point 5);
 - the formats each piece names: two that write files of one name, `svg` and `svg-modes`
@@ -667,6 +672,7 @@ class _Run:
         self._library_names(project)
         self._notation_findings(project)
         self.found.extend(content_findings(project))
+        self.found.extend(other_brand_parts(project))
         produced = _produced_findings(self.root, self.location, piece)
         self.found.extend(produced)
         self._scenes(project, _unmade(produced))
@@ -841,16 +847,18 @@ class _Run:
                     root=self.root,
                     locked=folders,
                 )
-                # Each component it holds is judged as a component library's is, a drawing
-                # as a drawing, and the forms it draws over its base (DEC-009 point 9,
-                # DEC-034 points 1 and 10).
+                # Each component it holds is judged as a component library's is, its tokens
+                # and their defaults by the scope, a drawing as a drawing, and the forms it
+                # draws over its base (DEC-009 point 9, DEC-034 points 1 and 10, DEC-044
+                # point 4).
                 env = pl.LibraryEnv(chosen, scope)
                 # What the version alone states, which no piece's lock reads (DEC-025 point 9).
                 found = [
+                    *scope.findings_of(name),
                     *brand.findings,
                     *brand.facts,
                     *default_clashes(self.held, library, env),
-                    *unread_tokens(self.held, library, env),
+                    *unread_tokens(self.held, library, env, brand),
                     *drawing_findings(self.held, library, env, brand),
                 ]
             else:
@@ -954,11 +962,16 @@ def _at_lock(finding: Finding, piece: pl.Piece) -> Finding:
     )
 
 
-def unread_tokens(held: Held, library: Library, env: pl.LibraryEnv) -> list[Finding]:
+def unread_tokens(
+    held: Held, library: Library, env: pl.LibraryEnv, brand: tokens.Brand | None = None
+) -> list[Finding]:
     """Each component token a component of the library version declares that its own file
     reads nowhere (`layout.unread_token_findings`, DEC-035 point 9), each component read
-    through `env`. A component that cannot be read is the scene's to report."""
+    through `env`. Given `brand`, the version read as a brand, a drawing's token that it
+    gives a value or opens is kept, as a stable component's is (DEC-044 point 4). A
+    component that cannot be read is the scene's to report."""
     ctx = layout.Context(env, "")
+    kept = brand.kept_tokens if brand is not None else frozenset[str]()
     found = []
     for path in held.files(library.name, library.version):
         if path.parent != library.folder / pl.COMPONENTS or path.suffix != ".yaml":
@@ -966,7 +979,9 @@ def unread_tokens(held: Held, library: Library, env: pl.LibraryEnv) -> list[Find
         component = ctx.component(f"{library.name}/{path.stem}")
         if component is not None:
             file = path.relative_to(held.root).as_posix()
-            found.extend(layout.unread_token_findings(component, file=file, library=library.label))
+            found.extend(
+                layout.unread_token_findings(component, file=file, library=library.label, kept=kept)
+            )
     return found
 
 
@@ -3293,6 +3308,65 @@ def _brand_forms(project: pl.Project) -> list[Finding]:
                 where="top",
                 fix=f"draw the piece under `{holder}` or a brand built on it; where its form is "
                 f"meant to be {held}'s in the values of {brand}, leave it",
+                who=AUTHOR,
+            )
+        )
+    return found
+
+
+#: The call for attention on a part a piece places, of a brand that is neither the piece's
+#: brand nor one along its chain, where the brand that holds the part gives one of its
+#: tokens a value (DEC-044 points 3 and 4).
+PART_OF_OTHER_BRAND = "part-of-other-brand"
+
+
+def other_brand_parts(project: pl.Project) -> list[Finding]:
+    """Each component the piece's content places, of a brand that is neither the piece's
+    brand nor one along its chain, where the brand that holds it gives one of its tokens a
+    value. Under the piece's brand the part draws each of its tokens at its default, so the
+    look its holder gave it is lost. It asks the piece's author for attention, naming the
+    part, the tokens and both brands, and never fails, since format 1 accepted the piece
+    (DEC-044 points 3 and 4), as a top a brand holds does (`_brand_forms`). A holding brand
+    that cannot be read names none, its own check reporting it."""
+    chain = {brand.name for brand in pl.chain_of(project.brand)}
+    contents = project.piece.contents.values()
+    placed = sorted({use for content in contents for use in pl.uses(content)})
+    holders: dict[str, tokens.Brand | None] = {}
+    found = []
+    for use in placed:
+        holder, _, name = use.partition("/")
+        if holder in chain or holder not in project.lock or project.kind(holder) != "brand":
+            continue
+        if holder not in holders:
+            try:
+                holders[holder] = project.locked_brand(holder)
+            except (pl.Refused, tokens.TokenError):
+                holders[holder] = None
+        read = holders[holder]
+        given = sorted(
+            path
+            for path, token in project.scope.tokens.items()
+            if project.scope.owner[path] == holder
+            and token.component == name
+            and read is not None
+            and path in read.roles
+        )
+        if not given:
+            continue
+        held, brand = project.label(holder), project.label(project.piece.brand)
+        tokens_said = ", ".join(f"`{path}`" for path in given)
+        found.append(
+            Finding(
+                PART_OF_OTHER_BRAND,
+                ATTENTION,
+                f"the part `{use}` is a component of the brand {held}, which gives "
+                f"{tokens_said} a value, and the piece's brand {brand} is neither that brand "
+                f"nor built on it: the part draws each of its tokens at its default, in the "
+                f"values of {brand}",
+                file=project.piece.file(pl.PIECE_FILE),
+                where="brand",
+                fix=f"draw the piece under `{holder}` or a brand built on it; where the part is "
+                f"meant in the values of {brand}, leave it",
                 who=AUTHOR,
             )
         )

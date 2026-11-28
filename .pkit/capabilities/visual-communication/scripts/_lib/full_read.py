@@ -12,12 +12,14 @@ those build on (`libraries.newest_of_majors`).
   and its schema (`file_findings`). The core's data validation reads no file under
   `.pkit/`, so a version the capability ships meets its schemas here alone.
 - **Read by the engine.** The foundations' declarations and the version's own roles and
-  its components' tokens, the scope of the versions it is read with (`tokens.read_scope`).
-  Each of its components, the file of each under `components/`, through the environment
-  of a library checked alone, which no piece or brand stands behind
-  (`pipeline.LibraryEnv`), a switch or a `when` by a size against the size axes of the
-  foundations it is read with, and each token it declares that its file reads nowhere
-  (`layout.unread_token_findings`, DEC-035 point 9). A component of a library that is no
+  its components' tokens, a brand's own components' among them, the scope of the versions
+  it is read with (`tokens.read_scope`, DEC-044 point 1). Each of its components, the file
+  of each under `components/`, through the environment of a library checked alone, which
+  no piece or brand stands behind (`pipeline.LibraryEnv`), a switch or a `when` by a size
+  against the size axes of the foundations it is read with, and each token it declares
+  that its file reads nowhere (`layout.unread_token_findings`, DEC-035 point 9), a
+  drawing's kept where its brand gives it a value or opens it (`tokens.Brand.kept_tokens`,
+  DEC-044 point 4). A component of a library that is no
   brand that declares `draws` (`layout.held_drawing_finding`), a brand's drawing read as
   one, a drawing of a top a brand holds (`pipeline.held_top_findings`), and a top's own
   drawing of a layout that shows a field by no part named after it
@@ -165,6 +167,17 @@ def _engine(held: libraries.Held, name: str, version: libraries.Version) -> Full
     # A switch or a `when` by a size reads the foundations' size axes; nothing is placed, so
     # no mode is read (DEC-021 point 7).
     ctx = layout.Context(env, "", sizes=layout.Sizes(pl.size_axes(scope.axes)))
+    refused: tuple[Finding, ...] = ()
+    if library.kind == "brand":
+        fonts = held.root / held.location / pl.FONTS
+        try:
+            brand = tokens.read_brand(
+                library.folder, scope, fonts=fonts, root=held.root, locked=folders
+            )
+        except tokens.TokenError as exc:
+            refused = exc.findings
+    # A drawing's unread token that its brand gives a value or opens is kept (DEC-044 point 4).
+    kept = brand.kept_tokens if brand is not None else frozenset[str]()
     if library.kind in ("components", "brand"):
         for path in held.files(name, version):
             if path.parent != library.folder / pl.COMPONENTS or path.suffix != ".yaml":
@@ -177,7 +190,9 @@ def _engine(held: libraries.Held, name: str, version: libraries.Version) -> Full
             components[path.stem] = component
             data[path.stem] = env.component(use)
             file = path.relative_to(held.root).as_posix()
-            found.extend(layout.unread_token_findings(component, file=file, library=label))
+            found.extend(
+                layout.unread_token_findings(component, file=file, library=label, kept=kept)
+            )
             # Only a brand's component draws a layout, and none a top a brand holds (DEC-034
             # points 1 and 4).
             if component.draws is not None and library.kind != "brand":
@@ -187,18 +202,12 @@ def _engine(held: libraries.Held, name: str, version: libraries.Version) -> Full
             if component.top:
                 found.extend(layout.own_drawing_findings(component, file=file, library=label))
         found.extend(_named_findings(reader, components, shown))
-    if library.kind == "brand":
-        fonts = held.root / held.location / pl.FONTS
-        try:
-            brand = tokens.read_brand(
-                library.folder, scope, fonts=fonts, root=held.root, locked=folders
-            )
-            found.extend((*brand.findings, *brand.facts))
-            # The forms it draws, over its base, as its check alone judges them (DEC-009
-            # point 9), before the engine's findings, of which they may take one back.
-            found.extend(pl.brand_findings(brand, ctx, env, shown=shown))
-        except tokens.TokenError as exc:
-            found.extend(exc.findings)
+    found.extend(refused)
+    if brand is not None:
+        found.extend((*brand.findings, *brand.facts))
+        # The forms it draws, over its base, as its check alone judges them (DEC-009 point 9),
+        # before the engine's findings, of which they may take one back.
+        found.extend(pl.brand_findings(brand, ctx, env, shown=shown))
     found.extend(ctx.findings)
     if library.kind == "notation":
         notation = notations.read_notation(

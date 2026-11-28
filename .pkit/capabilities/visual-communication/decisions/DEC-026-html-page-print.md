@@ -77,7 +77,7 @@ Terms:
 ### 7. What checks a print
 
 - **A test on the file** holds what points 1 to 5 ask of it, all but where a page that runs on breaks, as a test holds how its pages lie on screen (DEC-020 point 5). Where the machine has the step's browser, the test may also print the file there and count its sheets. That print lies in the test, never in the step's shipped code, and it asserts no mode.
-- **The viewing step reads no print.** A person looks at a print in each browser (DEC-020 point 5). Safari gets the same rules, and that print is its only check.
+- **The viewing step reads no print.** A person looks at a print in Chrome as shipped (DEC-020 point 5). Every browser gets the same rules, and no print is checked in another (refinement per [visual-communication:DEC-074-supports-chrome-alone] points 1 and 2).
 - **Every rule here holds in print alone,** so the screen's rules stay as DEC-020 and DEC-031 have them.
 
 ## Rationale
@@ -94,7 +94,7 @@ Terms:
 
 **Point 6, the renderer's declaration.** The scene sets none of these choices, and a renderer declares what it chooses (DEC-001 point 2). One width and one share for both media keep the keyline on paper from drifting apart from the screen's.
 
-**Point 7, the checks.** A test on the file holds the rules on every machine, and a person's print reaches each browser as shipped. The step's emulated dark signal printed dark where a real dark system printed light. The step's measures and images rest on the screen's rules.
+**Point 7, the checks.** A test on the file holds the rules on every machine, and a person's print reaches Chrome as shipped (refinement per [visual-communication:DEC-074-supports-chrome-alone] point 1). The step's emulated dark signal printed dark where a real dark system printed light. The step's measures and images rest on the screen's rules.
 
 ### Alternatives considered
 
