@@ -547,7 +547,7 @@ answers:
     revalidated:
       at: 2026-11-28T12:08:56Z
       outcome: unchanged
-      unchanged-because: The test changes hold that `--pre` in a project on a candidate names a later candidate and writes nothing, and drop one assertion that no lookup ran. No preview test changed, and the note writes nothing under `--dry-run` either, so a preview still writes nothing.
+      unchanged-because: The test changes hold that `--pre` in a project on a candidate names a later candidate and writes nothing. They drop two assertions that no lookup ran, and in place of one, that in the move cut short, assert that it runs one lookup and names the later candidate. No preview test changed, and the note writes nothing under `--dry-run` either, so a preview still writes nothing.
   - artefact: tech-docs/analysis/core/glossary.md#TERM-completion
     read:
       - 20261110T212240Z-c6177e80.yaml
@@ -564,7 +564,7 @@ answers:
     revalidated:
       at: 2026-11-28T12:09:00Z
       outcome: unchanged
-      unchanged-because: The change to upgrade.py adds only, under `pkit upgrade --pre` in a project on a release candidate, a lookup of candidate tags and a printed note naming a later candidate. It records no completion and changes when one is recorded, so the term holds.
+      unchanged-because: The change to upgrade.py adds only, under `pkit upgrade --pre` in a project on a release candidate, a lookup of candidate tags and a printed note naming a later candidate. It records no completion and does not change when one is recorded, so the term holds.
   - artefact: tech-docs/analysis/core/glossary.md#TERM-dependency-gate
     read:
       - 20261108T214259Z-302a0194.yaml
