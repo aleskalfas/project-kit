@@ -595,7 +595,7 @@
           }
         },
         "dropped": {
-          "description": "Each span the page does not show in full, in one entry for each cause, which `why` names (DEC-037 points 1 and 2). A cut or covered entry gives `share`, the share of the span's strong ink its cause loses, and no other entry gives one.",
+          "description": "Each span the page does not show in full, in one entry for each cause, which `why` names (DEC-037 points 1 and 2). A cut or covered entry gives `share`, and `island` where its cause takes an island of the span's ink (DEC-054 point 3). No other entry gives either.",
           "type": "array",
           "items": {
             "type": "object",
@@ -637,9 +637,14 @@
                 ]
               },
               "share": {
+                "description": "The share of the span's strong ink its cause loses, or of its counted ink where it holds no strong ink.",
                 "type": "number",
                 "minimum": 0,
                 "maximum": 1
+              },
+              "island": {
+                "description": "On an entry whose cause takes an island of the span's counted ink, such as a dot, whatever its share. Another entry holds no such key.",
+                "const": true
               }
             },
             "if": {
@@ -659,8 +664,17 @@
             },
             "else": {
               "not": {
-                "required": [
-                  "share"
+                "anyOf": [
+                  {
+                    "required": [
+                      "share"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "island"
+                    ]
+                  }
                 ]
               }
             }

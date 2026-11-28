@@ -124,9 +124,10 @@ LIST_LIMIT = state_issues.OPEN_LIMIT
 #: The state a Task waits in for its reviewers and a person (DEC-059 point 9).
 REVIEW = "review"
 
-#: Why a claim stopped counting, where its seat was released after it was made
-#: (ADR-041 point 7).
-RELEASED_SEAT = frozenset({ownership.SEAT_RELEASED, ownership.SEAT_RELEASED_SINCE})
+#: Why a claim stopped counting, where its seat was released after it was made:
+#: its clone no longer holds the seat, or made it before its current take of the
+#: seat (ADR-041 point 7).
+RELEASED_SEAT = frozenset({ownership.SEAT_RELEASED, ownership.MADE_BEFORE_TAKE})
 
 
 def main() -> int:

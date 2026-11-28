@@ -1,0 +1,24 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Added
+body: >
+  The check names a paragraph that a line feed written in the text ends on a
+  word the scene's language keeps off a line's end, where the text goes on
+  after the line feed (#3116, DEC-075). The engine keeps such a word off the
+  end of each line it breaks, but carries no word across a line feed, so the
+  paragraph's last line ends on it. The check reads every text the scene
+  holds, its runs joined, by the same rules the engine breaks lines by, and
+  reports `kept-word-ends-paragraph`. A line feed the engine adds, as after
+  each path of a list of paths but the last, is not read, nor is a text with
+  nothing after the word but spaces and line feeds. The finding asks for
+  attention and never fails. It lies where the text is written: in the content
+  file of the scene's language, at the key path of the run whose text holds
+  the word, for the piece's author; and for a text no content gives, in the
+  file of the component that shows it. Its fix moves the word past the line
+  feeds after it, or rewords the paragraph's end. An existing piece gives the
+  finding in validation from its next render, or once a file its scenes are
+  computed from changes, not from the release: the findings record's key holds
+  no engine version, so a record that still verifies is read as its render
+  wrote it. No file a project holds changes meaning, and the change owes no
+  migration.

@@ -303,8 +303,8 @@ def _print_lock_and_renderer(report: Mapping[str, Any], to: Any = None) -> None:
 
 def _dropped(each: Mapping[str, Any]) -> str:
     """What the report says of a text or a span its page does not show in full, in words for
-    its cause, with the share of its ink the cause loses where it gives one (DEC-037 point
-    2)."""
+    its cause, with the share of its ink the cause loses where it gives one, and where its
+    cause took an island (DEC-037 point 2)."""
     span, text, why = f"a span of the text `{each['element']}`", each["text"], each["why"]
     if "whole" in each:
         what = "text" if each["whole"] else "part of the text"
@@ -329,15 +329,16 @@ def _dropped(each: Mapping[str, Any]) -> str:
 
 def _share(each: Mapping[str, Any]) -> str:
     """The share of a span's ink a cause loses, in whole percent, and never as none: of its
-    strong ink, or through the SVG renderer of its ink at the lightest level the reads take
-    where it holds no strong ink, so a faint mark lost whole reads 100% (DEC-045 point 2)."""
+    strong ink, or of its ink at the lightest level the reads take where it holds no strong
+    ink, so a faint mark lost whole reads 100% (DEC-045 point 2, DEC-054 point 3)."""
     percent = round(each["share"] * 100)
     return f"{percent}%" if percent else "under 1%"
 
 
 def _island(each: Mapping[str, Any]) -> str:
     """What the report says of a cause that takes an island of a span's ink, leaving none of
-    it showing at its level, whatever its share (DEC-045 point 2)."""
+    it showing at its level, whatever its share, through either renderer (DEC-045 point 2,
+    DEC-054 point 3)."""
     return " (one island of it gone, such as a dot)" if each.get(viewing.ISLAND) else ""
 
 

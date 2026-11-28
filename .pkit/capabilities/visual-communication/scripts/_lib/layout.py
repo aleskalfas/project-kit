@@ -3794,6 +3794,9 @@ class Node:
     items: list[Instance] = field(default_factory=list)
     text: str = ""
     runs: list[TextRun] = field(default_factory=list)
+    # A text: the place in `text` of each line feed the engine added, which no file writes,
+    # one after each path of a list of paths but the last (DEC-056 point 1, DEC-075 point 1).
+    added: tuple[int, ...] = ()
     # An image of a produced output: the output, as its record keeps it, and its name.
     picture: PictureInfo | None = None
     output: str = ""
@@ -3834,11 +3837,18 @@ def _filled(value: Any, *, runs: bool = False, paths: bool = False) -> bool:
     return value not in (None, "", [], {})
 
 
-def _shown_paths(value: list[Any]) -> str:
+def _shown_paths(value: list[Any]) -> tuple[str, tuple[int, ...]]:
     """The text a list of paths is shown as: its paths in the content's order, a path to a
-    paragraph, each parted from the next by a line feed (DEC-056 point 1). An entry that is
-    no text is left out, as the check of the content reports."""
-    return "\n".join(path for path in value if isinstance(path, str))
+    paragraph, each parted from the next by a line feed (DEC-056 point 1); and the place in
+    that text of each line feed the engine so adds, which no file writes (DEC-075 point 1).
+    An entry that is no text is left out, as the check of the content reports."""
+    paths = [path for path in value if isinstance(path, str)]
+    added, at = [], 0
+    for path in paths[:-1]:
+        at += len(path)
+        added.append(at)
+        at += 1
+    return "\n".join(paths), tuple(added)
 
 
 def _run_text(run: Any) -> str:
@@ -4248,9 +4258,9 @@ class Instance:
         """The text a text part shows: a fact of its export (`_build_fact`), or its field's
         text, one run, or, in a field of runs, its runs (DEC-012 point 1). Each run takes the
         typography role its word chooses. A field given as text is one run of the field's
-        first word. A list of paths is one run too, a path to a paragraph (`_shown_paths`,
-        DEC-056 point 1). A part that names neither is recorded when the component was
-        read."""
+        first word. A list of paths is one run too, a path to a paragraph, and the node keeps
+        where the engine added each line feed (`_shown_paths`, DEC-056 point 1). A part that
+        names neither is recorded when the component was read."""
         props = node.part.props
         if "fact" in props:
             self._build_fact(node, trace)
@@ -4264,7 +4274,7 @@ class Instance:
         if isinstance(value, (int, float)) and not isinstance(value, bool):
             value = str(value)
         if isinstance(value, list) and content in self.component.path_lists:
-            value = _shown_paths(value)
+            value, node.added = _shown_paths(value)
         given = self._given_runs(content, words, value) if isinstance(value, list) else []
         if not isinstance(value, list) or words is None:
             if value is not None and not isinstance(value, str):

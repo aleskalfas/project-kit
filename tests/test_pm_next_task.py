@@ -24,6 +24,7 @@ import pytest
 
 from tests import pm_assignee_lookup
 from tests.pm_ownership_support import (
+    EARLIEST_TAKE,
     FakeGitHub,
     clone_with,
     seat_issue,
@@ -423,6 +424,36 @@ def test_a_task_whose_owner_cannot_be_read_is_skipped(run, capsys) -> None:
     assert "#10 could not be read, so whose it is cannot be told. Skipped." in err
 
 
+def test_a_claim_past_what_a_read_of_the_issue_gives_holds_the_task(
+    run, nt, monkeypatch, capsys
+) -> None:
+    """The pool folds the Task's whole comment log (ADR-041 point 1), so a claim
+    on a later page, past what a read of the issue gives, holds the Task."""
+    monkeypatch.setattr(nt.instance_claims.ownership.comment_log, "PAGE_SIZE", 2)
+    pool = Pool()
+    pool.github.view_comments = 2
+    pool.add(10, priority="High", assignees=("me",))
+    pool.add(11, priority="Low")
+    for n in range(3):
+        pool.github.post(10, f"comment {n}")
+    pool.github.post(10, _stamp(nt, 3))
+    rc, starts = run(pool, instance=2)
+    assert (rc, starts) == (0, [(11, False)])
+    assert "  skipped #10: held by instance 3" in capsys.readouterr().out
+
+
+def test_a_task_whose_comment_log_cannot_be_read_whole_is_skipped(run, capsys) -> None:
+    """A log cut short could miss a claim, so the Task is never taken as free."""
+    pool = Pool()
+    pool.add(10)
+    pool.github.failing.add("page")
+    rc, starts = run(pool, instance=2)
+    assert (rc, starts) == (3, [])
+    err = capsys.readouterr().err
+    assert "#10 could not be read, so whose it is cannot be told. Skipped." in err
+    assert pool.github.writes() == []
+
+
 def test_start_work_is_run_with_the_run_s_own_confirmations(nt, monkeypatch) -> None:
     ran: list[list[str]] = []
     fake = SimpleNamespace(run=lambda cmd, check: ran.append(cmd) or SimpleNamespace(returncode=0))
@@ -448,7 +479,7 @@ def _seat(nt, monkeypatch, *, role: str = "worker", scope: Any = None, holders: 
     """This clone holds `worker-2`, the second seat, with the key `k2`."""
     claims = nt.instance_claims
     ownership = claims.ownership
-    held = {"worker-2": ownership.Holder(ownership.SEAT_HELD, "me", "k2")}
+    held = {"worker-2": ownership.Holder(ownership.SEAT_HELD, "me", "k2", EARLIEST_TAKE)}
     seat = claims.Seat("worker-2", 2, role, scope)
     topology_with(claims, monkeypatch, claims.Topology(seat, holders or held), key="k2")
 
@@ -486,7 +517,7 @@ def test_a_task_whose_seat_was_released_is_taken_over(run, nt, monkeypatch, caps
         monkeypatch,
         holders={
             "worker-1": ownership.Holder(ownership.SEAT_FREE),
-            "worker-2": ownership.Holder(ownership.SEAT_HELD, "me", "k2"),
+            "worker-2": ownership.Holder(ownership.SEAT_HELD, "me", "k2", EARLIEST_TAKE),
         },
     )
     rc, starts = run(pool)
@@ -508,8 +539,8 @@ def test_a_task_in_progress_whose_claim_counts_is_left_alone(run, nt, monkeypatc
         nt,
         monkeypatch,
         holders={
-            "worker-1": ownership.Holder(ownership.SEAT_HELD, "me", "k1"),
-            "worker-2": ownership.Holder(ownership.SEAT_HELD, "me", "k2"),
+            "worker-1": ownership.Holder(ownership.SEAT_HELD, "me", "k1", EARLIEST_TAKE),
+            "worker-2": ownership.Holder(ownership.SEAT_HELD, "me", "k2", EARLIEST_TAKE),
         },
     )
     rc, starts = run(pool)

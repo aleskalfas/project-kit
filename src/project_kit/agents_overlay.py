@@ -7,7 +7,8 @@ define through a *hard* channel (any list key or `reads.paths` /
 `reads.records`); a category referenced *only* via `reads.patterns` is an
 **optional read** (ADR-052) whose absence never skips — the agent deploys
 without it and the undefined optional categories surface in their own
-`Optional` footer state. Plus an explicit `reconcile` that surfaces the
+`Optional` footer state, in the line `pkit status` says of them too
+(:func:`optional_reads_line`). Plus an explicit `reconcile` that surfaces the
 missing categories into the overlay as
 commented stubs or (when the conventional default directory exists) as
 uncommented, deploy-ready entries, and an explicit `adopt` that creates the
@@ -59,7 +60,7 @@ import io
 import re
 import shlex
 import subprocess
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, cast
@@ -378,13 +379,13 @@ def expand_placeholders(
 
 def agent_overlay_statuses(target_root: Path) -> list[AgentOverlayStatus]:
     values = load_overlay_values(target_root)
-    defaults = set(values.defaults)
     out: list[AgentOverlayStatus] = []
     for name, (ns, src) in sorted(discover_kit_agents(target_root).items()):
         referenced = agent_referenced_categories(src)
         _hard, optional = agent_category_roles(src)
-        defined = defaults | set(values.overrides.get(name, {}))
-        missing = referenced - defined
+        # Undefined as the deploy reads it (`OverlayValues.resolve`): a bare key
+        # carries no value, so it leaves its category as undefined as an absent one.
+        missing = {cat for cat in referenced if values.resolve(name, cat) is None}
         out.append(
             AgentOverlayStatus(
                 name=name,
@@ -704,10 +705,15 @@ def missing_categories(target_root: Path) -> list[str]:
 def agents_reaching(target_root: Path) -> dict[str, list[str]]:
     """Each undefined category → the agents that reach it once it is recorded: every
     agent referencing it with no override of its own. Sorted by agent name."""
+    overrides = load_overlay_values(target_root).overrides
     reaching: dict[str, list[str]] = {}
     for st in agent_overlay_statuses(target_root):
+        # A bare key in the agent's own override leaves the category undefined for
+        # it, and still wins over a value recorded at the top level.
+        own = overrides.get(st.name, {})
         for cat in st.missing:
-            reaching.setdefault(cat, []).append(st.name)
+            if cat not in own:
+                reaching.setdefault(cat, []).append(st.name)
     return reaching
 
 
@@ -736,6 +742,37 @@ def optional_categories(target_root: Path) -> set[str]:
         hard |= h
         optional |= o
     return optional - hard
+
+
+def undefined_optional_reads(target_root: Path) -> dict[str, list[str]]:
+    """Each optional category the overlay leaves undefined → the agents that deploy
+    without it, both sorted by name (ADR-052).
+
+    The categories are the project-wide optional ones (:func:`optional_categories`).
+    An agent is listed where the category is undefined for it
+    (:func:`agent_overlay_statuses`), so a category defined only in one agent's
+    override lists the other agents that read it. A category defined for every
+    agent that reads it is left out, whatever its paths hold, an explicit empty
+    list among them.
+    """
+    optional = optional_categories(target_root)
+    undefined: dict[str, list[str]] = {}
+    for st in agent_overlay_statuses(target_root):
+        for cat in st.missing:
+            if cat in optional:
+                undefined.setdefault(cat, []).append(st.name)
+    return dict(sorted(undefined.items()))
+
+
+def optional_reads_line(undefined: Mapping[str, Sequence[str]]) -> str:
+    """What `pkit agents` and `pkit status` both say of *undefined*, the answer of
+    :func:`undefined_optional_reads`: each category with the agents that deploy
+    without it, framed as an enrichment and never a gap (ADR-052 point 5)."""
+    named = ", ".join(f"{cat} ({', '.join(agents)})" for cat, agents in undefined.items())
+    return (
+        "Optional categor(ies) undefined, each with the agents that deploy without it: "
+        f"{named}; `pkit agents reconcile` to define and enrich."
+    )
 
 
 def render_status(target_root: Path) -> str:
@@ -814,16 +851,10 @@ def render_status(target_root: Path) -> str:
     sections = [cli_render.section(**table) for table in tables]
     # Undefined *optional* categories (ADR-052): patterns-only reads no agent
     # references hard. Their absence never skips an agent — surface them as a
-    # non-blocking enrichment, not a gap.
-    optional_undefined = sorted(
-        set(missing_categories(target_root)) & optional_categories(target_root)
-    )
-    optional_line = None
-    if optional_undefined:
-        optional_line = (
-            f"Optional categor(ies) undefined ({', '.join(optional_undefined)}): "
-            f"agents deploy without them; `pkit agents reconcile` to define and enrich."
-        )
+    # non-blocking enrichment, not a gap. `pkit status` says the same line.
+    optional_reads = undefined_optional_reads(target_root)
+    optional_undefined = list(optional_reads)
+    optional_line = optional_reads_line(optional_reads) if optional_reads else None
 
     status_part = None
     if skipped:
