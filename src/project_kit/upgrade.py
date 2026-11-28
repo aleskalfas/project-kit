@@ -1527,7 +1527,7 @@ def _auto_advance_pinned(
         latest = _newest_release_or_candidate()
         named = _NEWEST_UNDER_PRE
     else:
-        latest = _latest_released_version()
+        latest = latest_released_version()
         named = _LATEST
     try:
         pinned_version: Version | None = Version(current_pin)
@@ -1784,7 +1784,7 @@ def _maybe_self_update_tool(*, self_update: bool, dry_run: bool) -> None:
       failed hand-over after a successful install stops it before it syncs or
       pins (point 3).
     """
-    latest = _latest_released_version()
+    latest = latest_released_version()
     if latest is None:
         click.echo()
         click.secho(
@@ -1982,7 +1982,7 @@ def _instruct_tool_update(latest: Version, running: Version) -> None:
     click.echo("    pkit upgrade")
 
 
-def _latest_released_version() -> Version | None:
+def latest_released_version() -> Version | None:
     """Query the distribution source for the highest release tag, pre-releases skipped.
 
     Best-effort per ADR-063 point 1: returns None on *any* failure — `git` missing
@@ -1991,14 +1991,15 @@ def _latest_released_version() -> Version | None:
     the same compiled distribution URL the router pins against (`router`), in git's
     spelling, so tool detection and route-2 pinning share one source of truth. git's
     terminal prompt is off, so a server that asks for a credential fails the lookup
-    at once (ADR-090 point 2).
+    at once (ADR-090 point 2). `pkit status` reads it too, for a pinned project's
+    backbone line (`status`).
     """
     return _newest_tagged_version(candidates=False)
 
 
 def _newest_release_or_candidate() -> Version | None:
     """The lookup of `pkit upgrade --pre`: the highest release tag or release
-    candidate tag, from the source `_latest_released_version` reads, with the same
+    candidate tag, from the source `latest_released_version` reads, with the same
     failures (ADR-089 point 8). A withdrawn candidate is passed by (ADR-092 point
     4), and every other pre-release and dev release is still skipped."""
     return _newest_tagged_version(candidates=True)
@@ -2007,7 +2008,7 @@ def _newest_release_or_candidate() -> Version | None:
 def _newest_tagged_version(*, candidates: bool) -> Version | None:
     """The highest version the distribution source's tags name, release candidates
     among them only where *candidates* is set, or None on any failure of the
-    lookup or where no tag names one (`_latest_released_version`)."""
+    lookup or where no tag names one (`latest_released_version`)."""
     listing = _distribution_tags()
     if listing is None:
         return None

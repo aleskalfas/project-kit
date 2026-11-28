@@ -29,8 +29,9 @@ no issue and is guarded by nothing. A claim names the seat, its number and the
 clone's key, in the audit-log facility's stamp (point 9). It counts only while
 that clone holds that seat, and only where the clone made it after its current
 take of the seat, judged when it is read. So a seat's release frees its clone's
-claims for good, with no write, even where the same clone takes the seat again
-(point 5). A planner's seat files with no owner, so its work enters the shared
+claims, with no write, even where the same clone takes the seat again (point
+5), while the counted events of the seat's state issue stand (ADR-041 point 7).
+A planner's seat files with no owner, so its work enters the shared
 pool, and a lead's seat files with no owner the work it leaves to its workers
 ([project-management:DEC-081-delegation-between-seats] point 3). Every other
 filing claims at filing; a worker claims at ``start-work`` (point 7). Renewal, lapse and parking
@@ -58,6 +59,13 @@ built by ``_lib/instance_ownership`` and nowhere else (ADR-041 point 3). Owners
 are read only through the seam's fold, ``resolve_owner`` (ADR-041 point 1). This
 module decides when each write fires and what a result means: the failure
 posture ADR-041 point 5 leaves to the caller.
+
+**Each fold reads the whole log** (ADR-041 point 1). A read of an issue takes
+its assignees, labels and body in one call, and its comment log through the
+seam's reader, paged to its end. A log that cannot be read whole is a read that
+failed, never a fold of the comments read so far, which could miss a later
+claim. So the guard refuses, the claim and the release fail, the move back from
+In Progress refuses, and the shared pool skips the issue.
 
 **The claim re-reads.** A claim writes its marker, reads the issue again and
 folds it. Where another instance claimed in the same instant, both markers are
@@ -156,9 +164,10 @@ from _lib.membership import format_unresolved
 #: point 2), relative to the capability root.
 SETTINGS_RELATIVE = "project/instance-ownership.yaml"
 
-#: The fields one read of an issue takes: who it is assigned to, its labels, its
-#: comments (the event log) and its body (the mirror's home).
-VIEW_FIELDS = "assignees,labels,comments,body"
+#: The fields a read of an issue takes beside its comment log: who it is
+#: assigned to, its labels and its body (the mirror's home). The log, the event
+#: log a fold reads, is read whole through the shared reader (ADR-041 point 1).
+VIEW_FIELDS = "assignees,labels,body"
 
 # Outcomes. A claim ends CLAIMED, HELD, ELSEWHERE, NOT_CLAIMED, LOST or FAILED; a
 # release ends RELEASED, NOTHING, NOT_RELEASED or FAILED.
@@ -825,9 +834,9 @@ def claim(issue_number: int, clone: Clone, config: dict, *, run: Run | None = No
     if not clone.login:
         cannot_tell = format_unresolved(clone.login_cause)
         return Result(NOT_CLAIMED, f"[note] ownership: #{n} is not claimed: {cannot_tell}.")
-    issue = _read(gh, n)
+    issue, unread = _read(gh, n)
     if issue is None:
-        return Result(FAILED, f"[warn] ownership: #{n} could not be read, so it is not claimed.")
+        return Result(FAILED, f"[warn] ownership: {unread}, so it is not claimed.")
     assignees = _assignees(issue)
     if clone.login not in assignees:
         who = ", ".join(f"@{a}" for a in assignees) or "nobody"
@@ -859,7 +868,7 @@ def claim(issue_number: int, clone: Clone, config: dict, *, run: Run | None = No
         failure = _write_claim(gh, n, clone)
         if failure is not None:
             return Result(FAILED, f"[warn] ownership: the claim on #{n} failed: {failure}")
-        issue = _read(gh, n)
+        issue, _unread = _read(gh, n)
         if issue is None:
             return Result(
                 FAILED,
@@ -951,7 +960,7 @@ def _back_off(
             winner=winner,
             notes=tuple(notes),
         )
-    issue = _read(gh, n)
+    issue, _unread = _read(gh, n)
     if issue is not None:
         notes.extend(_mirror(gh, n, clone, issue, clone.login))
     return Result(
@@ -983,19 +992,20 @@ def guard(
     The owner is read through the seam's fold. An issue no claim holds, or one
     this clone holds, passes. In a project with a topology a claim that does not
     count is no claim, and a claim the fold cannot judge refuses as one that
-    counts (ADR-041 point 5). An issue that cannot be read refuses too, since
-    whose it is cannot be told. A bypass posts its audit comment before the
-    command writes, once however many commands of one act post it, and a dry run
-    posts none. ``flag`` is the command's spelling of the bypass (DEC-046).
+    counts (ADR-041 point 5). An issue that cannot be read, or whose comment log
+    cannot be read whole, refuses as such a claim does, since whose it is cannot
+    be told. A bypass posts its audit comment before the command writes, once
+    however many commands of one act post it, and a dry run posts none. ``flag``
+    is the command's spelling of the bypass (DEC-046).
     Where pkit cannot tell this clone's account, an instance of this clone's
     number may be its own, and the refusal says pkit cannot tell, and why
     (#3162); the audit comment a bypass posts is worded as before."""
     gh = run or _runner(config)
     n = issue_number
-    issue = _read(gh, n)
+    issue, unread = _read(gh, n)
     cannot_tell = ""
     if issue is None:
-        why = f"#{n} could not be read, so whose it is cannot be told"
+        why = f"{unread}, so whose it is cannot be told"
     else:
         assignees = _assignees(issue)
         account = clone.login if clone.login in assignees else (assignees[0] if assignees else None)
@@ -1050,9 +1060,10 @@ def read_owner(
 ) -> ownership.OwnershipResolution | None:
     """The issue's owners, folded by the seam as the clash guard folds them:
     the markers of this clone's account where it is an assignee, else of the
-    first assignee. None where the issue could not be read. Writes nothing."""
+    first assignee. None where the issue, or its whole comment log, could not be
+    read. Writes nothing."""
     gh = run or _runner(config)
-    issue = _read(gh, issue_number)
+    issue, _unread = _read(gh, issue_number)
     if issue is None:
         return None
     assignees = _assignees(issue)
@@ -1095,9 +1106,9 @@ def release(
         why = _reads_only_clause()
         line = "" if clone.quiet else f"[note] ownership: #{n} is not released: {why}."
         return Result(NOT_RELEASED, line)
-    issue = _read(gh, n)
+    issue, unread = _read(gh, n)
     if issue is None:
-        return Result(FAILED, f"[warn] ownership: #{n} could not be read, so it is not released.")
+        return Result(FAILED, f"[warn] ownership: {unread}, so it is not released.")
     assignees = _assignees(issue)
     account = clone.login if clone.login in assignees else (assignees[0] if assignees else None)
     logged = ownership.resolve_owner(
@@ -1130,7 +1141,7 @@ def release(
     released = sorted((set() if kept else set(logged)) | set(labelled))
     notes: list[str] = []
     if clone.substrate == "comment":
-        reread = _read(gh, n)
+        reread, _unread = _read(gh, n)
         if reread is not None:
             notes.extend(_mirror(gh, n, clone, reread, account))
     if failures:
@@ -1174,15 +1185,15 @@ def cannot_release(
     takes no part in instance ownership (``clone`` is None), since such a clone
     touches no marker (DEC-035 point 1). So is a claim on the comment log made
     under another account, since the fold trusts no other author (DEC-043 point
-    3). An issue that cannot be read refuses too, since whose it is cannot be
-    told. ``login`` is the invoker's account, read where ``clone`` is None.
-    Writes nothing."""
+    3). An issue that cannot be read, or whose comment log cannot be read whole,
+    refuses too, since whose it is cannot be told. ``login`` is the invoker's
+    account, read where ``clone`` is None. Writes nothing."""
     gh = run or _runner(config)
     n = issue_number
-    issue = _read(gh, n)
+    issue, unread = _read(gh, n)
     if issue is None:
         return Unreleasable(
-            f"#{n} could not be read, so whose it is cannot be told",
+            f"{unread}, so whose it is cannot be told",
             "run this again once the issue can be read",
         )
     assignees = _assignees(issue)
@@ -1375,16 +1386,27 @@ def _resolve(issue: dict, account: str | None, clone: Clone) -> ownership.Owners
     )
 
 
-def _read(gh: Run, n: int) -> dict | None:
-    """One read of the issue, or None when it failed."""
+def _read(gh: Run, n: int) -> tuple[dict | None, str]:
+    """One read of the issue for a fold, or None and why it failed.
+
+    The assignees, labels and body come in one call, and the comment log
+    through the seam's reader, paged to its end (ADR-041 point 1). The issue's
+    comments are the log's. A log that cannot be read whole fails the read,
+    since a fold of the comments read so far could miss a later claim."""
+    unread = f"#{n} could not be read"
     proc = gh(["gh", "issue", "view", str(n), "--json", VIEW_FIELDS])
     if not _ok(proc):
-        return None
+        return None, unread
     try:
         data = json.loads(getattr(proc, "stdout", "") or "")
     except (TypeError, ValueError):
-        return None
-    return data if isinstance(data, dict) else None
+        return None, unread
+    if not isinstance(data, dict):
+        return None, unread
+    log = ownership.read_log(n, gh)
+    if not log.complete:
+        return None, f"#{n}'s comment log could not be read whole ({log.cause})"
+    return {**data, "comments": list(log.comments)}, ""
 
 
 def _assignees(issue: dict) -> list[str]:
@@ -1399,8 +1421,9 @@ def _labels(issue: dict) -> list[Any]:
     return list(issue.get("labels") or [])
 
 
-def _comments(issue: dict) -> list[dict]:
-    return [c for c in issue.get("comments") or [] if isinstance(c, dict)]
+def _comments(issue: dict) -> list[Any]:
+    """The issue's comment log, as the shared reader read it whole."""
+    return list(issue.get("comments") or [])
 
 
 def _ok(proc: Any) -> bool:

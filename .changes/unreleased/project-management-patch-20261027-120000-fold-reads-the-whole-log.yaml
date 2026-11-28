@@ -1,0 +1,14 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  A claim, a release, the clash guard, the move back from In Progress and
+  `next-task` now read an issue's whole comment log, paged to its end, before
+  they judge whose the issue is (ADR-041 point 1, #2214). Before, each folded
+  the comments one `gh issue view` read returned, which GitHub may cut short,
+  so a claim on a later page of a long log was missed. They read the log
+  through the reader `seats` already uses. A log that cannot be read whole
+  counts as an issue that cannot be read: a claim or a release that reads it
+  first fails before it writes, the clash guard refuses unless a bypass gives a
+  reason, the move back refuses, and `next-task` skips the Task.

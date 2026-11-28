@@ -1,17 +1,22 @@
 """An in-memory GitHub for instance ownership's claims and releases.
 
-`FakeGitHub` answers the `gh` calls `_lib/instance_claims` makes — one read of an
-issue (`gh issue view --json assignees,labels,comments,body`), an event comment,
+`FakeGitHub` answers the `gh` calls `_lib/instance_claims` makes — a read of an
+issue (`gh issue view --json …`), a page of its comment log (`gh api
+repos/{owner}/{repo}/issues/N/comments?per_page=…&page=…`), an event comment,
 a label added or removed, a label created and a body written from a file — over
 issues it holds in memory. Every comment it is handed is authored by `author`,
 as GitHub authors a comment by the account `gh` runs as. No test reaches GitHub.
+A page of the log gives each comment as GitHub's REST answer does, with its id,
+its author's login and its body. With `view_comments`, a read of an issue gives
+only that many comments, as a listing GitHub cuts short.
 
 `on_view` runs before each read of an issue, with the issue's number and how
 many times it was read before: a test posts another clone's claim there to stand
 for a claim made in the same instant. `failing` holds the verbs whose next call
 fails once (`"comment"`, `"add-label"`, `"remove-label"`, `"body"`, `"view"`,
-`"label-create"`). With `labels_must_exist`, adding a label the repository does
-not hold fails, as GitHub refuses it.
+`"page"`, `"label-create"`). With `labels_must_exist`, adding a label the
+repository does not hold fails, as GitHub refuses it. `is_read(argv)` tells a
+read from a write.
 
 `use(module, monkeypatch, fake)` routes a loaded `instance_claims` through the
 fake, and `clone_with(module, monkeypatch, instance)` gives every caller of
@@ -23,12 +28,15 @@ A project with a topology of seats (DEC-059) is stood in for by
 that reading of the topology, as `read_topology` builds it from one run's
 snapshot, and `key` as this clone's key, as its runtime file keeps it, beside
 the name of the seat the reading gives. The stamp that names a seat is the
-audit-log facility's own.
+audit-log facility's own. A seat a reading gives as held names its holder's
+take of it (ADR-041 point 7): `EARLIEST_TAKE` is a take made before every
+comment the fakes post, so a claim a test posts comes after it.
 """
 
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -37,7 +45,18 @@ from typing import Any
 
 import pytest
 
-from tests.pm_state_issue_fakes import COMMENT_IDS
+from tests.pm_state_issue_fakes import COMMENT_IDS, FIRST_COMMENT_ID
+
+#: A seat's take made before every comment the fakes post.
+EARLIEST_TAKE = FIRST_COMMENT_ID - 1
+
+_PAGE = re.compile(r"repos/\{owner\}/\{repo\}/issues/(\d+)/comments\?per_page=(\d+)&page=(\d+)")
+_COMMENT_URL = re.compile(r"#issuecomment-(\d+)$")
+
+
+def is_read(argv: list[str]) -> bool:
+    """Whether a `gh` call only reads: a read of an issue or a page of its log."""
+    return argv[1:3] == ["issue", "view"] or argv[1:2] == ["api"]
 
 
 @dataclass
@@ -58,6 +77,7 @@ class FakeGitHub:
     calls: list[list[str]] = field(default_factory=list)
     on_view: Callable[[int, int], None] | None = None
     views: dict[int, int] = field(default_factory=dict)
+    view_comments: int | None = None
 
     def add(
         self,
@@ -91,11 +111,13 @@ class FakeGitHub:
 
     def writes(self) -> list[list[str]]:
         """Every call that changed something: all but the reads."""
-        return [argv for argv in self.calls if argv[1:3] != ["issue", "view"]]
+        return [argv for argv in self.calls if not is_read(argv)]
 
     def __call__(self, argv: list[str]) -> subprocess.CompletedProcess[str]:
         argv = [str(a) for a in argv]
         self.calls.append(argv)
+        if argv[1] == "api":
+            return self._page(argv)
         if argv[1:3] == ["label", "create"]:
             if self._fails("label-create"):
                 return _done(argv, 1, stderr="HTTP 403: Must have admin rights")
@@ -114,7 +136,7 @@ class FakeGitHub:
             record = {
                 "assignees": [{"login": a} for a in issue.assignees],
                 "labels": [{"name": n} for n in issue.labels],
-                "comments": list(issue.comments),
+                "comments": list(issue.comments)[: self.view_comments],
                 "body": issue.body,
             }
             fields = argv[argv.index("--json") + 1].split(",")
@@ -127,6 +149,28 @@ class FakeGitHub:
         if verb == "edit":
             return self._edit(argv, issue)
         raise AssertionError(f"unexpected gh call: {argv}")
+
+    def _page(self, argv: list[str]) -> subprocess.CompletedProcess[str]:
+        """A page of the issue's comment log, each comment as GitHub's REST
+        answer gives it: its id, its author's login, its creation and its body."""
+        page = _PAGE.fullmatch(argv[2])
+        assert page is not None, f"unexpected gh api call: {argv}"
+        number, size, index = (int(g) for g in page.groups())
+        if self._fails("page"):
+            return _done(argv, 1, stderr="HTTP 502: Bad Gateway")
+        rows = []
+        for comment in self.issues[number].comments[(index - 1) * size : index * size]:
+            cid = _COMMENT_URL.search(comment["url"])
+            assert cid is not None
+            rows.append(
+                {
+                    "id": int(cid.group(1)),
+                    "user": comment["author"],
+                    "created_at": "2026-10-27T00:00:00Z",
+                    "body": comment["body"],
+                }
+            )
+        return _done(argv, stdout=json.dumps(rows))
 
     def _edit(self, argv: list[str], issue: FakeIssue) -> subprocess.CompletedProcess[str]:
         if "--add-label" in argv:

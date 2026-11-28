@@ -340,12 +340,27 @@ def test_selector_reads_own_schema_home(io) -> None:
 # ---- a project with a topology of seats (ADR-041 point 7) -----------------
 
 
+#: The take of each seat `_holders` gives as held, and the id GitHub gives a
+#: seat's comment by default, after that take.
+_TAKE = 100
+_AFTER_THE_TAKE = _TAKE + 1
+
+
 def _seat_comment(
-    io, *, event, instance, seat, key, author="alice", to=None, created=None, cid=None
+    io,
+    *,
+    event,
+    instance,
+    seat,
+    key,
+    author="alice",
+    to=None,
+    created=None,
+    cid=_AFTER_THE_TAKE,
 ):
     """A claim or a handoff that names `seat`, the seat's number and the clone's
     `key`, through the audit-log facility's stamp. `cid` is the id GitHub gave
-    the comment, in its `url`, as `gh issue view` gives it."""
+    the comment, in its `url`, as `gh issue view` gives it, or None for none."""
     number = to if event == "handoff" else instance
     body = io.format_event_comment(
         event=event, instance=instance, to=to, seat=seat, seat_number=number, clone=key
@@ -359,13 +374,14 @@ def _seat_comment(
 
 
 def _holders(io, **seats):
-    """Each seat's holder: a key held by `alice`, `free` or `unread`."""
+    """Each seat's holder: a key held by `alice` since the take `_TAKE`, `free`
+    or `unread`."""
     out = {}
     for seat, value in seats.items():
         if value in ("free", "unread"):
             out[seat.replace("_", "-")] = io.Holder(value)
         else:
-            out[seat.replace("_", "-")] = io.Holder(io.SEAT_HELD, "alice", value)
+            out[seat.replace("_", "-")] = io.Holder(io.SEAT_HELD, "alice", value, _TAKE)
     return out
 
 
@@ -418,7 +434,7 @@ def test_a_claim_is_judged_against_its_seats_holder(io, holder, verdict, reason)
 
 def test_a_holder_under_another_account_does_not_hold_the_claim(io) -> None:
     comments = [_seat_comment(io, event="claim", instance=1, seat="w-1", key="k1")]
-    holders = {"w-1": io.Holder(io.SEAT_HELD, "bob", "k1")}
+    holders = {"w-1": io.Holder(io.SEAT_HELD, "bob", "k1", _TAKE)}
     res = io.resolve_owner(comments=comments, labels=[], assignee_login="alice", holders=holders)
     assert res.judgement(1).verdict == io.VOID
 
@@ -455,7 +471,9 @@ def test_under_a_topology_the_log_folds_in_githubs_order(io) -> None:
 def test_a_handoff_to_a_seat_counts_for_the_target(io) -> None:
     comments = [
         _seat_comment(io, event="claim", instance=1, seat="w-1", key="k1"),
-        _seat_comment(io, event="handoff", instance=1, seat="w-2", key="k2", to=2),
+        _seat_comment(
+            io, event="handoff", instance=1, seat="w-2", key="k2", to=2, cid=_AFTER_THE_TAKE + 1
+        ),
     ]
     holders = _holders(io, w_1="k1", w_2="k2")
     res = io.resolve_owner(comments=comments, labels=[], assignee_login="alice", holders=holders)
@@ -483,7 +501,7 @@ def test_a_comments_id_comes_from_the_log_or_from_its_url(io) -> None:
 @pytest.mark.parametrize(
     ("cid", "verdict", "reason"),
     [
-        pytest.param(9, "void", "its seat was released after it was made", id="before-the-take"),
+        pytest.param(9, "void", "it was made before its seat's current take", id="before-the-take"),
         pytest.param(11, "counts", None, id="after-the-take"),
         pytest.param(None, "unjudged", "its comment's id could not be read", id="no-id"),
     ],
@@ -491,9 +509,10 @@ def test_a_comments_id_comes_from_the_log_or_from_its_url(io) -> None:
 def test_a_claim_counts_only_where_it_came_after_its_clones_take_of_its_seat(
     io, cid, verdict, reason
 ) -> None:
-    """DEC-059 point 5: a seat's release frees its clone's claims for good, so
-    the same clone, taking the seat again, revives none of them (#2182). The
-    claim's comment and the take's are ordered by the ids GitHub gave them."""
+    """DEC-059 point 5: a seat's release frees its clone's claims, so the same
+    clone, taking the seat again, revives none of them (#2182). The claim's
+    comment and the take's are ordered by the ids GitHub gave them, whatever
+    moved the take (ADR-041 point 7)."""
     comments = [_seat_comment(io, event="claim", instance=1, seat="w-1", key="k1", cid=cid)]
     holders = {"w-1": io.Holder(io.SEAT_HELD, "alice", "k1", take=10)}
     res = io.resolve_owner(comments=comments, labels=[], assignee_login="alice", holders=holders)
@@ -502,6 +521,30 @@ def test_a_claim_counts_only_where_it_came_after_its_clones_take_of_its_seat(
     assert (judged.verdict, judged.reason) == (verdict, reason)
     assert res.owners == (frozenset({1}) if verdict == "counts" else frozenset())
     assert res.claimants == (frozenset() if verdict == "void" else frozenset({1}))
+
+
+@pytest.mark.parametrize(
+    ("key", "verdict", "reason"),
+    [
+        pytest.param("k1", "unjudged", "its seat's holder could not be read", id="its-clone"),
+        pytest.param("k9", "void", "its clone no longer holds its seat", id="another-clone"),
+    ],
+)
+def test_a_seat_held_with_no_take_named_judges_no_claim_of_its_clone(
+    io, key, verdict, reason
+) -> None:
+    """A holder carries its take of the seat (ADR-041 point 7), so a seat held
+    with none named was not read whole: its clone's claim is unjudged, never
+    counted on the clone alone. Another clone's claim is void by the clone the
+    holder names."""
+    comments = [_seat_comment(io, event="claim", instance=1, seat="w-1", key="k1")]
+    holders = {"w-1": io.Holder(io.SEAT_HELD, "alice", key)}
+    res = io.resolve_owner(comments=comments, labels=[], assignee_login="alice", holders=holders)
+    judged = res.judgement(1)
+    assert judged is not None
+    assert (judged.verdict, judged.reason) == (verdict, reason)
+    assert res.owners == frozenset()
+    assert res.claimants == (frozenset({1}) if verdict == "unjudged" else frozenset())
 
 
 def test_a_handoff_made_before_its_targets_take_does_not_count(io) -> None:

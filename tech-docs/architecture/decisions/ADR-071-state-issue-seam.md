@@ -172,8 +172,9 @@ Two writes at once can leave the region showing a state one event old, until the
 - **#2139** builds the one read of issues, and the single issue's read and the board's read beside it, each calling the marker's function (point 6). The function lands with #2138 first, or with #2139 if #2139 lands first.
 - **#2140 and #2141** build the module that reads the topology and each run's inputs, and the seam's first callers: the command that creates the seats' state issues, and the commands that take, release and list seats.
 - **ADR-041** holds the ownership seam's share: its point 3 makes the audit-log facility's builder build both seams' events, and its point 7 has the ownership fold take its inputs from its caller.
-- **The project-management README** describes state issues when #2138 lands, as #2138's Doc impact says. It tells a person two things no code enforces:
+- **The project-management README** describes state issues when #2138 lands, as #2138's Doc impact says. It tells a person three things no code enforces:
   - after an account loses its access or is deleted, check the listing of seats, and release by force each seat whose holder changed (point 4)
+  - where a seat's take moves with no release, release that seat by force (ADR-041 point 7)
   - a Task that a board's automation moves back to In Progress may lapse at once (ADR-041 point 7)
 - **Acceptance.** This record is accepted before #2138 and #2139 build on it. Its acceptance also confirms two readings of accepted records that point 5 makes:
   - one DEC-044 machine stamp inside DEC-052's frame, each event type a kind of DEC-052's roster
