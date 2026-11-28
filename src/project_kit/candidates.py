@@ -24,6 +24,9 @@ ways off PRJ-016 point 4 sets (`ways_off`):
 - **No move off it.** An upgrade or a raise of the pin refuses to move a project
   whose manifest records a candidate (`recorded_candidate`) to any release but
   that candidate (`refuse_move_off`; ADR-092 point 7).
+- **A later candidate is named.** `pkit upgrade --pre` there targets the
+  candidate it records, and names a later candidate published, with the ways off
+  that lead to it (`later_candidate`).
 - **No entry from above its base.** A candidate's own upgrade refuses a window
   that starts above the versions its cut was made from, which its own package
   records (`refuse_above_base`; ADR-092 point 9).
@@ -204,6 +207,20 @@ def ways_off(candidate: str) -> list[str]:
         "point 4).",
         f"A project that {candidate}'s `pkit init` installed has no such branch: install it "
         "again with a final release's `pkit init`.",
+    ]
+
+
+def later_candidate(candidate: str, later: str) -> list[str]:
+    """What `pkit upgrade --pre` says in a project on *candidate* where *later*, a
+    later release candidate, is published: that it moves the project to no release
+    but *candidate*, and the ways off, which lead to *later*, as a refusal of a move
+    to *later* names them (ADR-092 point 7; `ways_off`)."""
+    return [
+        f"A later release candidate is published: {later}. `pkit upgrade --pre` moves this "
+        f"project to no release but {candidate}, the candidate its manifest records, since a "
+        "project on a candidate moves to no other release, candidate or final (ADR-092 "
+        "point 7).",
+        *ways_off(candidate),
     ]
 
 

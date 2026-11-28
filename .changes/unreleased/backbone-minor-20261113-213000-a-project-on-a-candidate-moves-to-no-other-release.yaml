@@ -9,11 +9,11 @@ body: >
   move such a project to any release but that candidate, final or candidate,
   and names the ways off: leave the testers' branch for one at the final
   release the project stood at, or install again with a final release's
-  `pkit init`. `pkit upgrade --pre` there targets the recorded candidate, with
-  no lookup, so it only finishes a move to it cut short, and the message of a
-  pkit older than such a move, from `sync` or `upgrade`, names `pkit upgrade
-  --pre`. `pkit unpin` refuses, and writes nothing, in a project on a
-  candidate. A candidate's own upgrade refuses, last of its checks, where the
+  `pkit init`. `pkit upgrade --pre` there targets the recorded candidate,
+  whatever the release source lists, so it only finishes a move to it cut
+  short, and the message of a pkit older than such a move, from `sync` or
+  `upgrade`, names `pkit upgrade --pre`. `pkit unpin` refuses, and writes
+  nothing, in a project on a candidate. A candidate's own upgrade refuses, last of its checks, where the
   migrations it would run for the backbone or a component start above the
   versions it was cut from, naming entry from a final release at or below
   them, or the next candidate (ADR-092 point 9). The CLI reference and the

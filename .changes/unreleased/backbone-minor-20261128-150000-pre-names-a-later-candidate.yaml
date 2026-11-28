@@ -1,0 +1,15 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  In a project whose manifest records a release candidate, `pkit upgrade --pre`
+  names the newest candidate published where it is later than the one the
+  project records, a withdrawn candidate passed by, and says how to enter it:
+  the ways off that the refusal of a move to another candidate names (ADR-092
+  point 7; PRJ-016 point 4). It printed only that the project was at its
+  candidate, so the person read that no later one existed. `--pre` still
+  targets the recorded candidate and moves the project to no other release. To
+  find a later candidate it reads the release source's tags, as `--pre` does
+  elsewhere, and where none is later, or the tags cannot be read, as with no
+  network, its output is as before. Naming one writes nothing.

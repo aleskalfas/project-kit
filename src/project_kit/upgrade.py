@@ -69,6 +69,7 @@ from packaging.version import InvalidVersion, Version
 
 from project_kit.candidates import (
     is_candidate,
+    later_candidate,
     normal_form,
     recorded_candidate,
     refuse_above_base,
@@ -179,7 +180,8 @@ def run_upgrade(
     running pkit's own candidate through upgrade's guard (point 7). In a project
     whose manifest records a candidate, *pre* targets that candidate, so it only
     finishes a move to it cut short, and no upgrade moves the project to any
-    other release (ADR-092 point 7).
+    other release (ADR-092 point 7). *pre* there names a later candidate
+    published, with the ways off that lead to it.
 
     **Pins by default** (ADR-064): an **un-pinned** project is pinned at the
     version its content just synced to, so pinning is the norm and a project
@@ -1492,11 +1494,13 @@ def _auto_advance_pinned(
     under *pre* the newest release, candidates included, which then takes the
     latest's place (ADR-089 point 8). Under *pre* in a project whose manifest,
     *recorded*, records a release candidate, that candidate takes the latest's
-    place instead, with no lookup (ADR-092 point 7).
+    place instead, whatever the source lists (ADR-092 point 7).
 
     It first refuses to move a project on a candidate to any release but that
     candidate (`refuse_move_off`): the release it would hand over to, or else
-    its own pin. It then checks three cases, in this order:
+    its own pin. Under *pre* on a candidate it then names a later candidate
+    published (`_name_a_later_candidate`). It then checks three cases, in this
+    order:
 
     1. **A newer latest release that resolves:** it hands over to the latest
        through the router's bypass, and returns True. The latest's upgrade runs
@@ -1545,6 +1549,9 @@ def _auto_advance_pinned(
         refuse_move_off(recorded, str(newer))
     else:
         _refuse_its_own_move_off(recorded, current_pin)
+
+    if pre and candidate is not None:
+        _name_a_later_candidate(candidate)
 
     if latest is None:
         click.secho(
@@ -1614,10 +1621,12 @@ def _hand_over_under_pre(
     no candidate, has already run.
 
     In a project whose manifest records a release *candidate*, `--pre` targets
-    that candidate, with no lookup: it hands over to it unless it is the running
-    pkit, so it only finishes a move to it cut short (ADR-092 point 7).
+    that candidate, whatever the source lists: it hands over to it unless it is
+    the running pkit, so it only finishes a move to it cut short (ADR-092 point
+    7). It first names a later candidate published (`_name_a_later_candidate`).
     """
     if candidate is not None:
+        _name_a_later_candidate(candidate)
         if _same_version(candidate, running_version()):
             return False
         refuse_no_pin(candidate, pin=pin)
@@ -1649,6 +1658,21 @@ def _hand_over_under_pre(
         target_root, current_pin, str(newest), _NEWEST_UNDER_PRE, dry_run=dry_run, force=force
     )
     return True
+
+
+def _name_a_later_candidate(candidate: str) -> None:
+    """Under `pkit upgrade --pre` in a project whose manifest records the release
+    *candidate*, name the newest candidate published where it is later, with the
+    ways off that lead to it (`candidates.later_candidate`). `--pre` targets
+    *candidate* still (ADR-092 point 7), so this moves nothing and writes nothing.
+    Where no later candidate is published, or the lookup fails, it prints nothing,
+    and the run's output is what it was before the lookup."""
+    newest = _newest_candidate()
+    recorded = public_version(candidate)
+    if newest is None or recorded is None or newest <= recorded:
+        return
+    for line in later_candidate(candidate, str(newest)):
+        click.echo(line)
 
 
 def _hand_over(
@@ -2005,6 +2029,20 @@ def _newest_release_or_candidate() -> Version | None:
     return _newest_tagged_version(candidates=True)
 
 
+def _newest_candidate() -> Version | None:
+    """The highest release candidate tag, a withdrawn one passed by, from the source
+    `latest_released_version` reads, with the same failures, or None where no tag
+    names one: the lookup by which `pkit upgrade --pre` names a later candidate in
+    a project on a candidate (ADR-092 points 4 and 7)."""
+    listing = _distribution_tags()
+    if listing is None:
+        return None
+    published = [
+        version for version in _tagged_versions(listing, candidates=True) if version.is_prerelease
+    ]
+    return max(published, default=None)
+
+
 def _newest_tagged_version(*, candidates: bool) -> Version | None:
     """The highest version the distribution source's tags name, release candidates
     among them only where *candidates* is set, or None on any failure of the
@@ -2081,6 +2119,14 @@ def _max_released_tag(ls_remote_output: str, *, candidates: bool = False) -> Ver
     (`_withdrawn_candidates`; ADR-092 point 4). Any other pre-release or dev
     release is skipped still.
     """
+    versions = _tagged_versions(ls_remote_output, candidates=candidates)
+    return max(versions) if versions else None
+
+
+def _tagged_versions(ls_remote_output: str, *, candidates: bool) -> list[Version]:
+    """Each version a tag in `git ls-remote --tags` output names, as
+    `_max_released_tag` reads the tags: a release version, and, where *candidates*
+    is set, a release candidate no withdrawal tag names."""
     withdrawn: set[str] = _withdrawn_candidates(ls_remote_output) if candidates else set()
     versions: list[Version] = []
     for ref in _listed_tag_refs(ls_remote_output):
@@ -2091,7 +2137,7 @@ def _max_released_tag(ls_remote_output: str, *, candidates: bool = False) -> Ver
             candidates and is_candidate(version) and version not in withdrawn
         ):
             versions.append(Version(version))
-    return max(versions) if versions else None
+    return versions
 
 
 def _resolve_compatibility(
