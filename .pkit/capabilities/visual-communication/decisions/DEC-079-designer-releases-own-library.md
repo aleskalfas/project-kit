@@ -1,7 +1,7 @@
 ---
 id: DEC-079
 title: The designer releases the project's own library, and no release hides a piece's failure
-status: proposed
+status: accepted
 date: 2026-11-28
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
