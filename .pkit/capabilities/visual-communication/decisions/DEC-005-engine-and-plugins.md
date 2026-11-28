@@ -56,7 +56,7 @@ A *formula* computes one number in a component's data.
 ### 4. The engine measures text from committed fonts, and breaks its lines
 
 - **Measured from the brand's fonts** (refinement per [visual-communication:DEC-012-text-runs]). A run of a text is a span in one style. The engine shapes it in pieces of one font each, split where the next family of its typography role measures a character the first lacks. It shapes each piece with an established shaping library, HarfBuzz, from the committed font file, and reads font metrics with an established font library. Where a font profile gives a table of widths or an estimate, it measures by that. The record of brands and notations decides fonts, font profiles and what a missing font does ([visual-communication:DEC-004-brands-and-notations] points 2 and 9).
-- **Lines broken by the engine.** It breaks text into lines by Unicode's rules and each language's own rules, kept as data in the engine. So a new language's rules arrive with a release of the capability. In Czech, for example, a one-letter word never ends a line. The engine breaks a paragraph across its runs, each measured in its own typography role (refinement per [visual-communication:DEC-012-text-runs]).
+- **Lines broken by the engine.** It breaks text into lines by Unicode's rules and each language's own rules, kept as data in the engine. So a new language's rules arrive with a release of the capability. A word a language's rules keep off a line's end never ends a line the engine breaks. A line feed in a text ends a paragraph, and the engine carries no word across it (refinement per [visual-communication:DEC-075-paragraph-ends-on-kept-word] point 3). The engine breaks a paragraph across its runs, each measured in its own typography role (refinement per [visual-communication:DEC-012-text-runs]).
 - **A margin keeps lines stable.** The engine breaks against the planned width minus a small margin, and places the text in the planned width. So a renderer's slightly different metrics move no word, and centred text stays centred.
 - **Text never shrinks to fit.** A word longer than its line breaks after a slash, or is marked as overflowing. There is no hyphenation and no justified text at first.
 - **A renderer draws the lines as given.** A medium that wraps text itself, and whose edits come back as plain text, may wrap within the measured width, as a declared choice (the founding record, [visual-communication:DEC-001-visual-communication-discipline] point 2).
@@ -149,7 +149,7 @@ Each finding below fails validation where it lies in a file the project can corr
   - a page inside a page, or a mode a piece names that its brand lacks
   - a text that overflows its box, or a component that gets less than it asks for, measured from a font file
   - a text drawn smaller than the smallest size the piece's top declares for a medium that, as the piece names it, shows the key the text is drawn at (refinement per [visual-communication:DEC-055-smallest-text-size] points 4 and 6)
-- **Asks for attention, never failing:** an overflow measured from a table or by an estimate, and a loss nobody has accepted.
+- **Asks for attention, never failing:** an overflow measured from a table or by an estimate, a loss nobody has accepted, and a paragraph that a line feed written in the text ends on a word its language's rules keep off a line's end, where the text goes on after the line feed (refinement per [visual-communication:DEC-075-paragraph-ends-on-kept-word] points 1 and 2).
 
 ## Rationale
 
