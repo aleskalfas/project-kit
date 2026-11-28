@@ -10,9 +10,10 @@ from pathlib import Path
 import click
 import pytest
 from click.testing import CliRunner
+from packaging.version import Version
 
 from project_kit import data_points as dp
-from project_kit import install
+from project_kit import install, router, upgrade
 from project_kit import status as status_module
 from project_kit.cli import main, status
 from project_kit.manifest import (
@@ -38,6 +39,18 @@ def personal_skills(
     folder = tmp_path_factory.mktemp("home") / ".claude" / "skills"
     monkeypatch.setattr(status_module, "_personal_skills_folder", lambda: folder)
     return folder
+
+
+@pytest.fixture(autouse=True)
+def no_release_lookup(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Status looks up the latest release for no project but a pinned one that matches
+    its pin. A test of that line answers the lookup itself (`_latest_release`); in every
+    other test a lookup fails the test, so none reaches the network."""
+
+    def lookup() -> Version | None:
+        raise AssertionError("status looked up the latest release")
+
+    monkeypatch.setattr(upgrade, "latest_released_version", lookup)
 
 
 @pytest.fixture
@@ -482,12 +495,18 @@ def test_status_counts_flat_form_skills_in_source(installed_target: Path) -> Non
     assert int(match.group(1)) >= 1, "expected at least one core skill in inventory"
 
 
+def _backbone_line(output: str) -> str:
+    """The backbone line of status's report."""
+    (line,) = [line for line in output.splitlines() if line.startswith("  Backbone version:")]
+    return line
+
+
 def test_status_reports_backbone_version_up_to_date(installed_target: Path) -> None:
-    """Fresh install stamps the manifest with the current source version → up to date."""
+    """Fresh install stamps the manifest with the current source version → up to date.
+    The project has no pin, so the line says no more, and no release is looked up."""
     result = CliRunner().invoke(status, [])
     assert result.exit_code == 0, result.output
-    assert "Backbone version:" in result.output
-    assert "up to date" in result.output
+    assert _backbone_line(result.output).endswith("   (up to date)")
 
 
 def test_status_reports_backbone_version_when_behind(installed_target: Path) -> None:
@@ -604,6 +623,149 @@ def test_status_shows_no_transition_line_in_the_methodology_source(
     result = CliRunner().invoke(status, [])
     assert result.exit_code == 0, result.output
     assert "Transition:" not in result.output
+
+
+# --- the backbone line under a pin (#3556) ------------------------------------------
+# The router runs a pinned project under its pin's release, so the record equals the
+# running pkit's release whatever has been released since.
+
+PREVIEW = "run `pkit upgrade --dry-run` to preview"
+
+
+def _pin_at_the_record(root: Path) -> str:
+    """Pin the project at the version its manifest records, and return that version."""
+    manifest = read_backbone_manifest(root)
+    assert manifest is not None
+    router.write_version_pin(root, manifest.backbone_version)
+    return manifest.backbone_version
+
+
+def _latest_release(monkeypatch: pytest.MonkeyPatch, version: str | None) -> None:
+    """Answer status's lookup of the latest release with *version*, or with none, as a
+    lookup that fails answers."""
+    found = Version(version) if version is not None else None
+    monkeypatch.setattr(upgrade, "latest_released_version", lambda: found)
+
+
+@pytest.mark.parametrize("older", [None, "0.0.1"], ids=["the latest release", "ahead of it"])
+def test_status_says_a_pinned_project_is_up_to_date_once_it_read_no_newer_release(
+    installed_target: Path, monkeypatch: pytest.MonkeyPatch, older: str | None
+) -> None:
+    """The pin is the latest release, or ahead of it: the project matches its pin, and
+    is up to date by the release the lookup found."""
+    pin = _pin_at_the_record(installed_target)
+    latest = older or pin
+    _latest_release(monkeypatch, latest)
+
+    result = CliRunner().invoke(status, [])
+
+    assert result.exit_code == 0, result.output
+    assert _backbone_line(result.output) == (
+        f"  Backbone version:      {pin}   "
+        f"(matches its pin; up to date: the latest release is v{latest})"
+    )
+
+
+def test_status_names_a_newer_release_and_says_the_pin_is_behind_it(
+    installed_target: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    pin = _pin_at_the_record(installed_target)
+    _latest_release(monkeypatch, "999.0.0")
+
+    result = CliRunner().invoke(status, [])
+
+    assert result.exit_code == 0, result.output
+    line = _backbone_line(result.output)
+    assert line == (
+        f"  Backbone version:      {pin}   "
+        f"(matches its pin; the pin is behind the latest release, v999.0.0 — {PREVIEW})"
+    )
+    assert "up to date" not in line
+
+
+def test_status_says_it_did_not_check_where_the_lookup_fails(
+    installed_target: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Offline, say: the line says so, and claims neither of the two."""
+    pin = _pin_at_the_record(installed_target)
+    _latest_release(monkeypatch, None)
+
+    result = CliRunner().invoke(status, [])
+
+    assert result.exit_code == 0, result.output
+    line = _backbone_line(result.output)
+    assert line == (
+        f"  Backbone version:      {pin}   (matches its pin; did not check for a newer "
+        "release: the release source could not be read)"
+    )
+    assert "up to date" not in line
+    assert "behind" not in line
+
+
+@pytest.mark.parametrize("pin", ["0.0.1", "main"], ids=["another release", "no version"])
+def test_status_names_a_pin_the_record_differs_from_and_looks_up_no_release(
+    installed_target: Path, pin: str
+) -> None:
+    """Run by a pkit that is not the pin, as under the router's fallback, the record is
+    that pkit's release and not the pin. No release is looked up, so the line names the
+    pin and does not say "up to date"."""
+    router.write_version_pin(installed_target, pin)
+
+    result = CliRunner().invoke(status, [])
+
+    assert result.exit_code == 0, result.output
+    line = _backbone_line(result.output)
+    assert line.endswith(f"   (differs from its pin, {pin} — {PREVIEW})")
+    assert "up to date" not in line
+
+
+def test_a_pinned_projects_record_is_compared_with_the_running_pkit_first(
+    installed_target: Path,
+) -> None:
+    """A record that is not the running pkit's release reads under a pin as without
+    one, and no release is looked up."""
+    pin = _pin_at_the_record(installed_target)
+    manifest = installed_target / ".pkit" / "manifest.yaml"
+    manifest.write_text(
+        re.sub(r"backbone_version:.*", "backbone_version: 0.1.0", manifest.read_text()),
+        encoding="utf-8",
+    )
+
+    result = CliRunner().invoke(status, [])
+
+    assert result.exit_code == 0, result.output
+    assert _backbone_line(result.output) == (
+        f"  Backbone version:      0.1.0   (source {pin} — {PREVIEW})"
+    )
+
+
+def test_a_pinned_projects_incomplete_transition_is_said_before_its_pin(
+    installed_target: Path,
+) -> None:
+    _pin_at_the_record(installed_target)
+    manifest = installed_target / ".pkit" / "manifest.yaml"
+    manifest.write_text(
+        re.sub(r"(?m)^completed_version:.*\n", "", manifest.read_text()), encoding="utf-8"
+    )
+
+    result = CliRunner().invoke(status, [])
+
+    assert result.exit_code == 0, result.output
+    assert _backbone_line(result.output).endswith("   (the target of an incomplete transition)")
+
+
+def test_status_reads_no_pin_in_the_methodology_source(
+    installed_target: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The router runs a source checkout's own code before any pin (ADR-039), so a pin
+    file there changes nothing the line says."""
+    _pin_at_the_record(installed_target)
+    monkeypatch.setattr(install, "is_self_host", lambda *_args: True)
+
+    result = CliRunner().invoke(status, [])
+
+    assert result.exit_code == 0, result.output
+    assert _backbone_line(result.output).endswith("   (up to date)")
 
 
 # --- capabilities: the signs of a copy and of its source (COR-031, COR-041) ---------

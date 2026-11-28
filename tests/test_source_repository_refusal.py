@@ -41,7 +41,7 @@ _SENTINEL_TEXT = "edited in the source repository\n"
 @pytest.fixture(autouse=True)
 def _no_release_lookup(monkeypatch: pytest.MonkeyPatch) -> None:
     """Keep upgrade's tool step off the network should a refusal ever regress."""
-    monkeypatch.setattr(upgrade, "_latest_released_version", lambda: None)
+    monkeypatch.setattr(upgrade, "latest_released_version", lambda: None)
 
 
 @pytest.fixture

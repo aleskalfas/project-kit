@@ -100,10 +100,14 @@ def _report_backbone_version(target_root: Path, source_kit: Path) -> None:
     """Installed backbone version (from the manifest) vs. what the source ships.
 
     The at-a-glance "am I current?" line — pairs with `pkit version` (source)
-    and points at `pkit upgrade --dry-run` for the full delta when behind.
+    and points at `pkit upgrade --dry-run` for the full delta when behind. Under
+    a pin the source is the pin's own release, so a record equal to it says only
+    that the project matches its pin: the line then reads as `_pinned_gloss`
+    gives it (#3556).
     """
     from project_kit.install import is_self_host
     from project_kit.migrations import public_version
+    from project_kit.router import read_version_pin
 
     manifest = read_backbone_manifest(target_root)
     installed = manifest.backbone_version if manifest else ""
@@ -126,16 +130,57 @@ def _report_backbone_version(target_root: Path, source_kit: Path) -> None:
         return
     # No transition runs in the methodology's source repository (ADR-065 point 3).
     transitions = not is_self_host(target_root, source_kit)
+    # Nor is a pin read there: the router runs the checkout's own code before any pin
+    # (ADR-039).
+    pin = read_version_pin(target_root) if transitions else None
     # Compared as public versions, as a transition compares them (ADR-089 point 5).
     if source_version and public_version(installed) != public_version(source_version):
         gloss = f"source {source_version} — run `pkit upgrade --dry-run` to preview"
     elif transitions and manifest.transition_incomplete:
         gloss = "the target of an incomplete transition"
+    elif pin is not None:
+        gloss = _pinned_gloss(installed, pin)
     else:
         gloss = "up to date"
     click.echo(f"  {'Backbone version:':<22} {installed}   ({gloss})")
     if transitions and source_version:
         _report_transition_state(target_root, source_kit, manifest, source_version)
+
+
+def _pinned_gloss(installed: str, pin: str) -> str:
+    """The backbone line's gloss in a pinned project whose record, *installed*,
+    is the running pkit's release, its transition complete (#3556).
+
+    The router runs a pinned project under its pin's release, so the record
+    equals that release whatever has been released since. The gloss therefore
+    says that the project matches its pin, and then how the pin stands against
+    the latest release, looked up as `pkit upgrade` looks it up (ADR-063 point
+    1): behind it, with the release named, or up to date, which it says only
+    once the lookup found no newer release. Where the lookup fails, it says
+    that it did not check, and claims neither.
+
+    Where the record is not the pin, neither is the running pkit, as under the
+    router's fallback or its bypass. The gloss then names the pin, and looks
+    nothing up.
+    """
+    from project_kit.migrations import public_version
+    from project_kit.upgrade import latest_released_version
+
+    pinned = public_version(pin)
+    if pinned is None or pinned != public_version(installed):
+        return f"differs from its pin, {pin} — run `pkit upgrade --dry-run` to preview"
+    latest = latest_released_version()
+    if latest is None:
+        return (
+            "matches its pin; did not check for a newer release: the release source "
+            "could not be read"
+        )
+    if latest > pinned:
+        return (
+            f"matches its pin; the pin is behind the latest release, v{latest} — "
+            "run `pkit upgrade --dry-run` to preview"
+        )
+    return f"matches its pin; up to date: the latest release is v{latest}"
 
 
 def _report_transition_state(

@@ -513,7 +513,7 @@ def transition(repo: AdopterRepo, monkeypatch: pytest.MonkeyPatch) -> Path:
     assert backbone is not None
     backbone.backbone_version = "0.1.0"
     write_backbone_manifest(repo.root, backbone)
-    monkeypatch.setattr(upgrade, "_latest_released_version", lambda: None)
+    monkeypatch.setattr(upgrade, "latest_released_version", lambda: None)
     return repo.root
 
 
@@ -567,7 +567,7 @@ def test_a_project_already_current_asks_nothing(
     repo: AdopterRepo, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     _stage(repo, "defs", defines={GRANTS: QUESTION})
-    monkeypatch.setattr(upgrade, "_latest_released_version", lambda: None)
+    monkeypatch.setattr(upgrade, "latest_released_version", lambda: None)
 
     upgrade.run_upgrade(repo.root, pin=False)
 

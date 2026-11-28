@@ -440,7 +440,7 @@ def _sync_and_upgrade(
     older = text.replace(f"version: {_shipped_version()}\n", "version: 0.0.1\n")
     assert older != text
     record.write_text(older, encoding="utf-8")
-    monkeypatch.setattr(upgrade, "_latest_released_version", lambda: None)
+    monkeypatch.setattr(upgrade, "latest_released_version", lambda: None)
     capsys.readouterr()
     upgrade.run_upgrade(root, pin=False, self_update=False)
     assert f"capability 'visual-communication': 0.0.1 -> {_shipped_version()}" in (

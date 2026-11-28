@@ -436,7 +436,7 @@ def test_cli_upgrade_no_pin_flag_forwards(monkeypatch: pytest.MonkeyPatch) -> No
 
 def _stale(monkeypatch: pytest.MonkeyPatch, running: str = "0.1.0", latest: str = "9.9.9") -> None:
     monkeypatch.setattr(upgrade, "running_version", lambda: running)
-    monkeypatch.setattr(upgrade, "_latest_released_version", lambda: Version(latest))
+    monkeypatch.setattr(upgrade, "latest_released_version", lambda: Version(latest))
 
 
 def test_self_update_acts_when_stale_and_allowed(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -1500,7 +1500,7 @@ def test_the_release_lookup_asks_the_https_url_with_the_terminal_prompt_off(
     stub_ls_remote.ls_remote_returncode = 0
     stub_ls_remote.ls_remote_stdout = _tag_output("2.5.0")
 
-    assert upgrade._latest_released_version() == Version("2.5.0")
+    assert upgrade.latest_released_version() == Version("2.5.0")
 
     assert stub_ls_remote.ls_remote_calls == [
         ["git", "ls-remote", "--tags", "https://github.com/aleskalfas/project-kit.git"]
@@ -1781,7 +1781,7 @@ def test_upgrade_pinned_child_auto_advances_to_latest(
     `uv tool install`, no manual escape (ADR-049)."""
     router.pin_file_path(installed_target).write_text("1.0.0\n", encoding="utf-8")
     monkeypatch.setenv(router._LOOP_GUARD_ENV, "1")
-    monkeypatch.setattr(upgrade, "_latest_released_version", lambda: Version("2.0.0"))
+    monkeypatch.setattr(upgrade, "latest_released_version", lambda: Version("2.0.0"))
 
     seen: dict[str, object] = {}
 
@@ -1824,7 +1824,7 @@ def test_upgrade_pinned_child_at_the_latest_release_stays_at_its_pin(
     (ADR-065 point 9)."""
     router.pin_file_path(installed_target).write_text(f"{_this_pkit()}\n", encoding="utf-8")
     monkeypatch.setenv(router._LOOP_GUARD_ENV, "1")
-    monkeypatch.setattr(upgrade, "_latest_released_version", lambda: Version(_this_pkit()))
+    monkeypatch.setattr(upgrade, "latest_released_version", lambda: Version(_this_pkit()))
     _no_hand_over(monkeypatch, "an at-latest pin must not hand over")
 
     upgrade.run_upgrade(installed_target)
@@ -1844,7 +1844,7 @@ def test_upgrade_pinned_child_leaves_pin_when_ahead_of_latest(
     a pin, so it is left unchanged and no reconcile runs (ADR-049)."""
     router.pin_file_path(installed_target).write_text(f"{_this_pkit()}\n", encoding="utf-8")
     monkeypatch.setenv(router._LOOP_GUARD_ENV, "1")
-    monkeypatch.setattr(upgrade, "_latest_released_version", lambda: Version("1.0.0"))
+    monkeypatch.setattr(upgrade, "latest_released_version", lambda: Version("1.0.0"))
     _no_hand_over(monkeypatch, "a pin ahead of latest must not hand over")
 
     upgrade.run_upgrade(installed_target)
@@ -1863,7 +1863,7 @@ def test_upgrade_pinned_child_degrades_when_latest_unresolvable(
     release and leave the pin unchanged; never brick the command (ADR-049)."""
     router.pin_file_path(installed_target).write_text(f"{_this_pkit()}\n", encoding="utf-8")
     monkeypatch.setenv(router._LOOP_GUARD_ENV, "1")
-    monkeypatch.setattr(upgrade, "_latest_released_version", lambda: None)
+    monkeypatch.setattr(upgrade, "latest_released_version", lambda: None)
     _no_hand_over(monkeypatch, "an unresolvable latest must not hand over")
 
     upgrade.run_upgrade(installed_target)  # must not raise
@@ -1886,7 +1886,7 @@ def test_upgrade_pinned_child_dry_run_runs_the_targets_upgrade_with_dry_run(
     point 9)."""
     router.pin_file_path(installed_target).write_text("1.0.0\n", encoding="utf-8")
     monkeypatch.setenv(router._LOOP_GUARD_ENV, "1")
-    monkeypatch.setattr(upgrade, "_latest_released_version", lambda: Version("2.0.0"))
+    monkeypatch.setattr(upgrade, "latest_released_version", lambda: Version("2.0.0"))
     handed: list[tuple[str, list[str]]] = []
     monkeypatch.setattr(
         upgrade, "run_bypassed", lambda pin, argv, _environ=None: handed.append((pin, argv)) or 0
@@ -1911,7 +1911,7 @@ def test_upgrade_pinned_child_passes_force_to_the_newer_release(
     (ADR-065 point 9)."""
     router.pin_file_path(installed_target).write_text("1.0.0\n", encoding="utf-8")
     monkeypatch.setenv(router._LOOP_GUARD_ENV, "1")
-    monkeypatch.setattr(upgrade, "_latest_released_version", lambda: Version("2.0.0"))
+    monkeypatch.setattr(upgrade, "latest_released_version", lambda: Version("2.0.0"))
     handed: list[tuple[str, list[str], str | None]] = []
 
     def _bypassed(pin: str, argv: list[str], _environ: object = None) -> int:
@@ -1959,7 +1959,7 @@ def test_a_routed_child_with_no_newer_release_finishes_the_transition_to_its_pin
         "ahead-of-latest": Version("1.0.0"),
         "offline": None,
     }[latest]
-    monkeypatch.setattr(upgrade, "_latest_released_version", lambda: found)
+    monkeypatch.setattr(upgrade, "latest_released_version", lambda: found)
     _no_hand_over(monkeypatch, "no newer release resolves, so nothing to hand over to")
     pin_at_copy: list[str | None] = []
     real_propagate = upgrade.propagate
@@ -2040,7 +2040,7 @@ def test_a_routed_child_refuses_content_ahead_of_its_pin_and_names_the_remedy(
     router.pin_file_path(installed_target).write_text(f"{_this_pkit()}\n", encoding="utf-8")
     monkeypatch.setenv(router._LOOP_GUARD_ENV, "1")
     found = Version(_this_pkit()) if latest == "online" else None
-    monkeypatch.setattr(upgrade, "_latest_released_version", lambda: found)
+    monkeypatch.setattr(upgrade, "latest_released_version", lambda: found)
     _no_hand_over(monkeypatch, "no newer release resolves, so nothing to hand over to")
     before = _tree_bytes(installed_target)
 
@@ -2141,7 +2141,7 @@ def test_a_routed_child_that_inherited_the_fallback_mark_never_meets_the_refusal
     router.pin_file_path(installed_target).write_text(f"{_this_pkit()}\n", encoding="utf-8")
     monkeypatch.setenv(router._LOOP_GUARD_ENV, "1")
     monkeypatch.setenv(router._PIN_UNRESOLVED_ENV, _this_pkit())
-    monkeypatch.setattr(upgrade, "_latest_released_version", lambda: None)
+    monkeypatch.setattr(upgrade, "latest_released_version", lambda: None)
 
     upgrade.run_upgrade(installed_target)  # must not raise
 
@@ -2379,7 +2379,7 @@ def test_upgrade_as_the_pinned_child_still_raises_a_pin_behind_its_content(
     _record_content_version(installed_target, _NEWER)
     router.pin_file_path(installed_target).write_text(f"{_this_pkit()}\n", encoding="utf-8")
     monkeypatch.setenv(router._LOOP_GUARD_ENV, "1")
-    monkeypatch.setattr(upgrade, "_latest_released_version", lambda: Version(_NEWER))
+    monkeypatch.setattr(upgrade, "latest_released_version", lambda: Version(_NEWER))
     raised_to: list[str] = []
 
     def _reconciled(pin: str, _argv: list[str], _environ: object = None) -> int:
@@ -3856,7 +3856,7 @@ def test_a_pin_that_names_a_candidate_lets_its_routed_child_move_the_project(
     _run_as(monkeypatch, _real_source_copy(tmp_path), candidate)
     router.pin_file_path(installed_target).write_text(f"{candidate}\n", encoding="utf-8")
     monkeypatch.setenv(router._LOOP_GUARD_ENV, "1")
-    monkeypatch.setattr(upgrade, "_latest_released_version", lambda: Version(_this_pkit()))
+    monkeypatch.setattr(upgrade, "latest_released_version", lambda: Version(_this_pkit()))
     _no_hand_over(monkeypatch, "the pin is ahead of the latest release")
 
     upgrade.run_upgrade(installed_target)
