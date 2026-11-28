@@ -1,0 +1,7 @@
+answers:
+  - artefact: .pkit/capabilities/lean-business/README.md
+    read:
+      - 20261124T145759Z-f20a7cfa.yaml
+    revalidated:
+      at: 2026-11-28T02:33:02Z
+      outcome: updated
