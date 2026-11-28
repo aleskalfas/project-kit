@@ -77,7 +77,7 @@ Four facts of an export may show in a scene (DEC-006 point 7). A *stand-in* is o
 - **A stand-in's text is the engine's.** The capability's reference holds it, and a new text reaches a piece as a new engine does, at a render (DEC-005 point 13).
 - **Every scene a shared answer rests on takes them.** These are the check's scenes, those a render keeps findings from, and those a program's measured frames come from.
 - **The findings record keeps what those scenes found,** under a key of files alone. So a render on any clone writes the same record.
-- **A stand-in that overflows** is a finding at the element that shows the fact, and it names the component. It fails where the project can correct that component, and asks for attention in a released library (DEC-005 point 14).
+- **A stand-in that overflows** is a finding at the element that shows the fact, and it names the component. It fails where the project can correct that component, and asks for attention in a released library (DEC-005 point 14). In a released version of the project's own library, it lies at the piece's lock and fails (refinement per [visual-communication:DEC-079-designer-releases-own-library] point 4).
 - **What a person looks at shows real text.** A preview fills what this clone's next export would: its next number and the date of this run. Another clone may show another number, which harms nothing, since a preview is never committed. A before-and-after and the viewing step fill the same way.
 - **Where a preview cannot read the next number,** as in a record of exports that conflicts on a merge, it takes the stand-ins and says so.
 - **A real text that overflows in a preview** is said in the render's output, and no record keeps it.

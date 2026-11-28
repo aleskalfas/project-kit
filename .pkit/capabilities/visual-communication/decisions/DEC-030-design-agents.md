@@ -71,7 +71,7 @@ Two habits of the method guide its choices:
 ### 4. Where the libraries cannot draw the design
 
 It takes one of three ways, by where the need belongs:
-- **Extend a library, through its owner's bar.** A form other pieces need goes to the library that holds such forms. In the project's own library, it goes into a version not yet released ([visual-communication:DEC-003-change-over-time] point 6). Where the capability is authored, it may go into a shipped library's version being built. The owner judges it by the bar that owner keeps, such as the starter's bar for entry (DEC-007 point 3).
+- **Extend a library, through its owner's bar.** A form other pieces need goes to the library that holds such forms. In the project's own library, it goes into a version not yet released ([visual-communication:DEC-003-change-over-time] point 6). Where the capability is authored, it may go into a shipped library's version being built. The owner judges it by the bar that owner keeps, such as the starter's bar for entry (DEC-007 point 3). In the project's own library, that bar is the capability's: its checks and its reviewer hold a version to it before the designer releases it, and no person need judge the version. The designer marks each component's status there. Taking a new major stays the person's, so where the release refuses a break, the designer undoes it or asks the person (refinement per [visual-communication:DEC-079-designer-releases-own-library] point 3).
 - **Make a local component** for a form this piece alone needs ([visual-communication:DEC-001-visual-communication-discipline] point 4), or have a helper write one (DEC-001 point 8).
 - **Stop.** Where neither way draws the design, it reports what the design needs, why nothing draws it, and what would, as a question to the person (point 2). An example is a form that needs a tool the engine lacks (DEC-007 point 2).
 
@@ -87,9 +87,10 @@ Three limits hold on those ways:
   - a version not yet released of the project's own library;
   - a declaration that a brand be written out as code.
 - **Where its grant names them,** also a helper script and the shared content its pieces read. Either may belong to another: a helper is the project's code, and a shared model may be another capability's.
-- **What commands write** stays theirs (COR-013 point 2): a lock, a findings record, an export, a produced output, a copy of a shipped library, a release. It runs those commands where its body says.
+- **What commands write** stays theirs (COR-013 point 2): a lock, a findings record, an export, a produced output, a copy of a shipped library, a release. It runs those commands where its body says. It runs the release of a version of the project's own library itself, at the person's ship call on a piece whose lock names the version and when the person asks, and names each such version to the person when it hands the piece over for the ship call. It never runs the release of a library the capability ships or of another repository's (refinement per [visual-communication:DEC-079-designer-releases-own-library] points 1 and 2).
 - **Never:**
   - a released version of any library (DEC-003 point 6);
+  - a version not yet released that a final piece's lock names, or that an export kept in a piece's record of exports was made under, since no file says whether that export was handed out (refinement per [visual-communication:DEC-079-designer-releases-own-library] point 2);
   - a copy of a library the capability ships, which only the command that brings it in writes (DEC-013 point 5);
   - the capability's folder where sync keeps a copy of it (COR-001);
   - a sign-in's secrets, which the methodology's shared sign-in keeps (DEC-002 point 8);
