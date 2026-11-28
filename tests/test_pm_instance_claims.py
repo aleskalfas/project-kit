@@ -764,6 +764,75 @@ def test_an_owner_this_clone_may_be_says_why_it_is_not_released(ic, root: Path) 
     assert gh.writes() == []
 
 
+# ---- the whole log, paged to its end (ADR-041 point 1, #2214) -------------------
+#
+# Each fold reads the issue's whole comment log through the shared reader, never
+# the comments a read of the issue gives, which GitHub may cut short. Here a read
+# of the issue gives its first two comments, and the log comes two to a page.
+
+
+def _long_log(ic, monkeypatch, gh: FakeGitHub, last: str) -> None:
+    """Issue #7 with three comments and then `last`, on the log's second page and
+    past what a read of the issue gives."""
+    monkeypatch.setattr(ic.ownership.comment_log, "PAGE_SIZE", 2)
+    gh.view_comments = 2
+    gh.add(7)
+    for n in range(3):
+        gh.post(7, f"comment {n}")
+    gh.post(7, last)
+
+
+def test_a_claim_on_a_later_page_of_the_log_counts(ic, root, monkeypatch, no_topology) -> None:
+    """The guard, the claim, the shared pool, the move back's question and the
+    release each fold the whole log, so a claim past the first page owns the
+    issue."""
+    gh = FakeGitHub()
+    _long_log(ic, monkeypatch, gh, _stamp(ic, "claim", 3))
+    clone = _clone(ic, root)
+    refused = _guard(ic, gh, clone)
+    assert refused.refused and "#7 is owned by instance 3" in refused.line
+    claimed = ic.claim(7, clone, {}, run=gh)
+    assert (claimed.outcome, claimed.winner) == (ic.ELSEWHERE, 3)
+    owner = ic.read_owner(7, clone, {}, run=gh)
+    assert owner is not None and owner.owners == frozenset({3})
+    kept = _cannot(ic, gh, None, root)
+    assert kept is not None and kept.why.startswith("#7 is owned by instance 3 of @me")
+    assert ic.release(7, clone, {}, run=gh).outcome == ic.RELEASED
+    assert _events(gh, 7) == ["claim 3", "release 3"]
+
+
+def test_a_log_that_cannot_be_read_whole_is_never_a_pass(ic, root, monkeypatch) -> None:
+    """A read cut short could miss a claim. The guard refuses as on a claim it
+    cannot judge, a bypass included, the move back's question refuses, and the
+    claim, the release and the shared pool write nothing."""
+    gh = FakeGitHub()
+    _long_log(ic, monkeypatch, gh, "comment 3")
+    clone = _clone(ic, root)
+    why = "#7's comment log could not be read whole (HTTP 502: Bad Gateway)"
+    gh.failing.add("page")
+    refused = _guard(ic, gh, clone)
+    assert refused.refused
+    assert f"[refused] edit-issue #7: {why}, so whose it is cannot be told" in refused.line
+    gh.failing.add("page")
+    claimed = ic.claim(7, clone, {}, run=gh)
+    assert claimed.outcome == ic.FAILED
+    assert claimed.line == f"[warn] ownership: {why}, so it is not claimed."
+    gh.failing.add("page")
+    released = ic.release(7, clone, {}, run=gh)
+    assert released.outcome == ic.FAILED
+    assert released.line == f"[warn] ownership: {why}, so it is not released."
+    gh.failing.add("page")
+    assert ic.read_owner(7, clone, {}, run=gh) is None
+    gh.failing.add("page")
+    kept = _cannot(ic, gh, clone, root)
+    assert kept is not None and kept.why == f"{why}, so whose it is cannot be told"
+    assert gh.writes() == []
+    gh.failing.add("page")
+    assert _guard(ic, gh, clone, bypass="its log cannot be read").bypassed
+    (audit,) = _audits(gh)
+    assert f"The clash guard was bypassed: {why}, so whose it is" in audit
+
+
 # ---- a project with a topology of seats (DEC-059) -------------------------------
 
 

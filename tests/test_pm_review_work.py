@@ -12,7 +12,7 @@ from types import SimpleNamespace
 import pytest
 
 from tests.pm_composed_move_support import FakeEngine, MoveIssueInProcess, status_at
-from tests.pm_ownership_support import FakeGitHub, clone_with
+from tests.pm_ownership_support import FakeGitHub, clone_with, is_read
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts" / "review-work.py"
@@ -352,7 +352,7 @@ def run_main(rw, monkeypatch):
         fake = github if github is not None else FakeGitHub()
 
         def ownership_gh(args: list[str], _config: dict):
-            if args[1:3] != ["issue", "view"]:
+            if not is_read(args):
                 gh_calls.append([str(a) for a in args])
             return fake(args)
 

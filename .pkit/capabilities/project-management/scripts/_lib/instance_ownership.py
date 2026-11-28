@@ -362,9 +362,8 @@ def parse_events(comments: Iterable[Any], assignee_login: str | None) -> list[Ow
     Not built yet: a stamp whose author is of a kind unknown, such as a bot's
     account the service gives with no suffix, still counts on an issue whose
     assignee bears its login. DEC-079 point 2 holds it, neither counted nor
-    freed, and waits on the claim commands reading an issue's comments from
-    GitHub's REST interface, which gives each author's kind, where they read
-    gh's JSON now, which gives none (ADR-094 point 3).
+    freed, and waits on this fold reading each author's kind, which the log
+    gives (:func:`read_log`, ADR-094 point 3).
     """
     out: list[OwnershipEvent] = []
     if not assignee_login:

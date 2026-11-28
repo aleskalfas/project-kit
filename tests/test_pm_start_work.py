@@ -12,7 +12,7 @@ import pytest
 
 from tests import pm_assignee_lookup
 from tests.pm_composed_move_support import FakeEngine, MoveIssueInProcess, status_at
-from tests.pm_ownership_support import FakeGitHub, clone_with, topology_with
+from tests.pm_ownership_support import FakeGitHub, clone_with, is_read, topology_with
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts" / "start-work.py"
@@ -440,7 +440,7 @@ def run_main(sw: Any, monkeypatch: pytest.MonkeyPatch, backbone: Any) -> Any:
         fake = github if github is not None else FakeGitHub()
 
         def ownership_gh(args: list[str], _config: dict) -> Any:
-            if args[1:3] != ["issue", "view"]:
+            if not is_read(args):
                 mutations.append(("ownership", args[2]))
             return fake(args)
 
