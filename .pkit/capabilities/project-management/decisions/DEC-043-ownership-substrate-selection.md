@@ -179,11 +179,12 @@ substrate and making `label` the opt-in fails safe.
 - **The shared audit-log facility** ([project-management:DEC-044-audit-log-facility]) carries the comment-stamp + render spec; the
   ownership event log is that facility specialised with ownership event types, and the existing
   promote / bypass / handoff audit strings migrate onto it rather than running parallel.
-- **Read cost stays one call** — the description mirror is returned inline by
-  `gh issue list --json body`; the comment log is read only to reconcile or show history. In a
-  project with a topology of seats, a claim lapses by the time of reading, so the guard and the
-  shared pool fold the comment log of each Task In Progress, the only claims that lapse. The
-  ownership seam pages a long log, so a fold never reads one cut short (refinement per
+- **A listing's read cost stays one call** — the description mirror is returned inline by
+  `gh issue list --json body`, and only the signed listing reads it: every consumer that decides
+  something folds the comment log of each issue it decides on (refinement per [pkit:ADR-041]
+  point 4). In a project with a topology of seats, a claim on a Task In Progress lapses by the
+  time of reading, so even a listing folds that Task's comment log. The ownership seam pages a
+  long log, so a fold never reads one cut short (refinement per
   [project-management:DEC-059-topology-of-seats]).
 - **A surface change** — a new selector, a new substrate, a new schema home and schema formats
   bump the capability version per [pkit:PRJ-002]; a
