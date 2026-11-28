@@ -1,7 +1,7 @@
 ---
 id: DEC-075
 title: The check names a paragraph that ends on a word kept off a line's end
-status: proposed
+status: accepted
 date: 2026-11-27
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
