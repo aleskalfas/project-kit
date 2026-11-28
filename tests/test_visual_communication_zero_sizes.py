@@ -18,7 +18,8 @@ in-memory `Env` (`tests/visual_engine.py`):
   or, sharing its line, for the line it is given (point 3);
 - the finding lies at the content where the size rests on what the content placed, and
   else in the component that gave it, where a released version only asks for attention
-  (point 4).
+  (point 4), save one of the project's own library, where it lies at the piece's lock
+  (DEC-079 point 4, `test_visual_communication_own_release.py`).
 """
 
 from __future__ import annotations
@@ -399,7 +400,7 @@ def test_a_size_from_roles_alone_lies_in_the_component_that_gave_it() -> None:
     assert found.where == "top/card/inner"
     assert (found.library, lies_in(found)) == ("lab@1.0.0", "lab/card")
     assert found.level == findings.FAILS
-    # In a released version it asks for attention instead (DEC-002 point 7).
+    # In a released version the project does not own, it asks for attention (DEC-002 point 7).
     assert findings.level_where(found, True) == findings.ATTENTION
 
 

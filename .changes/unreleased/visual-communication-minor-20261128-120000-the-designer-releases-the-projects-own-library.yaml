@@ -1,0 +1,16 @@
+component: visual-communication
+kind: minor
+body: >
+  The graphic designer now runs the release of the project's own library
+  itself: at the person's ship call on a piece whose lock names a version not
+  yet released, and when the person asks for it. It marks each component's
+  status in a version it writes, and leaves a new major to the person. A
+  release of a library the capability ships stays with whoever maintains the
+  capability. A project that wants a person to keep the release, or the
+  marking of a status, says so in an accepted record of its own (#3398).
+  Upgrading may fail a piece that passed before: a failure a piece's scene
+  shows inside a released version of the project's own library, such as a
+  division by zero over the piece's content or a stand-in's text too long
+  for its box, no longer asks attention of the library's owner but fails at
+  the piece's lock. The mend is a new version of the library, its release
+  and the lock's move to it, or a change to the content.

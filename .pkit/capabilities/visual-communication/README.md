@@ -104,6 +104,10 @@ pkit:
         - visual-communication:DEC-071#4
         - visual-communication:DEC-071#5
         - visual-communication:DEC-071#6
+        - visual-communication:DEC-079#1
+        - visual-communication:DEC-079#2
+        - visual-communication:DEC-079#3
+        - visual-communication:DEC-079#4
         - COR-017
         - COR-070#1
         - COR-073#3
@@ -183,6 +187,7 @@ pkit:
         - .pkit/capabilities/visual-communication/checks.md#
         - .pkit/capabilities/visual-communication/checks.md#contents
         - .pkit/capabilities/visual-communication/checks.md#what-a-finding-says
+        - .pkit/capabilities/visual-communication/checks.md#severities
         - .pkit/capabilities/visual-communication/checks.md#what-each-run-judges
         - .pkit/capabilities/visual-communication/checks.md#files-and-binding
         - .pkit/capabilities/visual-communication/checks.md#content-against-components
@@ -527,7 +532,7 @@ Writes a brand out as code, as the declaration `code/<name>.yaml` in the locatio
 
 ## The designer
 
-`graphic-designer` turns a piece's brief into a piece ([visual-communication:DEC-030-design-agents] point 2). It names the content's structure, and the order each page explains in, before it chooses a form. It settles where a page's path starts before it ranks the page's head, its focal point and the action it asks above the rest, takes type, colour and space from the brand's roles, and writes the reason for each choice into the brief. It writes the piece's own file, its content in every language, its brief and its local components. It also builds the project's own libraries, in a version not yet released. It renders, checks and looks at a piece only through the commands, as the skill `visual-author` walks them ([Drawing a piece](#drawing-a-piece)). A new presentation, or one redesigned whole, it starts from a sketch, which it reads outside the commands ([The sketch](#the-sketch)). The adapter deploys it as it deploys any agent ([Deploy mechanics](../../agents/README.md#deploy-mechanics)).
+`graphic-designer` turns a piece's brief into a piece ([visual-communication:DEC-030-design-agents] point 2). It names the content's structure, and the order each page explains in, before it chooses a form. It settles where a page's path starts before it ranks the page's head, its focal point and the action it asks above the rest, takes type, colour and space from the brand's roles, and writes the reason for each choice into the brief. It writes the piece's own file, its content in every language, its brief and its local components. It also builds the project's own libraries, in a version not yet released, and releases such a version itself ([Its releases](#its-releases)). It renders, checks and looks at a piece only through the commands, as the skill `visual-author` walks them ([Drawing a piece](#drawing-a-piece)). A new presentation, or one redesigned whole, it starts from a sketch, which it reads outside the commands ([The sketch](#the-sketch)). The adapter deploys it as it deploys any agent ([Deploy mechanics](../../agents/README.md#deploy-mechanics)).
 
 **Its grant.** It writes within the location, which the overlay category `visual-communication.work` grants it ([visual-communication:DEC-030-design-agents] point 5):
 
@@ -543,10 +548,23 @@ To use it:
 1. **Ask it for a piece,** saying what it must say, to whom, and where it is shown. It writes the brief's goals and relations from what you say, and shows them to you before it designs against them. Where they give no order in which a page explains, it proposes one from the page's lead or takeaway, and writes it into the brief once you confirm it. A new presentation starts with a sketch drawn from your words, unless you have it skip the sketch ([The sketch](#the-sketch)).
 2. **Let it build.** Where no library draws the design, it extends the project's own library, makes a component for the piece alone, or stops and says what is missing ([visual-communication:DEC-030-design-agents] point 4). In a rebuild of a sketch, it draws the nearest that keeps a part's meaning where it would stop, and stops on a part where nothing near keeps it. It never changes what the piece says to fit what a library draws.
 3. **It runs one round.** [The reviewer](#the-reviewer) reads every page in every language, mode and size. The designer mends once each fault, each brief finding, each break the reviewer labels settled, each fact its source contradicts, and each thing the reviewer says a reader cannot make out where the piece is shown. Then the reviewer reads every page again ([visual-communication:DEC-070-ship-call-and-one-round] points 2 and 3). Where the designer can start agents, it dispatches the reviewer itself. Otherwise it asks you to, and says the piece is not reviewed. It runs no further round of its own.
-4. **Read what it hands you.** It hands you the piece, with the reviewer's second report as written, what it changed and why, each finding it left and why, and each question still open. A piece rebuilt from a sketch comes with the sketch beside it ([The sketch](#the-sketch)). A finding it judged wrong it leaves, and says why. Any other finding for a person, a note, and a finding the reviewer marked wait for you. Whether the piece ships is your call: the designer never reports it done ([visual-communication:DEC-070-ship-call-and-one-round] point 1).
-5. **Ask for mends, or ship it.** Where you ask for mends, name them. The designer mends what you name, the reviewer reads every page again, and the piece comes back to you.
+4. **Read what it hands you.** It hands you the piece, with the reviewer's second report as written, what it changed and why, each finding it left and why, and each question still open. It names each version of the project's own library not yet released that the piece's lock names, which your ship call releases. A piece rebuilt from a sketch comes with the sketch beside it ([The sketch](#the-sketch)). A finding it judged wrong it leaves, and says why. Any other finding for a person, a note, and a finding the reviewer marked wait for you. Whether the piece ships is your call: the designer never reports it done ([visual-communication:DEC-070-ship-call-and-one-round] point 1).
+5. **Ask for mends, or ship it.** Where you ask for mends, name them. The designer mends what you name, the reviewer reads every page again, and the piece comes back to you. Where you ship it, the designer releases each version it named, so the piece may be marked final or published.
 
 **Whose words it changes.** The brief's goals and relations, each page's lead and title and each takeaway once you have seen them, any word a goal names as yours, and their translations are yours: it changes none of them without your word. It records each lead, title and takeaway it drafts and you have not seen in the brief's record of drafts ([The makers' record of drafts](files.md#the-makers-record-of-drafts)), and changes every other word alone, where each goal and relation still holds ([visual-communication:DEC-070-ship-call-and-one-round] point 4). In mending, it asks you only where a fix would change your words or cut a fact a goal or a relation rests on, or needs a write it may not make, such as to a library the capability ships. You answer, and it makes the change.
+
+### Its releases
+
+The designer runs `pkit visual release` on the project's own library itself, and you need not run it ([visual-communication:DEC-079-designer-releases-own-library] point 1). The release writes only in the working tree. Whatever carries the version out of the repository, such as a merge or a push to a branch others read, stays yours where it releases or publishes.
+
+- **When.** At your ship call on a piece whose lock names a version not yet released, and when you ask for a release, or for a published piece's lock to move to a version, and at no other time. A draft may lock a version not yet released, so no round needs one ([visual-communication:DEC-079-designer-releases-own-library] point 2).
+- **What it tells you.** At the hand-over, each version your ship call will release. After it, each version it released.
+- **Where the release refuses,** it mends what fails, or undoes a break. It never takes a new major: it asks you whether to, and says what it recommends. It changes no version that may have gone out, one a final piece's lock names or one an export was made under, and asks you instead.
+- **The bar is the capability's.** No person need judge a version of the project's own library. The checks of each piece that draws it and the reviewer's reading of every page hold it to the bar, and the release reads it in full ([`pkit visual release <library>`](#pkit-visual-release-library)). The designer marks each component's status as it writes the version ([visual-communication:DEC-079-designer-releases-own-library] point 3).
+- **Yours, where you keep it.** Where an accepted record of the project's keeps the release, or the marking of a status, for a person, the designer leaves each to you.
+- **Never a shipped library's.** A library the capability ships is released by whoever maintains the capability, where it is authored, and a library another repository shares by its owner.
+
+A failure a piece's scene shows inside a version the designer released still fails, at the piece's lock ([Severities](checks.md#severities); [visual-communication:DEC-079-designer-releases-own-library] point 4).
 
 ### The sketch
 

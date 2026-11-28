@@ -16,7 +16,9 @@ for attention instead, and names who corrects it (DEC-002 point 7):
 So the level, and that `who`, are worked out when a finding is read (`as_read`),
 never stored with it. A finding the project corrects whether the version is
 released or not names no version, so it keeps its level: a version that needs a
-newer release of the capability is one (DEC-014 point 5).
+newer release of the capability is one (DEC-014 point 5). So is a failure a piece's
+scene shows inside a released version of the project's own library, which lies at the
+piece's lock once it is read (`checks.Reading`, DEC-079 point 4).
 
 An overlap of two parts that the part on top names under `lies-over` carries the version
 that holds that word (`lies_over_in`), and no mark of whether it is released: the label it

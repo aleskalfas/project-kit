@@ -145,7 +145,7 @@ When it computes a scene, a share may give no smallest size at a page, in three 
 - **It gives a length of zero or less there,** such as a difference of the page's width and height on an upright page. That is a value its format does not allow, as a number not positive is (`component-shape`).
 
 Each is reported as severely as any formula's finding (DEC-005 point 14), and names each such page:
-- **At the top's file, in one case.** Where a share reads `:page-height` at a page of the top's own that asks for no height, the fault lies at the top's file, at that medium's value. The top's file alone shows that fault, whatever the brand.
+- **At the top's file, in one case.** Where a share reads `:page-height` at a page of the top's own that asks for no height, the fault lies at the top's file, at that medium's value. The top's file alone shows that fault, whatever the brand. Inside a released version of the project's own library, it lies at the piece's lock (refinement per [visual-communication:DEC-079-designer-releases-own-library] point 4).
 - **At the piece's lock, in every other.** That takes in `:page-height` read at a brand's drawing, or at a page a slot places. It takes in a division by zero and a length of zero or less too. Each lies at the piece's lock and names no version, as every fault that only a lock shows does (the list of checks, "Under a lock").
 - **Why the last two lie at the lock always.** Both depend on the page's size, which a brand's width gives. The check computes a scene under one lock, so it cannot tell that either holds under every brand.
 - **Beside it, the check states its own fact** for that page (point 10). A formula's finding is another check's, and says nothing of what this check measured.

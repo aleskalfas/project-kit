@@ -2,7 +2,7 @@
 (visual-communication DEC-002 points 3, 4, 6 and 7, DEC-003 point 9, DEC-004 points 8, 9
 and 11, DEC-005 points 7, 9, 13 and 14, DEC-006 point 8, DEC-008 points 1 and 9, DEC-010
 points 1, 2 and 9, DEC-013 points 5 and 6, DEC-017 points 4 to 7, DEC-018 points 1, 2, 4
-and 5, DEC-019 point 8, DEC-030 point 5).
+and 5, DEC-019 point 8, DEC-030 point 5, DEC-079 point 4).
 
 **File-level findings, every run:**
 
@@ -136,6 +136,12 @@ capability ships, released or not, it names whoever maintains the capability
 the list. A released version whose folder no longer matches what was released is the
 project's to restore, so a finding in it fails (DEC-002 point 7, DEC-003 point 9, DEC-013
 point 6).
+
+**A failure a scene shows** (`SHOWN`) inside a released version of the project's own library
+lies at the lock of the piece whose scene shows it, which chose the version, and fails there:
+the project corrects it in a new version that the lock then names, or in the content (DEC-079
+point 4). It is moved there when it is read, from the list's mark of release and the
+library's source, so the findings record keeps it in the version.
 
 **An overlap's label** is computed when a finding is read too, in validation alone: an
 overlap the part on top names under `lies-over` is the fact `box-overlap-meant` where the
@@ -378,7 +384,7 @@ def check(root: Path, *, only: str | None = None, deadline: float | None = None)
         run.all(only)
     except location.GitFailed as exc:
         run.add(Finding("files-unlisted", FAILS, f"the location's files cannot be listed: {exc}"))
-    judged = [run.judged(finding) for finding in [*config, *run.found]]
+    judged = [*map(run.judged, config), *run.all_judged()]
     return Report(run.summary(only), judged)
 
 
@@ -466,6 +472,9 @@ class Reading:
     - **Its level** (`findings.as_read`), by whether the version the finding lies in is
       released and still as it was released, and whether it is a copy of a library the
       capability ships.
+    - **A failure a scene shows inside a released version of the project's own library**
+      (`shown`) lies at the lock of the piece whose scene shows it, and fails there
+      (`_at_the_lock`, DEC-079 point 4). Only a finding read with its piece is moved so.
     - **An overlap's label, in validation alone.** An overlap the part on top names under
       `lies-over` reads as the fact `box-overlap-meant` where the version that holds the word
       reads as released (`word_given`), and as `box-overlap` elsewhere. The viewing step
@@ -476,9 +485,13 @@ class Reading:
         self.held = held
         self._held_as: dict[tuple[str, Version], tuple[bool, bool]] = {}
 
-    def read(self, finding: Finding, *, validation: bool) -> tuple[Finding, str]:
+    def read(
+        self, finding: Finding, *, validation: bool, piece: pl.Piece | None = None
+    ) -> tuple[Finding, str]:
         """`finding` as it reads, with its level there: in validation where `validation`,
-        else in the viewing step."""
+        else in the viewing step. `piece` is the piece whose scene gives the finding, where
+        one does: a failure that scene shows inside a released version of the project's own
+        library reads at that piece's lock."""
         if validation and finding.lies_over_in and self.word_given(finding.lies_over_in):
             touch = finding.code == letters.LETTERS_TOUCH
             finding = letters.meant(finding) if touch else boxes.meant(finding)
@@ -488,6 +501,13 @@ class Reading:
         except ValueError:
             return as_read(finding, False)
         released, shipped = self._as_released(name, version)
+        if (
+            piece is not None
+            and released
+            and self.held.source(name) == PROJECT_SOURCE
+            and shown(finding, piece)
+        ):
+            return as_read(_at_the_lock(finding, piece), False)
         return as_read(finding, released, shipped=shipped)
 
     def word_given(self, library: str) -> bool:
@@ -542,14 +562,22 @@ class _Run:
         self.named: set[str] = set()
         self.notations: set[str] = set()
         self.reading = Reading(self.held)
+        #: The piece whose scene gives each scene finding, by the finding's place in `found`.
+        self.scene_of: dict[int, pl.Piece] = {}
         self.counts = {"pieces": 0, "read": 0, "computed": 0, "unchecked": 0, "final": 0}
 
     def add(self, finding: Finding) -> None:
         self.found.append(finding)
 
-    def judged(self, finding: Finding) -> tuple[Finding, str]:
-        """A finding as validation reads it where it lies, with its level there."""
-        return self.reading.read(finding, validation=True)
+    def judged(self, finding: Finding, piece: pl.Piece | None = None) -> tuple[Finding, str]:
+        """A finding as validation reads it where it lies, with its level there; `piece` is
+        the piece whose scene gives it, where one does."""
+        return self.reading.read(finding, validation=True, piece=piece)
+
+    def all_judged(self) -> list[tuple[Finding, str]]:
+        """Each finding the run found, as validation reads it, a scene finding with the piece
+        whose scene gives it."""
+        return [self.judged(each, self.scene_of.get(at)) for at, each in enumerate(self.found)]
 
     @property
     def compared(self) -> copies.Compared:
@@ -949,10 +977,12 @@ class _Run:
 
     def _scene_findings(self, piece: pl.Piece, found: Sequence[Finding], unmade: set[str]) -> None:
         """A piece's scene findings, each file relative to the project root, and each that
-        only repeats another finding of the run left out (`_said`)."""
+        only repeats another finding of the run left out (`_said`). Each is read with the
+        piece (`scene_of`)."""
         for finding in found:
             placed = rooted(finding, piece)
             if not _said(placed, unmade, self.unbound):
+                self.scene_of[len(self.found)] = piece
                 self.add(placed)
 
 
@@ -976,6 +1006,89 @@ def _at_lock(finding: Finding, piece: pl.Piece) -> Finding:
         or f"move the lock to versions that fit together, or mend {finding.library}",
         library="",
     )
+
+
+#: The labels of a failure a scene shows: one the check finds only by computing a piece's
+#: scene, in what the scene draws or in a value a formula takes there, such as a frame, a
+#: size, a text's lines or a division (DEC-079 point 4). A finding on what a version declares
+#: or holds, such as a component's keys or a picture file, is none, even where computing a
+#: scene finds it, since a release reads the version in full (DEC-014 point 1).
+SHOWN = frozenset(
+    {
+        exports.GETS_LESS,
+        exports.OVERFLOWS,
+        "division-by-zero",
+        "no-size",
+        "missing-exposed",
+        "no-colour",
+        layout.TRUNK_PART,
+    }
+)
+
+#: The labels that are a failure a scene shows only where computing a scene finds them, at a
+#: trace of the scene: reading a component finds them too, at a key path of its file, in what
+#: the version declares (a `cross-size` that reads its own list's size, a formula that reads
+#: what it may not reach).
+SHOWN_AT_A_TRACE = frozenset({"loop", "formula-reach"})
+
+
+def shown(finding: Finding, piece: pl.Piece) -> bool:
+    """Whether `finding`, which `piece`'s scene gives, is a failure that scene shows
+    (`SHOWN`, DEC-079 point 4): it fails, and its label is one of a failure a scene shows,
+    found at a trace of the scene where reading a component finds it too."""
+    if finding.level != FAILS:
+        return False
+    if finding.code in SHOWN:
+        return True
+    if finding.code not in SHOWN_AT_A_TRACE:
+        return False
+    # A trace starts at the piece's top, or at a page a finding read alike on several pages
+    # stands for (`_once_on_pages`); a key path of a component's file at neither.
+    roots = (piece.top.rpartition("/")[2], PAGE)
+    return any(finding.where == root or _below_trace(finding.where, root) for root in roots)
+
+
+def _at_the_lock(finding: Finding, piece: pl.Piece) -> Finding:
+    """A failure `piece`'s scene shows inside a released version of the project's own
+    library, as it lies: at the piece's lock, which chose the version, where the project
+    corrects it in a new version that the lock then names, or in the content (DEC-079 point
+    4). It names no version, so it fails. Its message names the version, the component and the
+    place inside it, and its fix the new version and the lock's move (DEC-003 point 8)."""
+    name = finding.library.partition("@")[0]
+    folder, _, component = finding.file.rpartition(f"/{pl.COMPONENTS}/")
+    inside = (
+        f"its component `{name}/{PurePosixPath(component).stem}`" if folder and component else "it"
+    )
+    at = f"{finding.file}, `{finding.where}`" if finding.where else finding.file
+    return dataclasses.replace(
+        finding,
+        message=f"under this lock, {finding.library}, released, fails in this piece's scene, "
+        f"in {inside} ({at}): {finding.message}",
+        file=piece.file(pl.PIECE_FILE),
+        where="lock",
+        fix=_new_version_fix(piece, name, finding.fix),
+        library="",
+        who="",
+    )
+
+
+def _new_version_fix(piece: pl.Piece, name: str, mend: str) -> str:
+    """What mends a failure a scene shows inside a released version of `name`, the project's
+    own library: `mend`, the finding's own fix, or a mend of it, in a new version of `name`
+    that the piece's lock then names, by who moves that lock (DEC-003 point 8); or the content
+    (DEC-079 point 4). A published piece locks only released versions, and a person moves its
+    lock."""
+    render = pl.render_command(piece.name)
+    if piece.lock_stays:
+        move = (
+            f"release it with `pkit visual release {name}`, and move the lock to it with "
+            f"`pkit visual upgrade {piece.name}`"
+        )
+    elif piece.pinned:
+        move = f"name it in the lock by hand, or unpin the piece and run {render}"
+    else:
+        move = f"run {render}, which moves a draft's lock to it"
+    return f"in a new version of `{name}`, {mend or 'mend it'}, and {move}; or change the content"
 
 
 def unread_tokens(
