@@ -83,6 +83,7 @@ from tests.visual_communication_project import (
     names,
     pl,
     exports,
+    scene_lib,
 ) = load(
     "visual-communication",
     "look.py",
@@ -98,6 +99,7 @@ from tests.visual_communication_project import (
     "names",
     "pipeline",
     "exports",
+    "scene",
 )
 
 LOCK = ["foundations 1.0.0", "test-brand 1.0.0", "tests 1.0.0"]
@@ -1605,6 +1607,142 @@ def test_a_frame_lies_in_the_image_s_pixels_through_every_group_above_it() -> No
             "height": 80.0,
         },
     ]
+
+
+#: What a text's frame names beside its box (DEC-077 point 1).
+TEXT_FACTS = ("text-anchor", "line-count", "given-width")
+
+
+def facts_of(frames: Mapping[str, Any]) -> dict[str, tuple[Any, ...]]:
+    """What each text's frame of a frames file names beside its box, by its trace id."""
+    return {
+        frame["id"]: tuple(frame[key] for key in TEXT_FACTS)
+        for frame in frames["elements"]
+        if frame["type"] == "text"
+    }
+
+
+def scene_facts(text: Mapping[str, Any]) -> tuple[Any, ...]:
+    """What the scene's code reads of `text`, for the checks, in `TEXT_FACTS`'s order."""
+    return (scene_lib.anchor(text), scene_lib.line_count(text), scene_lib.given_width(text))
+
+
+def texts_of(page: Mapping[str, Any]) -> dict[str, Mapping[str, Any]]:
+    """Each text of `page`, as its scene holds it, by its trace id."""
+    return {each["id"]: each for each, _, _ in viewing._placed(page) if each["type"] == "text"}
+
+
+def framed_text(
+    trace: str, width: float, *lines: float, anchor: str | None = None, given: bool = True
+) -> dict[str, Any]:
+    """A text `width` px wide, its lines as wide as `lines`, holding `anchor` as its
+    `text-anchor` where it is given one. A text not `given` its width names the engine as its
+    width's source, as the scene names one whose component gave it none."""
+    held = [line(0, 15.0 + 20 * at, (0, "words", wide)) for at, wide in enumerate(lines)]
+    look = {} if anchor is None else {"text-anchor": anchor}
+    text = element("text", trace, x=0, y=0, width=width, height=20 * len(lines), **look)
+    return {**text, "lines": held, "sources": {} if given else {"width": "engine"}}
+
+
+def page_holding(*children: dict[str, Any]) -> dict[str, Any]:
+    group = element(
+        "group", "page/group", x=100, y=50, width=60, height=70, children=list(children)
+    )
+    return element("group", "page", width=200, height=100, children=[group])
+
+
+def test_a_text_s_frame_names_its_anchor_count_of_lines_and_whether_its_width_was_given() -> None:
+    """At each anchor, of one line and of more, given a width and given none, as the scene's
+    code reads it for the checks: with a text of one line given a width whose line lies within
+    a pixel of it, which fills no width, and a text of no lines, whose count is zero. A text
+    whose scene holds no anchor stands its lines at the start. Every other frame stays its
+    box (DEC-077 points 1 and 2)."""
+    grid = [
+        framed_text(
+            f"page/group/{anchor}-{count}-{given}",
+            60,
+            *[30.0] * count,
+            anchor=anchor,
+            given=given,
+        )
+        for anchor in ("start", "middle", "end")
+        for count in (1, 2)
+        for given in (True, False)
+    ]
+    near = framed_text("page/group/near", 60, 59.5, anchor="end")
+    empty = framed_text("page/group/empty", 30, anchor="middle", given=False)
+    unheld = framed_text("page/group/unheld", 30, 30.0, given=False)
+    box = element("box", "page/group/box", x=0, y=0, width=10, height=10)
+    texts = [*grid, near, empty, unheld]
+    shown = {frame["id"]: frame for frame in viewing.frames(page_holding(*texts, box), 400, 200)}
+    named = facts_of({"elements": shown.values()})
+    assert named == {text["id"]: scene_facts(text) for text in texts}
+    assert {
+        trace: named[trace]
+        for trace in ("page/group/near", "page/group/empty", "page/group/unheld")
+    } == {
+        "page/group/near": ("end", 1, True),
+        "page/group/empty": ("middle", 0, False),
+        "page/group/unheld": ("start", 1, False),
+    }
+    assert [named[text["id"]] for text in grid] == [
+        (anchor, count, given)
+        for anchor in ("start", "middle", "end")
+        for count in (1, 2)
+        for given in (True, False)
+    ]
+    assert [text["id"] for text in texts if scene_lib.fills_width(text)] == [
+        "page/group/start-1-False",
+        "page/group/middle-1-False",
+        "page/group/end-1-False",
+        "page/group/unheld",
+    ]
+    assert set(shown["page/group/box"]) == {"id", "type", "x", "y", "width", "height"}
+    assert set(shown["page/group"]) == set(shown["page/group/box"]) == set(shown["page"])
+
+
+def test_a_text_s_frame_names_the_anchor_the_scene_s_table_of_anchors_knows(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The frames read a text's anchor where the checks read it, so a change to the table in
+    which the scene's code holds the anchors it knows changes both alike (DEC-077 point 2)."""
+    texts = [
+        framed_text(f"page/group/{anchor}", 60, 30.0, anchor=anchor)
+        for anchor in ("start", "middle", "end", "centre")
+    ]
+    page = page_holding(*texts)
+
+    def anchors() -> dict[str, str]:
+        return {
+            trace: facts[0]
+            for trace, facts in facts_of({"elements": viewing.frames(page, 200, 100)}).items()
+        }
+
+    assert anchors() == {
+        "page/group/start": "start",
+        "page/group/middle": "middle",
+        "page/group/end": "end",
+        "page/group/centre": "start",
+    }
+    monkeypatch.setattr(scene_lib, "STANDS", {"start": 0.0, "centre": 0.5})
+    assert anchors() == {
+        "page/group/start": "start",
+        "page/group/middle": "start",
+        "page/group/end": "start",
+        "page/group/centre": "centre",
+    }
+    assert [scene_lib.stands(text) for text in texts] == [0.0, 0.0, 0.0, 0.5]
+
+
+def test_each_text_s_frame_names_what_the_scene_s_code_reads_of_it(flow: Path) -> None:
+    """Through a whole run, each text's frame names the scene's reading (DEC-077 point 2)."""
+    assert run_look(flow, PIECE).returncode == 0
+    [image] = report_of(flow)["images"]
+    texts = texts_of(page_of(flow))
+    assert texts
+    assert facts_of(frames_of(flow, image)) == {
+        trace: scene_facts(text) for trace, text in texts.items()
+    }
 
 
 @pytest.mark.parametrize(
@@ -3312,6 +3450,23 @@ def test_forced_colours_draw_each_page_file_in_both_palettes_after_its_keys(
     assert frames["image"] == f"forced-dark/{PIECE}.en.{DARK_KEY}.png"
 
 
+def test_a_text_s_frame_names_the_same_through_a_browser_and_under_each_forced_palette(
+    tmp_path: Path, browser: Browser
+) -> None:
+    """Every frames file of the HTML renderer, the forced palettes' among them, names each
+    text's anchor, count of lines and whether its width was given as the scene's code reads
+    them (DEC-077 point 1)."""
+    root = html_flow(tmp_path)
+    assert run_look(root, PIECE, "--renderer", "html", FORCED).returncode == 0
+    texts = texts_of(page_of(root))
+    images = html_report(root)["images"]
+    assert {each[viewing.FORCED] for each in images} == {None, "light", "dark"}
+    for image in images:
+        assert facts_of(frames_of(root, image, "html")) == {
+            trace: scene_facts(text) for trace, text in texts.items()
+        }
+
+
 def test_the_report_names_the_forced_palettes_their_flag_their_folders_and_what_they_miss(
     tmp_path: Path, browser: Browser
 ) -> None:
@@ -3784,6 +3939,18 @@ def test_beside_each_band_lie_the_frames_of_what_it_shows_in_its_own_pixels(tall
     in_both = first & second
     assert across < in_both
     assert any(name.endswith("/head") for name in in_both)
+
+
+def test_a_text_in_two_bands_names_what_the_scene_s_code_reads_of_it_in_each(tall: Path) -> None:
+    """A text a band's edge crosses, or an overlap holds, names the same in each band that
+    shows it, as the scene's code reads it (DEC-077 point 1)."""
+    assert run_look(tall, PIECE).returncode == 0
+    texts = texts_of(page_of(tall))
+    held = [facts_of(frames_of(tall, image)) for image in report_of(tall)["images"]]
+    for each in held:
+        assert each == {trace: scene_facts(texts[trace]) for trace in each}
+    [first, second, *_] = held
+    assert first.keys() & second.keys()
 
 
 def test_a_text_drawn_to_nothing_on_a_page_in_bands_is_reported_once(tall: Path) -> None:
