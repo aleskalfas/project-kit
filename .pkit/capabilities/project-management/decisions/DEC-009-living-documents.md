@@ -11,6 +11,8 @@ source:
   captured_at: 2026-05-21
 ---
 
+> **Partially superseded by [project-management:DEC-085-issue-waits].** Where a project turns DEC-085's checks on, removing the integration-branch marker from an issue, before its branch merges and while its owner has not closed as not planned, is refused as a hard reject. Overturned there: the `bypassable-with-audit` severity of that removal in "Interaction with the integration-branch marker", which `body-format.yaml`'s `integration_marker.removal_authorisation_severity` holds. Among what stands: the marker as scope content, and that severity where the checks are off, or once the branch has merged or its owner closed as not planned.
+
 ## Context
 
 The checkbox-validation rule from [project-management:DEC-007-checkbox-validation] treats a tick as an audit record. That rule alone leaves the question: can the *set* of checkboxes — or the body's narrative sections — change between filing and closing? In practice, yes: PM-authored Features have acceptance criteria that turn out to be unrealistic; Implementer work surfaces missing criteria; rewordings clarify intent. The capability has to specify how bodies evolve without dissolving the discipline that makes the close-gate meaningful.
