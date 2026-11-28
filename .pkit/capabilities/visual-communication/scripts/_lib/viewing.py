@@ -66,9 +66,10 @@ is read, and none is used up (DEC-016 point 5).
   code stopped on its scene, or on a scene a check compares with it. It carries each
   check's reach as the code that ran states it, and the capability's version. Each finding
   is read as validation reads it where it lies, its level by whether its version is released,
-  save that every overlap reads as `box-overlap`, whatever names the pair (`checks.Reading`,
-  DEC-066 point 2). A loss the report lists in its own list is not given again. The findings
-  record is not read, and none is kept (`_Made.checked`).
+  and a failure the scene shows inside a released version of the project's own library at the
+  piece's lock (DEC-079 point 4), save that every overlap reads as `box-overlap`, whatever
+  names the pair (`checks.Reading`, DEC-066 point 2). A loss the report lists in its own list
+  is not given again. The findings record is not read, and none is kept (`_Made.checked`).
 - **A run replaces** what an earlier run left in its renderer's folder, as one change
   (`write`), and leaves the other renderer's folder where it lies.
 """
@@ -1110,10 +1111,14 @@ def _said_found(
     """A finding as the report gives it (DEC-062 point 1): its check's id where the check
     states a reach, else None; its label, level, location and message, as the viewing step
     reads it where it lies (`checks.Reading`), so every overlap as `box-overlap`, with nothing
-    of a part's `lies-over` (DEC-066 point 2); its language, None where it holds in every
-    language; the key it holds for, None where it holds at every key; and its page, None where
-    its place lies on no page."""
-    finding, level = reading.read(checks.rooted(found.finding, project.piece), validation=False)
+    of a part's `lies-over` (DEC-066 point 2), and a failure the scene shows inside a released
+    version of the project's own library at the piece's lock (DEC-079 point 4); its language,
+    None where it holds in every language; the key it holds for, None where it holds at every
+    key; and its page, None where its place lies on no page."""
+    piece = project.piece
+    finding, level = reading.read(
+        checks.rooted(found.finding, piece), validation=False, piece=piece
+    )
     return {
         "check": found.check.id or None,
         "label": finding.code,

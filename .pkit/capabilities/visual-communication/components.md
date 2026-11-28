@@ -153,6 +153,7 @@ pkit:
         - visual-communication:DEC-075#1
         - visual-communication:DEC-075#2
         - visual-communication:DEC-075#3
+        - visual-communication:DEC-079#4
       artefact:
         - .pkit/capabilities/visual-communication/files.md#what-the-location-holds
         - .pkit/capabilities/visual-communication/files.md#shapes
@@ -910,7 +911,7 @@ parts:
   - **Not inside one with no size.** A component that asks for no size there, and lies in one with no size there, is not reported for it, since that one asked for zero, is reported itself or lies in turn in one of no size there, save in the top and a tie (DEC-073 point 2). An item that `cross-size` sizes is reported wherever it lies (DEC-038 point 5). A component lies in the one whose part places it or repeats over its list, and a page in its top.
   - **The top and a tie are not judged so.** The top gets what it asks for. A tie lies in its part's whole frame and is drawn between its ends.
   - **Nor is a part that draws a primitive,** whose size is its component's own drawing. A text given a width of zero or less overflows, which is reported. A box, an ellipse, an image or a sign held at zero draws nothing, with no finding.
-  - **Where the finding lies** (DEC-073 point 4). It lies at the content where the size rests on what the content placed: a list given more items than its gaps leave room for, or a formula that reads, itself, through a named value or through a part of its own, the size its component takes from where it is placed, its place in its list, a list, an item or what the content places in a slot. A size its component asks for and gets as asked, as the top does, rests on its own formula. Otherwise the finding lies in the component that gave the size, or, for one that asks for less than zero, in its own, and in a released version it asks for attention (*checks*, `gets-less`). Its message names what gave the size.
+  - **Where the finding lies** (DEC-073 point 4). It lies at the content where the size rests on what the content placed: a list given more items than its gaps leave room for, or a formula that reads, itself, through a named value or through a part of its own, the size its component takes from where it is placed, its place in its list, a list, an item or what the content places in a slot. A size its component asks for and gets as asked, as the top does, rests on its own formula. Otherwise the finding lies in the component that gave the size, or, for one that asks for less than zero, in its own, and in a released version it asks for attention, save a released version of the project's own library, where it lies at the piece's lock and fails (*checks*, `gets-less`). Its message names what gave the size.
 - **No frame is below zero** (DEC-073 point 3). The engine holds at zero each size it computes below zero: the size a component gets, the size a list gives an item and the size a part's formula gives its part. Every reader of frames reads the size so held.
 
 ## How the engine computes a scene
@@ -950,7 +951,7 @@ Which text fills `version` and `date`:
 - **What a person looks at** shows real text: a preview, a before-and-after and the viewing step. Each fills what this clone's next export would: its next number, and the date of the run. Another clone may show another number.
 - **An export** shows one number and one date in every file of its version, those its record of exports keeps: its number, and the date of the time it records. Its fingerprint reads neither, so a new number makes nothing stale.
 - **Where there is no next number,** what a person looks at takes the stand-ins, and the command says so, and why. A record of exports that cannot be read gives none, as one that conflicts on a merge. A final piece has none, since it takes no export.
-- **A stand-in that overflows** is a finding at the element that shows it, and it names the component. It fails where the project can correct that component, and asks for attention in a released library.
+- **A stand-in that overflows** is a finding at the element that shows it, and it names the component. It fails where the project can correct that component, and asks for attention in a released library, save a released version of the project's own library, where it lies at the piece's lock and fails.
 - **A real text that overflows in a preview** is said in the render's output, and no record keeps it.
 - **A new stand-in** reaches a piece as a new engine does, at a render.
 

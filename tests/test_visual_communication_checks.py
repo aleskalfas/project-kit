@@ -838,9 +838,14 @@ def test_an_error_the_check_does_not_expect_on_a_final_piece_counts_it_once(
 # --- library names and released versions ------------------------------------------------------
 
 
+#: Where a library of another repository comes from, beside its source's kind.
+ELSEWHERE = {"url": "https://example.org/library.git", "ref": "v1"}
+
+
 def held_as(root: Path, name: str, *, released: bool = False, source: str = "project") -> Path:
     """The drawing project without its picture, the `tests` library held, listed and used
-    under `name` instead, from the source `source`; released where `released` says so."""
+    under `name` instead, from the source `source`, a repository's at a URL and a ref of its
+    own; released where `released` says so."""
     folder = root / "visual" / "libraries" / name
     (root / "visual" / "libraries" / "tests").rename(folder)
     for path in folder.rglob("*.yaml"):
@@ -856,7 +861,7 @@ def held_as(root: Path, name: str, *, released: bool = False, source: str = "pro
             "foundations": {"source": {"kind": "shipped"}, "versions": unreleased},
             "test-brand": {"source": {"kind": "project"}, "versions": unreleased},
             name: {
-                "source": {"kind": source},
+                "source": {"kind": source, **(ELSEWHERE if source == "repository" else {})},
                 "versions": {"1.0.0": released_entry(folder / "1.0.0", name)}
                 if released
                 else unreleased,
@@ -954,10 +959,13 @@ def test_a_stand_in_that_overflows_in_the_pieces_own_component_fails(tmp_path: P
     assert finding.library == ""
 
 
-def test_a_stand_in_that_overflows_in_a_released_library_asks_its_owner_for_attention(
+def test_a_stand_in_that_overflows_in_another_repositorys_released_version_asks_its_owner(
     tmp_path: Path,
 ) -> None:
-    root = held_as(drawing_project(tmp_path, picture=False), "stamps", released=True)
+    """In a released version of the project's own library, it lies at the piece's lock
+    instead, and fails (DEC-079 point 4; `test_visual_communication_own_release.py`)."""
+    root = drawing_project(tmp_path, picture=False)
+    root = held_as(root, "stamps", released=True, source="repository")
     [(finding, level)] = overflowing_stamp(root, "stamps/stamp")
     assert level == "attention"
     assert finding.where == "figure/body/narrow"

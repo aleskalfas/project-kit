@@ -751,7 +751,14 @@ def test_a_copy_made_with_a_number_let_through_fails_where_the_project_corrects_
         ),
         "label": "current-copy-let-through",
     }
-    assert (run(root).returncode == 1) == (severity == "error")
+    # The piece's scene shows the stamp's overflow too. Inside a released version of the
+    # project's own library, it lies at the piece's lock and fails there (DEC-079 point 4), so
+    # the run fails whichever library holds the stamp.
+    assert run(root).returncode == 1
+    if severity == "warning":
+        assert ("text-overflow", "error", f"{PIECE_FOLDER}/piece.yaml#lock") in said(
+            document(root)["findings"]
+        )
 
 
 def test_a_copy_made_with_a_number_let_through_is_a_finding_until_a_version_fits(
