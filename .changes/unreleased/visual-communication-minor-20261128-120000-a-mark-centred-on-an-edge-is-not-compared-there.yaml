@@ -1,0 +1,20 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Changed
+body: >
+  The check of edges that nearly line up, `edges-nearly-in-line`, no longer
+  compares two parts at an edge of one on which the other's centre lies within
+  a pixel, where the other is a mark: a part shorter on each axis than twice
+  the brand's smallest step of space and two pixels, such as a dot centred on a
+  card's top edge or a badge on its corner (DEC-076, #3405). Their starts there,
+  or their ends, are not compared, among siblings and between groups, and the
+  pair is compared on its other lines on that axis as before. So a piece may
+  lose `near-alignment` and `near-alignment-between-groups` findings at such
+  parts: a row of four cards, each with a dot centred on its top edge, gives
+  none, where it gave sixteen. A bar, a stripe or a rule laid on an edge is no
+  mark, and is still compared there, and a pair whose starts or ends at that
+  edge lie within a pixel still lines up, so the check names nothing new. The
+  check's reach names the edges it leaves uncompared, and the graphic-design
+  reviewer judges on the image whether such a mark was set by its centre on the
+  edge or slipped.

@@ -194,6 +194,12 @@ def _near_other_lines() -> None:
     _between_other_lines()
 
 
+def _near_centred_on_an_edge() -> None:
+    """A dot 6 px square centred on a box's top edge, its top 3 px above the box's."""
+    assert near(A, element("figure/dot", "path", x=17, y=-3, width=6, height=6)) == []
+    _between_centred_on_an_edge()
+
+
 def _near_held_edges() -> None:
     outer = element("figure/card", width=100, height=100)
     assert near(outer, element("figure/head", x=2.5, y=2.5, width=95, height=95)) == []
@@ -334,6 +340,11 @@ def _list_s_own_spacing() -> None:
 
 def _between_other_lines() -> None:
     assert in_two_groups(element("figure/one/a"), element("figure/two/b", y=60, width=43)) == []
+
+
+def _between_centred_on_an_edge() -> None:
+    dot = element("figure/two/dot", "path", x=17, y=-3, width=6, height=6)
+    assert in_two_groups(element("figure/one/a"), dot) == []
 
 
 def _between_held_edges() -> None:
@@ -723,9 +734,10 @@ PLANTED: dict[tuple[str, str, int], Callable[[], None]] = {
     ("edges-nearly-in-line", "leaves-out", 10): _gap_between_groups,
     ("edges-nearly-in-line", "leaves-out", 11): _list_s_own_spacing,
     ("edges-nearly-in-line", "leaves-out", 12): _near_other_lines,
-    ("edges-nearly-in-line", "leaves-out", 13): _near_held_edges,
-    ("edges-nearly-in-line", "leaves-out", 14): _near_inset_on_an_edge,
-    ("edges-nearly-in-line", "leaves-out", 15): _near_gap_not_beside,
+    ("edges-nearly-in-line", "leaves-out", 13): _near_centred_on_an_edge,
+    ("edges-nearly-in-line", "leaves-out", 14): _near_held_edges,
+    ("edges-nearly-in-line", "leaves-out", 15): _near_inset_on_an_edge,
+    ("edges-nearly-in-line", "leaves-out", 16): _near_gap_not_beside,
     ("edges-nearly-in-line", "states", 0): _near_states_no_step,
     ("boxes-that-overlap", "measures", 0): _overlap_pair,
     ("boxes-that-overlap", "leaves-out", 0): lambda: _apart_in_groups(overlap, -20),

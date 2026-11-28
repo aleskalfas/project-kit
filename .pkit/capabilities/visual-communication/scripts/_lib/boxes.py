@@ -34,6 +34,12 @@ brand offers, and hardly chosen.
   on one line of an axis is not reported on another line of it, since that near miss follows
   from the line chosen, as an icon and a label centred in a row differ at their tops. One
   finding names every line of the axis on which the pair nearly lines up.
+- **A mark centred on an edge** (DEC-076). A *mark* is a part shorter on each axis than twice
+  the step and two pixels, as a dot is (`_mark`). Where a mark's centre lies within a pixel of
+  the other's start or end on an axis, as a dot's middle lies on a card's top edge, the pair
+  is not compared at that edge, their starts or their ends, and is compared on its other lines
+  there (`_centred_on`). Their starts or ends within a pixel still line the pair up, so the
+  rule only ever drops a near miss.
 - **A text's room** (DEC-067 point 3). Only a text of one line given no width fills its
   width (`scene.fills_width`). Any other text is compared across only on the line on which
   its anchor stands its lines (`scene.stands`), since its box past its lines is room no reader
@@ -175,6 +181,12 @@ NEAR_ALIGNMENT_CHECK = SceneCheck(
             "the other lines of an axis on which a pair, of siblings or of leaves of different "
             "groups, lines up on one line within a pixel, of those on which both are compared "
             "(DEC-046 point 3, DEC-067 point 2)",
+            "the like edges on an axis of a pair, of siblings or of leaves of different groups, "
+            "at an edge of one on which the other's centre lies within a pixel, the other a "
+            "mark, a part shorter on each axis than twice the brand's smallest step of space and "
+            "two pixels: their left edges or their right edges across, or their tops or their "
+            "bottoms down, where the centre and that edge are each a line on which its part is "
+            "compared, and those edges lie more than a pixel apart (DEC-076 points 1 and 2)",
             "the edges and centres of a pair one of which holds the other within a pixel, "
             "whose insets it measures instead (DEC-046 point 3, DEC-067 point 2)",
             "the insets on an axis of a part inside another's box that lies within a pixel of "
@@ -261,6 +273,11 @@ SHARES = (0.0, 0.5, 1.0)
 
 #: Where a text stands its lines in its middle, so that its room lies alike on its two sides.
 MIDDLE = SHARES[1]
+
+#: The place in `LINES` of an axis's centre, and the places of its two edges, its start and
+#: its end.
+CENTRE = 1
+EDGES = (0, 2)
 
 #: The two sides of each axis on which a held part's insets lie, by name.
 SIDES = {
@@ -595,8 +612,9 @@ class _Miss:
 def _miss(first: _Part, second: _Part, a: Box, b: Box, axis: str, step: Step) -> _Miss | None:
     """The near miss on `axis` of `first` and `second`, whose boxes `a` and `b` are taken in
     one frame: on no line of it within a pixel of rounding, of those both are compared on, and
-    on one or more of them within the step. Where one holds the other, their insets are
-    compared instead (`_insets_miss`)."""
+    on one or more of them within the step, leaving uncompared each edge on which a mark's
+    centre lies (`_centred_on`). Where one holds the other, their insets are compared instead
+    (`_insets_miss`)."""
     if a.holds(b) or b.holds(a):
         return _insets_miss(first, second, a, b, axis, step)
     shared = [index for index in a.compared_on(axis) if index in b.compared_on(axis)]
@@ -606,8 +624,38 @@ def _miss(first: _Part, second: _Part, a: Box, b: Box, axis: str, step: Step) ->
     offsets = [(index, _apart(first_lines[index], second_lines[index])) for index in shared]
     if any(abs(offset) <= ROUNDING for _, offset in offsets):
         return None
-    near = tuple((LINES[axis][index], offset) for index, offset in offsets if _near(offset, step))
+    uncompared = _centred_on(a, b, axis, step)
+    near = tuple(
+        (LINES[axis][index], offset)
+        for index, offset in offsets
+        if index not in uncompared and _near(offset, step)
+    )
     return _Miss(first, second, axis, near) if near else None
+
+
+def _mark(box: Box, step: Step) -> bool:
+    """Whether `box` is a mark's: shorter on each axis than twice the step and two pixels of
+    rounding, as a dot is (DEC-076, "The words it uses")."""
+    return all(box.size(axis) < 2 * (step.value + ROUNDING) for axis in LINES)
+
+
+def _centred_on(a: Box, b: Box, axis: str, step: Step) -> set[int]:
+    """The places in `LINES` of the edges on `axis` at which `a` and `b` are not compared:
+    each edge of one, its start or its end, on which the other's centre lies within a pixel of
+    rounding, the other a mark (`_mark`), its centre and that edge each a line its part is
+    compared on (DEC-076 points 1 and 2). The caller has found that no line of the pair lies
+    within a pixel, so the pair lines up at no edge it leaves uncompared."""
+    found: set[int] = set()
+    for centred, other in ((a, b), (b, a)):
+        if not _mark(centred, step) or CENTRE not in centred.compared_on(axis):
+            continue
+        centre, edges = centred.lines(axis)[CENTRE], other.lines(axis)
+        found.update(
+            edge
+            for edge in EDGES
+            if edge in other.compared_on(axis) and abs(_apart(centre, edges[edge])) <= ROUNDING
+        )
+    return found
 
 
 def _insets_miss(

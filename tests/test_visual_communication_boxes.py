@@ -8,7 +8,9 @@ siblings.
   on the two sides of one axis differ by as much, unless it lies on an edge of that axis; and
   two spacings between the siblings of a group that nearly agree. A text is compared by its
   room: on every line where it fills its width, and else on the line it stands its lines on.
-  A finding of two siblings, one of them a group, names the pairs of leaves that show it.
+  A mark, a part small on both axes, is not compared with another part at an edge of it on
+  which the mark's centre lies (DEC-076). A finding of two siblings, one of them a group,
+  names the pairs of leaves that show it.
 - **Between groups** (`near-alignment-between-groups`): two leaves of different groups on one
   page, neither a tie's part, gathered into one finding for each offset between two sides; and
   two lists whose items one component draws, at one level, whose spacings nearly agree.
@@ -730,17 +732,25 @@ def test_one_placement_repeats_its_finding_with_each_side_that_shares_its_line()
     ]
 
 
-def test_a_dot_centred_on_each_card_s_top_edge_repeats_with_each_other_card() -> None:
-    """A row of four cards, a dot centred on each one's top edge: twelve findings between
-    groups, beside the four among each card's siblings."""
+def a_row_of_cards(*marks: dict[str, Any]) -> dict[str, Any]:
+    """A row of as many cards as `marks`, their tops on one line, each a group holding a box
+    140 by 100 px and its mark, whose trace id is put under the card's."""
 
-    def dotted(n: int) -> dict[str, Any]:
+    def card(n: int, mark: dict[str, Any]) -> dict[str, Any]:
         trace = f"page/row/c{n}"
         box = element(f"{trace}/box", width=140, height=100)
-        dot = element(f"{trace}/dot", "path", x=67, y=-3, width=6, height=6)
-        return group(trace, box, dot, x=20 + n * 150, y=40, width=140, height=100)
+        placed = {**mark, "id": f"{trace}/{mark['id']}"}
+        return group(trace, box, placed, x=20 + n * 150, y=40, width=140, height=100)
 
-    found = boxes.near_alignment(on_page(group("page/row", *map(dotted, range(4)))), STEP)
+    return on_page(group("page/row", *(card(n, mark) for n, mark in enumerate(marks))))
+
+
+def test_a_tag_set_2_px_above_each_card_s_top_edge_repeats_with_each_other_card() -> None:
+    """A row of four cards, a tag set 2 px above each one's top edge, centred on no edge:
+    twelve findings between groups, beside the four among each card's siblings (DEC-067,
+    "What it costs")."""
+    tag = element("tag", x=10, y=-2, width=40, height=30)
+    found = boxes.near_alignment(a_row_of_cards(*[tag] * 4), STEP)
     assert [f.code for f in found].count(boxes.NEAR_ALIGNMENT) == 4
     assert [f.code for f in found].count(boxes.NEAR_ALIGNMENT_BETWEEN_GROUPS) == 12
 
@@ -1067,6 +1077,241 @@ def test_a_tree_rooted_in_one_node_beside_a_tree_rooted_in_a_list(
     if lists:
         assert "set off their match: `page/left/children#2/text` and" in spacings[0].message
         assert "set off their match" not in spacings[1].message
+
+
+# --- a mark centred on an edge ------------------------------------------------------------------
+
+#: A dot 6 px square centred on its card's top edge, and a badge as large on its top right
+#: corner, in a card of `a_row_of_cards`.
+DOT = element("dot", "path", x=67, y=-3, width=6, height=6)
+BADGE = element("badge", "path", x=137, y=-3, width=6, height=6)
+
+
+def two(first: dict[str, Any], second: dict[str, Any]) -> dict[str, Any]:
+    """`first` and `second`, siblings in the group `page/g`, 800 by 400 px."""
+    return on_page(group("page/g", first, second, width=800, height=400))
+
+
+def a_timeline(size: float, *, off: float = 0) -> dict[str, Any]:
+    """A rule 2 px wide and 300 px tall, from the first step's number's centre to the last's,
+    and three steps, each a group 400 by 24 px holding its number, `size` px square, centred on
+    the rule across, the first one `off` px right of it, and a text beside it."""
+
+    def step(k: int) -> dict[str, Any]:
+        trace = f"page/line/s{k}"
+        x = 40 - size / 2 + (off if k == 0 else 0)
+        number = element(f"{trace}/number", "path", x=x, y=12 - size / 2, width=size, height=size)
+        label = text(f"{trace}/text", x=56, y=2, width=300, height=20, lines=(180,))
+        return group(trace, number, label, y=8 + 150 * k, width=400, height=24)
+
+    rule = element("page/line/rule", x=39, y=20, width=2, height=300)
+    return on_page(group("page/line", rule, *map(step, range(3)), width=400, height=340))
+
+
+@pytest.mark.parametrize(
+    "given",
+    [
+        a_row_of_cards(*[DOT] * 4),
+        a_row_of_cards(BADGE),
+        a_row_of_cards(*[BADGE] * 4),
+        two(
+            text("page/g/text", width=300, lines=(200,)),
+            element("page/g/bullet", "path", x=-3, y=40, width=6, height=6),
+        ),
+        on_page(
+            group(
+                "page/a",
+                element("page/a/box", width=140, height=100),
+                x=20,
+                y=40,
+                width=140,
+                height=100,
+            ),
+            group(
+                "page/b",
+                element("page/b/dot", "path", y=37, width=6, height=6),
+                x=300,
+                width=100,
+                height=200,
+            ),
+        ),
+    ],
+    ids=[
+        "a-dot-on-each-of-four-cards-top-edges",
+        "a-badge-on-a-card-s-corner",
+        "a-badge-on-each-of-four-cards-corners",
+        "a-mark-on-the-left-edge-of-a-text-standing-at-the-start",
+        "a-dot-whose-middle-lies-on-another-group-s-card-s-top-by-chance",
+    ],
+)
+def test_a_mark_centred_on_another_s_edge_is_not_compared_with_it_at_that_edge(
+    given: dict[str, Any],
+) -> None:
+    """A mark, shorter on each axis than two steps and two pixels, whose centre lies on another
+    part's edge, its start or its end, is not compared with it at that edge, among siblings
+    and between groups alike. The row of four dotted cards gave four findings among siblings
+    and twelve between groups, a badge on a card's corner two, and a mark on the left edge of a
+    text that stands its lines at the start one, on the edge its room leaves compared (DEC-076
+    points 1 and 2, DEC-067 point 3)."""
+    assert found_in(given) == []
+
+
+def test_a_timeline_s_markers_on_the_ends_of_its_rule_are_not_compared_with_it_there() -> None:
+    """Markers 6 px across on the ends of a timeline's rule give none, where they gave two
+    between groups. Numbers 24 px across, no marks, give none, as they always did: half their
+    size is no near miss. The first marker set 4 px right of the rule's centre is still
+    named, at their left edges, between groups, and its top is still not compared with the
+    rule's (DEC-076, "What it costs")."""
+    assert found_in(a_timeline(6)) == []
+    assert found_in(a_timeline(24)) == []
+    [finding] = boxes.near_alignment(a_timeline(6, off=4), STEP)
+    assert finding.code == boxes.NEAR_ALIGNMENT_BETWEEN_GROUPS
+    assert finding.message.endswith(
+        "`page/line/rule` and `page/line/s0/number`, their left edges 2 px apart"
+    )
+
+
+@pytest.mark.parametrize(
+    ("given", "named"),
+    [
+        (
+            two(
+                element("page/g/heading", width=400, height=40),
+                element("page/g/dot", "path", x=200, y=60, width=6, height=6),
+            ),
+            "their centres lie 3 px apart",
+        ),
+        (
+            two(
+                element("page/g/header", x=40, width=720, height=60),
+                element("page/g/column", x=43, y=80, width=357, height=300),
+            ),
+            "their left edges lie 3 px apart",
+        ),
+        (
+            two(
+                element("page/g/dot", "path", x=100, width=7, height=7),
+                element("page/g/mark", "path", x=103.5, y=40, width=5, height=5),
+            ),
+            "their centres lie 2.5 px apart",
+        ),
+        (
+            two(
+                element("page/g/dot", "path", x=100, width=7.5, height=7.5),
+                element("page/g/mark", "path", x=103.75, y=40, width=5, height=5),
+            ),
+            "their centres lie 2.5 px apart and their right edges lie 1.25 px apart",
+        ),
+        (
+            two(
+                element("page/g/a", "path", x=100, width=6, height=6),
+                element("page/g/b", "path", x=103, y=40, width=6, height=6),
+            ),
+            "their centres lie 3 px apart",
+        ),
+    ],
+    ids=[
+        "a-dot-set-by-its-left-edge-on-a-heading-s-centre",
+        "a-column-whose-right-edge-lies-on-a-header-s-centre",
+        "a-mark-of-5-px-set-by-its-left-edge-on-the-centre-of-a-dot-of-7-px",
+        "a-mark-of-5-px-set-by-its-left-edge-on-the-centre-of-a-dot-of-7-5-px",
+        "two-swatches-of-6-px-one-set-3-px-past-the-other",
+    ],
+)
+def test_a_pair_is_still_compared_on_its_other_lines_on_that_axis(
+    given: dict[str, Any], named: str
+) -> None:
+    """Only the like edges at the edge a mark's centre lies on go uncompared, so a slip the
+    pair's other lines show is named: a part set by its edge on another's centre, a column
+    that misses a margin, and marks of near one size, each uncompared at an edge on which the
+    other's centre lies (DEC-076 point 1, "Why that edge alone")."""
+    [finding] = boxes.near_alignment(given, STEP)
+    assert finding.code == boxes.NEAR_ALIGNMENT
+    assert f"nearly line up across: {named}, more than a pixel" in finding.message
+
+
+def a_card_s_bar(side: str, slip: float) -> dict[str, Any]:
+    """A card's box 240 by 160 px with a bar one step thick, drawn flush inside its top or its
+    left side as the starter's card draws its bars, slipped `slip` px out past it."""
+    box = element("page/card/box", width=240, height=160)
+    if side == "top":
+        bar = element("page/card/bar", y=-slip, width=240, height=STEP.value)
+    else:
+        bar = element("page/card/bar", x=-slip, width=STEP.value, height=160)
+    return on_page(group("page/card", box, bar, x=40, y=40, width=240, height=160))
+
+
+@pytest.mark.parametrize("slip", [1.1, 1.5, 2, 2.5, 3])
+@pytest.mark.parametrize(
+    ("side", "named"), [("top", "down: their tops"), ("left", "across: their left edges")]
+)
+def test_a_bar_slipped_out_past_its_card_s_edge_by_half_its_thickness_is_still_named(
+    side: str, named: str, slip: float
+) -> None:
+    """A bar one step thick, slipped out past the edge it was drawn flush inside by more than a
+    pixel and up to 3 px, has its middle within a pixel of that edge. It is long, so no mark,
+    and is compared there as before (DEC-076 point 1, "A mark alone")."""
+    [finding] = boxes.near_alignment(a_card_s_bar(side, slip), STEP)
+    assert f"nearly line up {named} lie {slip:g} px apart, more than a pixel" in finding.message
+
+
+@pytest.mark.parametrize(
+    ("given", "named"),
+    [
+        (
+            a_row_of_cards(element("stripe", y=-2, width=140, height=4)),
+            "down: their tops lie 2 px apart",
+        ),
+        (
+            two(
+                element("page/g/rule", x=39, width=2, height=300),
+                element("page/g/marker", "path", x=41, y=147, width=6, height=6),
+            ),
+            "across: their left edges lie 2 px apart",
+        ),
+        (
+            two(
+                element("page/g/panel", y=40, width=300, height=200),
+                element("page/g/indicator", x=20, y=38, width=40, height=4),
+            ),
+            "down: their tops lie 2 px apart",
+        ),
+    ],
+    ids=[
+        "a-stripe-meant-flush-inside-a-card-s-top-slipped-2-px-up",
+        "a-marker-4-px-off-the-centre-of-a-rule-beside-it",
+        "a-tab-s-indicator-on-a-panel-s-border",
+    ],
+)
+def test_a_long_part_whose_centre_lies_on_an_edge_is_still_compared_at_that_edge(
+    given: dict[str, Any], named: str
+) -> None:
+    """A stripe, a rule and a tab's indicator, each longer than a mark, keep their findings at
+    an edge their middle lies on: a stripe that slipped, a marker set by its left edge on a
+    rule's right, as the rule's centre lies on it, and an indicator meant to straddle a
+    border, which the reviewer judges on the image (DEC-076, "What it costs")."""
+    [finding] = boxes.near_alignment(given, STEP)
+    assert f"nearly line up {named}, more than a pixel" in finding.message
+
+
+@pytest.mark.parametrize(("width", "named"), [(9.9, False), (10, True)])
+def test_a_mark_is_shorter_than_two_steps_and_two_pixels_on_each_axis(
+    width: float, named: bool
+) -> None:
+    """A part 4 px tall whose middle lies on its card's top, centred on the card across, is a
+    mark only where it is shorter than 10 px across under a step of 4 px (DEC-076, "The words
+    it uses")."""
+    part = element("part", x=70 - width / 2, y=-2, width=width, height=4)
+    assert bool(found_in(a_row_of_cards(part))) is named
+
+
+def test_a_mark_whose_edge_lies_flush_with_the_other_s_there_still_lines_up() -> None:
+    """A hairline 1 px tall and 6 px long beside a swatch 6 px square, their tops flush: the
+    hairline's middle lies within a pixel of the swatch's top, and their tops still line up
+    there, so the pair is not compared at their middles, 2.5 px apart (DEC-076 point 1, "An
+    exact edge still lines up")."""
+    swatch = element("page/g/swatch", "path", x=100, y=40, width=6, height=6)
+    assert found_in(two(swatch, element("page/g/hairline", x=120, y=40, width=6, height=1))) == []
 
 
 # --- boxes that overlap -------------------------------------------------------------------------
