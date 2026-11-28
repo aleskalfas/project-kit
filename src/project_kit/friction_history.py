@@ -54,12 +54,15 @@ object id, shared by every artefact in the file; and a version whose bytes
 hold none of what the walk looks for — the value, in any spelling YAML's
 timestamp grammar allows (`stamps_in`), sought in its front matter alone,
 where every artefact's data is read; the block's key; every word of a
-deferral's reason (`reason_words`) — carries none of it, so it is never
-parsed. The walk that finds where each entry of a collection file was last
-added reads each version of the file from git once, however many of its
-entries it seeks: it keeps their bytes by object id while it walks that
-file, and lets them go when it walks another, so it holds one file's
-versions at most (`Walker.added`).
+deferral's reason (`reason_words`), sought in its front matter alone too,
+where it writes no backslash — carries none of it, so it is never parsed.
+The walk that finds where each entry of a collection file was last added
+reads each version of the file from git once, however many of its entries
+it seeks: it keeps their bytes by object id while it walks that file, and
+lets them go when it walks another, so it holds one file's versions at most
+(`Walker.added`). So does the walk to a deferral's point, however many
+deferrals of the file it walks for, keeping each version's front matter
+alone (`Walker.deferral_point`).
 
 **A shallow clone.** The boundary commit is listed as adding every file. A
 value — or a deferral entry — the file already carries there has its point
@@ -156,7 +159,7 @@ _INSTANT = "%Y-%m-%dT%H:%M:%S"
 _BLOCK_KEY = b"friction"
 
 # How many blobs the walker keeps in memory between a prefilter and a parse, beside
-# those it keeps for the walk of one collection file (`Walker._kept`).
+# what it keeps for the walk of one file (`Walker._kept`, `Walker._kept_data`).
 _RECENT = 16
 
 # The shortest word of a deferral's reason worth searching for.
@@ -802,9 +805,10 @@ def stamps_in(data: bytes) -> Counter[str]:
 
 
 def reason_words(reason: str | None) -> tuple[str, ...]:
-    """The words of a deferral's reason every text carrying it holds: those written in plain
-    ASCII with no quote or backslash, so no escaped or quoted form can hide one, and of at
-    least `_SHORTEST_WORD` characters — each once, the longest first; none where none is."""
+    """The words of a deferral's reason every text carrying it holds as written, unless it
+    spells one by an escape, which writes a backslash (`Walker._may_carry_reason`): those
+    in plain ASCII with no quote or backslash, so no quoted form hides one, and of at least
+    `_SHORTEST_WORD` characters — each once, the longest first; none where none is."""
     if not reason:
         return ()
     words = {
@@ -834,8 +838,9 @@ class Walker:
         self._recent: OrderedDict[str, bytes | None] = OrderedDict()
         self._added: dict[tuple[str, str | None], int | None] = {}
         self._held: dict[tuple[str, str], bool] = {}
-        self._walking: str | None = None  # the collection file whose versions `_kept` holds
+        self._walking: str | None = None  # the file whose versions `_kept`, `_kept_data` hold
         self._kept: dict[str, bytes | None] = {}
+        self._kept_data: dict[str, bytes] = {}
 
     # --- one version --------------------------------------------------------------
 
@@ -854,11 +859,12 @@ class Walker:
         return raw
 
     def _walk(self, path: str) -> None:
-        """Start keeping the blobs of the collection file at `path` (`_kept_read`), letting
-        go of another file's: the walker holds one file's versions at most."""
+        """Start keeping the versions of the file at `path` (`_kept_read`, `_kept_data_read`),
+        letting go of another file's: the walker holds one file's versions at most."""
         if path != self._walking:
             self._walking = path
             self._kept = {}
+            self._kept_data = {}
 
     def _kept_read(self, obj: str) -> bytes | None:
         """The blob `obj` names, read from git once for the walk of its file (`_walk`) and
@@ -866,6 +872,15 @@ class Walker:
         if obj not in self._kept:
             self._kept[obj] = self._read(obj)
         return self._kept[obj]
+
+    def _kept_data_read(self, obj: str) -> bytes:
+        """The part of the blob `obj` names a parse reads data from (`_data_of`), read from
+        git once for the walk of its file (`_walk`) and kept by object id until the walker
+        walks another. Only that part is kept, so a long document's body is not."""
+        found = self._kept_data.get(obj)
+        if found is None:
+            found = self._kept_data[obj] = _data_of(self._read(obj) or b"")
+        return found
 
     def _scan(self, obj: str) -> _Bytes:
         found = self._bytes.get(obj)
@@ -905,6 +920,19 @@ class Walker:
             return True
         raw = read(state[1]) or b""
         return all(word.encode() in raw for word in words)
+
+    def _may_carry_reason(self, state: TreeEntry | None, words: Sequence[str]) -> bool:
+        """Whether the blob of `state` could carry a deferral whose reason has `words`
+        (`reason_words`): `False` only where the part of its bytes a parse reads data from
+        (`_data_of`) lacks one of them and writes no backslash, so no escape in it spells
+        one otherwise. That part is kept for the walk of its file (`_kept_data_read`), so
+        each version is read from git once however many deferrals of the file are walked."""
+        if state is None or state[0] in (LINK_MODE, _GITLINK_MODE):
+            return False
+        if not words:
+            return True
+        data = self._kept_data_read(state[1])
+        return b"\\" in data or all(word.encode() in data for word in words)
 
     def artefact_in(self, state: TreeEntry | None, path: str, like: Artefact) -> Artefact | None:
         """`like` as the blob of `state` holds it at `path`: the document, or the entry under
@@ -1101,9 +1129,12 @@ class Walker:
         — an entry this history does not hold yet, put back on top of it — the
         point of the entry it puts back: `Deferred(None)` where no version
         carries an entry on `anchor` with that reason, so it puts nothing back.
+        A version is parsed to tell only where it may carry that reason
+        (`_may_carry_reason`).
         """
         versions = list(self.history.versions(like.path))
         cut = bool(versions) and self.history.is_cut(versions[-1].index)
+        self._walk(like.path)
 
         def present(state: TreeEntry | None, path: str | None) -> bool:
             if path is None or state is None:
@@ -1112,7 +1143,7 @@ class Walker:
             return found is not None and any(d.anchor == anchor for d in found.deferrals)
 
         def carrying(state: TreeEntry | None, path: str, wanted: str | None) -> bool:
-            if not self.holds(state, reason_words(wanted)):
+            if not self._may_carry_reason(state, reason_words(wanted)):
                 return False
             found = self.artefact_in(state, path, like)
             return found is not None and any(

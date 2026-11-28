@@ -1,0 +1,26 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Added
+body: >
+  A brand gives values to its own components' tokens, its drawings' among
+  them, whether or not it has a base, and opens them, as DEC-044 decides
+  (#3512). The brand's resolution, its check alone and its release read them
+  under `component.<its own name>`. A brand built on a base reaches the tokens
+  of each brand along its chain through its base, without naming it, and gives
+  one a value only where its base opens it. Under a brand outside its chain, a
+  brand's components draw their tokens at their defaults. The check now fails
+  a token under `component.<its own name>`, or under `component.<a brand along
+  its chain>`, that names none of that brand's components' tokens or is of
+  another type, and every token under the name of a brand along its chain
+  outside `component` (`library-token`). It also fails an open role that names
+  a role of a brand outside the chain (`open-unknown`), and a default of a
+  brand's own component's token that does not hold. It asks for attention at
+  a token under the name of a brand outside the chain
+  (`library-token-private`), and at a part a piece places of a brand outside
+  its brand's chain whose holding brand gives one of its tokens a value
+  (`part-of-other-brand`). A token a drawing reads nowhere is stated as a fact
+  where its brand gives it a value or opens it. The document of values, and
+  so written code, holds a brand's own components' tokens, so code written
+  from a brand whose components declare tokens is stale until it is written
+  again. A brand whose components declare no token reads as before.

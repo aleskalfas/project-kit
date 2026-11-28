@@ -18,7 +18,8 @@
   The command reads the brand at the versions it names, and never moves it.
 - **A run** resolves every token the brand exports, and every other role of the
   component libraries the lock names at the brand's value or its default (DEC-008 point
-  5), in every combination of the brand's axes whose kind the writer's declaration spells,
+  5), the tokens of the brand's own components and of its chain's among them (DEC-044
+  point 1), in every combination of the brand's axes whose kind the writer's declaration spells,
   each other axis at its default (the values document, version 2), and each picture role
   the brand gives a file. It knows its losses before the writer runs: each token of a type
   the writer's declaration has no form for in the declaration's form is left out, such as
@@ -436,8 +437,9 @@ def _brand(
 ) -> tokens.Brand:
     """The declaration's brand, read at the versions its lock names, over its base when it
     builds on one, against the roles of the libraries the lock names: the shared roles of
-    the foundations it locks, and the own roles of each component library it locks, which
-    the code then holds at the brand's values or their defaults (DEC-008 point 5). Raises
+    the foundations it locks, the own roles of each component library it locks, and the
+    component tokens of each library and brand it locks, which the code then holds at the
+    brand's values or their defaults (DEC-008 point 5, DEC-044 point 1). Raises
     CodeRefused."""
     held = libraries.Held(root, location) if held is None else held
     reached = _check_lock(held, declaration)

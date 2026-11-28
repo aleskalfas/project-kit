@@ -1,0 +1,13 @@
+component: visual-communication
+kind: patch
+custom:
+  category: Changed
+body: >
+  The capability supports Chrome alone, as Google ships it in its current
+  stable release, until a record brings another browser (DEC-074, #3534). The
+  HTML renderer's page file, and an SVG figure a web page shows or a browser
+  opens, are built for Chrome, checked through Chrome's engine and looked at in
+  Chrome. No work tests or looks at them in another browser, and a fault only
+  another browser shows is filed and waits for the record that brings it. What
+  was built for another browser stays as built, such as the lengths the HTML
+  renderer writes for Firefox's print. No file the capability writes changes.
