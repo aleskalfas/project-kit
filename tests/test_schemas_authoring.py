@@ -1150,3 +1150,68 @@ def test_rename_refuses_an_id_the_example_document_does_not_hold(tmp_path: Path)
     with pytest.raises(SchemaAuthoringError, match="'second' not found in namespace 'cycle'"):
         rename_entry(tmp_path, "cycle", "second", "later")
     assert {name: path.read_text(encoding="utf-8") for name, path in paths.items()} == before
+
+
+# What the companion of `cycle` is given, and what the commands then say is wrong with it.
+_UNREADABLE_OWNERSHIPS = [
+    pytest.param(
+        {"x-pkit-id-collection": "/entries"},
+        "the companion declares both 'x-pkit-id-collection' and 'x-pkit-entry-id'",
+        id="both-annotations",
+    ),
+    pytest.param(
+        {"x-pkit-entry-id": ["id"]},
+        "the companion has non-string 'x-pkit-entry-id': ['id']",
+        id="non-string-pointer",
+    ),
+]
+
+
+def _with_unreadable_ownership(tmp_path: Path, annotations: dict[str, object]) -> None:
+    """The document namespace `cycle`, its companion given `annotations`."""
+    paths = _setup_document_namespace_with_consumers(tmp_path)
+    companion_path = paths["owner"].with_suffix(".schema.json")
+    companion = json.loads(companion_path.read_text(encoding="utf-8"))
+    companion.update(annotations)
+    companion_path.write_text(json.dumps(companion), encoding="utf-8")
+
+
+@pytest.mark.parametrize(("annotations", "message"), _UNREADABLE_OWNERSHIPS)
+def test_cli_schemas_add_refuses_an_ownership_it_cannot_read_and_writes_nothing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, annotations: dict[str, object], message: str
+) -> None:
+    """A companion declaring both annotations (COR-029 point 6), or a pointer that is no
+    string, gives no way to read the namespace's ids: the command says why and changes no
+    file."""
+    _with_unreadable_ownership(tmp_path, annotations)
+    before = _tree(tmp_path)
+    monkeypatch.chdir(tmp_path)
+
+    result = CliRunner().invoke(
+        main,
+        ["--color", "never", "schemas", "add", "cycle", "second", "--from", "-"],
+        input="title: The second\n",
+    )
+
+    assert result.exit_code == 1, result.output
+    assert f"namespace 'cycle': {message}" in result.output
+    assert _tree(tmp_path) == before
+
+
+@pytest.mark.parametrize(("annotations", "message"), _UNREADABLE_OWNERSHIPS)
+def test_cli_schemas_rename_refuses_an_ownership_it_cannot_read_and_writes_nothing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, annotations: dict[str, object], message: str
+) -> None:
+    """The same companions refused by `schemas rename`, before it renames the token and the
+    key that cite `cycle`."""
+    _with_unreadable_ownership(tmp_path, annotations)
+    before = _tree(tmp_path)
+    monkeypatch.chdir(tmp_path)
+
+    result = CliRunner().invoke(
+        main, ["--color", "never", "schemas", "rename", "cycle", "first", "opening"]
+    )
+
+    assert result.exit_code == 1, result.output
+    assert f"namespace 'cycle': {message}" in result.output
+    assert _tree(tmp_path) == before
