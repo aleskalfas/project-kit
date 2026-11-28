@@ -21,7 +21,7 @@ import pytest
 from tests import pm_assignee_lookup
 from tests.pm_board_graphql import FieldsBoard, flag_value, is_seam_read, query_of
 from tests.pm_board_world import LABEL_STATE
-from tests.pm_ownership_support import FakeGitHub, clone_with, topology_with, use
+from tests.pm_ownership_support import EARLIEST_TAKE, FakeGitHub, clone_with, topology_with, use
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATH = (
@@ -558,7 +558,7 @@ def _file_from_seat(
     github.add(55, assignees=("filer-login",))
     claims = ci.instance_claims
     ownership = claims.ownership
-    holder = ownership.Holder(ownership.SEAT_HELD, "filer-login", "k1")
+    holder = ownership.Holder(ownership.SEAT_HELD, "filer-login", "k1", EARLIEST_TAKE)
     seat = claims.Seat("seat-1", 1, role)
     topology_with(claims, monkeypatch, claims.Topology(seat, {"seat-1": holder}), key="k1")
     use(claims, monkeypatch, github)
