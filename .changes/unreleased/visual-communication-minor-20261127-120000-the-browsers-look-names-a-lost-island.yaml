@@ -1,0 +1,29 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Changed
+body: >
+  Through a browser, the look report's `dropped` names a cut or a cover that
+  takes an island of a span's ink, such as a full stop, a decimal point or
+  the dot of ż that a later part hides whole, as it does through the SVG
+  renderer (DEC-054, #3262). A cause is named where it loses at least the
+  sliver, 0.01 of the span's em squared of its strong ink in device pixels,
+  or where it takes an island of the span's ink, however few its pixels: it
+  hides some of the island wholly and leaves none of it showing at its
+  strength. Past the page's edge, it takes one only by cutting all of it.
+  Such an entry carries `island: true`, whatever its share. Where the span
+  holds no strong ink, `share` is of its ink at the lightest level the read
+  takes, so a faint full stop hidden whole gives 1. A smaller loss that takes
+  no island names none. The levels and the joining of the measure are one
+  set for both renderers, which the outputs page states. A graze that hides
+  wholly a pixel standing apart from the rest of its letter, such as one at a
+  descender's foot, is named too, and is mended as any covered span is, by
+  moving the box clear of the line. The report's schema,
+  `schemas/look-report.schema.json`, follows: through the HTML renderer, a
+  `cut` or `covered` entry of `dropped` may hold `island` as true, and an
+  entry of another cause holds neither `share` nor `island`. Each start's
+  first read plants a dot too, a full stop of its own under a later box, set
+  at the text floor in device pixels, and the run stops where the read leaves
+  it unnamed or names it without `island`, or where the háček plant's loss
+  lies under the sliver. A look through a browser may name a dot it left
+  unnamed before.

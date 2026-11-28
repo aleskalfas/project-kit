@@ -18,9 +18,11 @@ point 5), and `compute_scene`, which computes it from a piece's content and libr
   that measured it (file name and sha256), how it was measured, and the source of each.
   Each line holds its text, its width, its baseline below its top, its paragraph, and
   its spans: each the part of one run of its paragraph that lies on it, with its width
-  (DEC-012 points 4 and 7). Where it stands each line in its width, by its anchor, and
-  whether it fills that width are read here alone (`stands`, `line_left`, `fills_width`),
-  which the checks read: a text's start lies at its left.
+  (DEC-012 points 4 and 7). Its anchor, its count of lines, whether its component gave it
+  its width, where it stands each line in that width and whether it fills it are read here
+  alone (`anchor`, `line_count`, `given_width`, `stands`, `line_left`, `fills_width`), which
+  the checks and the viewing step's frames read (DEC-077 point 2): a text's start lies at
+  its left.
 - **A run's sign and ground** (DEC-036 point 3). A run whose text part chooses them holds
   `sign: true` and its `ground`, a role, each with its source. A span holds the sign
   before its text, `sign`: its run's concept's outline, `d` and `fill-rule`, mapped into a
@@ -154,15 +156,35 @@ def length(value: float) -> float:
 
 #: Where a text stands each of its lines in its width, by its `text-anchor`: the share of
 #: the room a line leaves in that width that lies before the line. A text's start lies at
-#: its left, so it stands its lines at its left edge, its centre or its right edge.
+#: its left, so it stands its lines at its left edge, its centre or its right edge. These
+#: are the anchors the scene knows (`anchor`).
 STANDS = {"start": 0.0, "middle": 0.5, "end": 1.0}
 
 
-def stands(text: Mapping[str, Any]) -> float:
-    """The share of `text`'s width at which it stands each of its lines (`STANDS`): 0 at its
-    left edge, 0.5 at its centre, 1 at its right edge. An anchor the scene does not hold is
+def anchor(text: Mapping[str, Any]) -> str:
+    """Where `text` stands each of its lines in its width, its `text-anchor`, as one of the
+    anchors `STANDS` knows. An anchor the scene does not hold, or one it does not know, is
     the engine's default, the start."""
-    return STANDS.get(str(text.get("text-anchor", "start")), 0.0)
+    held = str(text.get("text-anchor", "start"))
+    return held if held in STANDS else "start"
+
+
+def line_count(text: Mapping[str, Any]) -> int:
+    """How many lines the scene holds for `text`: none for a text of no lines."""
+    return len(text.get("lines") or [])
+
+
+def given_width(text: Mapping[str, Any]) -> bool:
+    """Whether `text`'s component gave it its width: false only where the scene names the
+    engine as its width's source, as where the engine made the text as wide as its widest
+    line ("Sources", `components.md`)."""
+    return (text.get("sources") or {}).get("width") != ENGINE
+
+
+def stands(text: Mapping[str, Any]) -> float:
+    """The share of `text`'s width at which it stands each of its lines, by its `anchor`
+    (`STANDS`): 0 at its left edge, 0.5 at its centre, 1 at its right edge."""
+    return STANDS[anchor(text)]
 
 
 def line_left(text: Mapping[str, Any], line: Mapping[str, Any]) -> float:
@@ -173,11 +195,11 @@ def line_left(text: Mapping[str, Any], line: Mapping[str, Any]) -> float:
 
 
 def fills_width(text: Mapping[str, Any]) -> bool:
-    """Whether `text` draws to both edges of its width: only a text of one line whose
-    component gave it no width, which the engine makes as wide as that line, its width's
-    source the engine's. A text given a width breaks its lines short of it, and the lines of
+    """Whether `text` draws to both edges of its width: only a text of one line
+    (`line_count`) whose component gave it no width (`given_width`), which the engine makes
+    as wide as that line. A text given a width breaks its lines short of it, and the lines of
     a text of more than one end where their words do ("Breaking lines", `components.md`)."""
-    return len(text.get("lines") or []) == 1 and (text.get("sources") or {}).get("width") == ENGINE
+    return line_count(text) == 1 and not given_width(text)
 
 
 @dataclass

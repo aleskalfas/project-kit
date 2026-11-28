@@ -32,9 +32,9 @@ is read, and none is used up (DEC-016 point 5).
   reload: the step takes each key's signals from the renderer's declaration (`signals_of`)
   and the browser's module sets them (DEC-023 point 6). Its `dropped` names too each span the
   page does not show in full, cut by its page's edge or covered on it, with the share of its
-  strong ink each cause loses (DEC-037). Through the SVG renderer the tool's module reads
-  cover and cut too, and its entries take the same fields, and `island` where the cause takes
-  an island of the span's ink, leaving none of it showing at its level (DEC-045).
+  strong ink each cause loses (DEC-037), and `island` where the cause takes an island of the
+  span's ink, leaving none of it showing at its level (DEC-054). Through the SVG renderer the
+  tool's module reads cover and cut too, and its entries take the same fields (DEC-045).
   The browser is the one the configuration names (`browser_named`), or else the first found
   where Chrome and Chromium install themselves. Its profile lies in the clone's local folder,
   and the module removes it.
@@ -47,8 +47,10 @@ is read, and none is used up (DEC-016 point 5).
   entry that lies on one. resvg knows no forced colours, so a run through the SVG renderer
   that asks for them is refused.
 - **Beside them,** in the renderer's own folder of `FOLDER` (`folder_of`): each image's
-  frames, one report of what the images cannot show as the renderer set it (DEC-015 point
-  3), and for the HTML renderer each page file, for a person to open in their own browser.
+  frames, a text's naming too its anchor, its count of lines and whether its component gave
+  it its width, as the scene's code reads them for the checks (`text_facts`, DEC-077), one
+  report of what the images cannot show as the renderer set it (DEC-015 point 3), and for
+  the HTML renderer each page file, for a person to open in their own browser.
 - **A stop.** Where no browser runs, or one stops part way, or its first read fails, the
   run gives the page files and a report that says what stopped it, and no image (DEC-020
   point 8). Every refusal comes before that. The report names the ways on, in the order of
@@ -99,7 +101,7 @@ from _lib.env import MissingFont
 from _lib.plugins import seam
 from _lib.reading import ReadError, read_yaml
 from _lib.root import CAPABILITY, CONFIG, LOCAL
-from _lib.scene import SceneResult
+from _lib.scene import SceneResult, anchor, given_width, line_count
 from _lib.scene_checks import LANGUAGES, SIZES, Found, SceneCheck
 
 #: Where the images of each piece lie, relative to the project root.
@@ -158,9 +160,9 @@ FORCED_UNSHOWN = (
 #: How many decimals the share of a span's strong ink that a cause loses keeps in the report.
 SHARE_PLACES = 3
 
-#: The key of a cut or covered entry, through the SVG renderer, whose cause takes an island of
+#: The key of a cut or covered entry, through either renderer, whose cause takes an island of
 #: the span's ink, such as a dot, leaving none of it showing at its level. Another entry holds
-#: no such key (DEC-045 point 2).
+#: no such key (DEC-045 point 2, DEC-054 point 3).
 ISLAND = "island"
 
 #: How many decimals a browser's device scale keeps, rounded up, so its flag names it whole.
@@ -824,6 +826,7 @@ class _Made:
                 "text": each.text,
                 "why": each.why,
                 **({} if each.share is None else {"share": round(each.share, SHARE_PLACES)}),
+                **({ISLAND: True} if each.island else {}),
             }
             for each in read.dropped
         )
@@ -1380,12 +1383,13 @@ def frames(
     """Each element's frame in the pixels of an image of `width` by `height`, with its trace
     id, the page's own first, in drawing order (DEC-015 point 5). Of a band, `region`, each
     element the band shows, a part of it or the whole, in the band's own pixels, so a frame a
-    cut crosses reaches past the image (DEC-022 point 7)."""
+    cut crosses reaches past the image (DEC-022 point 7). A text's frame names too what
+    `text_facts` gives (DEC-077 point 1)."""
     top, tall = (0.0, float(page["height"])) if region is None else region
     across, down = width / float(page["width"]), height / tall
 
     def frame(element: Mapping[str, Any], x: float, y: float) -> dict[str, Any]:
-        return {
+        box = {
             "id": element["id"],
             "type": element.get("type"),
             "x": round(x * across, 2),
@@ -1393,6 +1397,7 @@ def frames(
             "width": round(float(element.get("width", 0)) * across, 2),
             "height": round(float(element.get("height", 0)) * down, 2),
         }
+        return {**box, **text_facts(element)} if element.get("type") == "text" else box
 
     def shows(element: Mapping[str, Any], y: float) -> bool:
         bottom, reach = top + tall, float(element.get("height", 0))
@@ -1400,6 +1405,19 @@ def frames(
 
     placed = (frame(each, x, y) for each, x, y in _placed(page) if shows(each, y))
     return [frame(page, 0.0, 0.0), *placed]
+
+
+def text_facts(text: Mapping[str, Any]) -> dict[str, Any]:
+    """What a text's frame names beside its box, as the scene holds it (DEC-077 points 1 and
+    2): its anchor, how many lines it has, and whether its component gave it its width. Each
+    is the reading of the scene's code that the checks read (`scene.anchor`,
+    `scene.line_count`, `scene.given_width`), and none is worked out here. None is a place,
+    so a text names the same in every image and every band that shows it."""
+    return {
+        "text-anchor": anchor(text),
+        "line-count": line_count(text),
+        "given-width": given_width(text),
+    }
 
 
 def drawn_otherwise(page: Mapping[str, Any]) -> Iterator[dict[str, Any]]:

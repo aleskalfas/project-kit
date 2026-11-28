@@ -10,8 +10,9 @@ each span adds what only a browser could learn: `fonts`, as `CSS.getPlatformFont
 answers, `ink`, the grounds on which the span changes the picture, with `ink-when` giving
 other grounds under a reader's signal set to a value, keyed `signal:value`, and `lost`, the
 share of its strong ink each cause loses, by cause, `cut` or `covered`, with `lost-when` as
-`ink-when`. `requests` are what the document asks for. A `fault` names a method, and the
-document it strikes in, if any.
+`ink-when`. A span may add a `dot`, an island of its own, with its `dark`ness and the cause
+that takes it whole, `lost`, if any, and may hold no `letter`. `requests` are what the document
+asks for. A `fault` names a method, and the document it strikes in, if any.
 
 **The signals.** What `Emulation.setEmulatedMedia` set shows in every picture it takes, so a
 page repaints as its signals change; under `repaints: false`, no picture shows them. The
@@ -20,7 +21,12 @@ names others.
 
 **What the page shows of a span.** Each span the module asks it to tally holds `STRONG` device
 pixels of strong ink, and loses to each cause its `lost` share of them, whatever the pictures
-it was handed.
+it was handed. For the measure of islands, its letter is drawn as `LETTER` pixels of strong
+ink, one island, of which each cause loses its share, at least one pixel of any share: the cut
+from its first rows, the cover from its last. Its dot, where it has one, is `DOT` pixels of its
+darkness apart from the letter, strong where that is `islands.STRONG` or darker, and counts
+among its strong ink. A span with no letter holds the dot's ink alone. Where a cause loses
+some of the span's ink, the tally gives each pixel of it, as the module's does.
 
 **What it leaves.** Each line of the log it writes is a JSON message, its flags and its process
 first.
@@ -54,6 +60,19 @@ HELD_FONT = {"familyName": "Held", "isCustomFont": True, "glyphCount": 4}
 
 #: How many device pixels of strong ink each span holds, where the module tallies it.
 STRONG = 10_000
+
+#: The pixels the letter of a span is drawn in, for the measure of islands: rows of
+#: `LETTER_WIDTH`, from the first row, each of strong ink.
+LETTER = 100
+LETTER_WIDTH = 10
+
+#: The pixels of a span's dot, two rows of two, and the row it starts at, apart from the letter.
+DOT = 4
+DOT_ROW = 20
+
+#: The darkness the stand-in counts as strong, and the lightest it counts, as `islands` holds.
+STRONG_DARKNESS = 127
+FAINT = 191
 
 #: The ground and the text colour each scheme's forced palette gives, as a browser computes them.
 COLOURS = {
@@ -257,16 +276,37 @@ class _Browser:
                 self.styles.pop(each, None)
         return None
 
-    def tallied(self, index: int) -> dict[str, int]:
-        """What the module's tally gives of the span of `index`: its strong ink, and how much of
-        it lies past its page's edge and hidden on its page, under the signals set."""
+    def tallied(self, index: int) -> dict[str, Any]:
+        """What the module's tally gives of the span of `index`: its strong ink, how much of it
+        lies past its page's edge and hidden on its page, under the signals set, and each pixel
+        of its ink where a cause loses some of it, each with its row, its column, its darkness
+        and how much of it the page drawn whole shows, `None` past the edge."""
         span = next(each for each in self.spans() if each["index"] == index)
         lost = self.when(span, "lost", {})
-        return {
-            "strong": STRONG,
-            "past": round(lost.get("cut", 0) * STRONG),
-            "hidden": round(lost.get("covered", 0) * STRONG),
+        letter = span.get("letter", True)
+        dot = span.get("dot")
+        strong_dot = dot is not None and dot["dark"] <= STRONG_DARKNESS
+        tally = {
+            "strong": (STRONG if letter else 0) + (DOT if strong_dot else 0),
+            "past": round(lost.get("cut", 0) * STRONG) if letter else 0,
+            "hidden": round(lost.get("covered", 0) * STRONG) if letter else 0,
         }
+        pixels: list[list[Any]] = []
+        if letter:
+            cut, covered = (_pixels_of(lost.get(cause, 0)) for cause in ("cut", "covered"))
+            for at in range(LETTER):
+                row, column = divmod(at, LETTER_WIDTH)
+                gone = "cut" if at < cut else "covered" if at >= LETTER - covered else ""
+                pixels.append([row, column, 0, _shown(gone)])
+        if dot is not None:
+            gone = dot.get("lost", "")
+            if strong_dot and gone:
+                tally["past" if gone == "cut" else "hidden"] += DOT
+            for at in range(DOT):
+                row, column = divmod(at, 2)
+                pixels.append([DOT_ROW + row, column, dot["dark"], _shown(gone)])
+        held = [pixel for pixel in pixels if pixel[2] <= FAINT]
+        return {**tally, "pixels": held if any(pixel[3] in (None, 0) for pixel in held) else None}
 
     def ink(self, span: Mapping[str, Any]) -> Sequence[str]:
         """The grounds on which `span` changes the picture, under the signals set."""
@@ -292,6 +332,17 @@ class _Browser:
         header = b"\x89PNG\r\n\x1a\n" + b"\0\0\0\rIHDR" + struct.pack(">II", width, height)
         media = self.media if self.plan.get("repaints", True) else {}
         return header + json.dumps([self.document, self.ground, clip, shown, media]).encode()
+
+
+def _pixels_of(share: float) -> int:
+    """How many pixels of a letter a cause loses at `share`: at least one of any share."""
+    return max(round(share * LETTER), 1) if share else 0
+
+
+def _shown(gone: str) -> int | None:
+    """How much of a pixel the page drawn whole shows, where `gone` names the cause that lost it:
+    none past the edge, nothing under a cover, and all of it otherwise."""
+    return None if gone == "cut" else 0 if gone == "covered" else 255
 
 
 def main() -> None:

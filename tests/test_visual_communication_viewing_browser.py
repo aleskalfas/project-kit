@@ -47,6 +47,9 @@ from tests.visual_communication_browser import (
 
 (viewing_browser,) = load("visual-communication", "viewing_browser")
 
+#: The measure of islands the module takes (DEC-054 point 2).
+islands = viewing_browser.islands
+
 MODULE = Path(str(viewing_browser.__file__))
 
 #: The file a drawing reads, as the module opens it.
@@ -144,12 +147,17 @@ def clean() -> dict[str, Any]:
     return one_page(span("hello", 0), span("world", 1))
 
 
-#: The share of its strong ink each plant the reads name as cut or covered loses, by its trace
-#: id, as a stand-in draws the planted file.
+#: The dot plant as a stand-in draws it: a dot of strong ink and no letter, its box covering
+#: it whole, so it loses fewer pixels than the sliver and the measure of islands names it.
+PLANTED_DOTS = {viewing_browser.DOT: {"letter": False, "dot": {"dark": 0, "lost": "covered"}}}
+
+#: The share of its strong ink each other plant the reads name as cut or covered loses, by its
+#: trace id, as a stand-in draws the planted file.
 PLANTED_LOSSES = {
     finding[1]: {finding[0]: 0.5}
     for finding in viewing_browser.PLANTED_FINDINGS
     if finding[0] in (viewing_browser.CUT, viewing_browser.COVERED)
+    and finding[1] not in PLANTED_DOTS
 }
 
 
@@ -199,6 +207,7 @@ def planted(forced: bool = False) -> dict[str, Any]:
                                 else DARK
                             ),
                             lost=PLANTED_LOSSES.get(element, {}),
+                            **PLANTED_DOTS.get(element, {}),
                         )
                     )
                     index += 1
@@ -246,6 +255,8 @@ def cured(document: dict[str, Any], finding: tuple[str, ...]) -> dict[str, Any]:
         spans[0]["x"] = 8.0
     elif kind in (viewing_browser.CUT, viewing_browser.COVERED):
         spans[0]["lost"] = {}
+        if "dot" in spans[0]:
+            spans[0]["dot"] = {**spans[0]["dot"], "lost": ""}
     elif kind == viewing_browser.NO_FACE:
         spans[0]["face"] = True
     else:
@@ -317,12 +328,12 @@ def test_the_module_imports_the_standard_library_and_the_renderers_declaration_a
         if isinstance(node, ast.Import):
             names.update(alias.name for alias in node.names)
         elif isinstance(node, ast.ImportFrom):
-            if node.module == "_lib.plugins":
+            if node.module in ("_lib", "_lib.plugins"):
                 names.update(f"{node.module}.{alias.name}" for alias in node.names)
             else:
                 names.add(node.module or "")
     outside = {name for name in names if name.split(".")[0] not in sys.stdlib_module_names}
-    assert outside == {"_lib.plugins.html_declaration"}
+    assert outside == {"_lib.islands", "_lib.plugins.html_declaration"}
 
 
 # `find`
@@ -712,7 +723,7 @@ def evaluated(program: Path, function: str) -> list[list[Any]]:
 
 def tallied(program: Path) -> list[list[int]]:
     """The spans, by their places in the document, of each batch whose strong ink was read."""
-    return [[each["index"] for each in asked] for _, _, asked in evaluated(program, TALLY)]
+    return [[each["index"] for each in asked] for _, _, asked, _ in evaluated(program, TALLY)]
 
 
 TALLY = viewing_browser.TALLY
@@ -735,10 +746,14 @@ def test_a_span_cut_or_covered_is_an_entry_of_dropped_with_the_share_its_cause_l
         span("shown", 3),
     )
     assert found == (
-        viewing_browser.Dropped("page", "text-0", "cut", viewing_browser.CUT, 0.25),
-        viewing_browser.Dropped("page", "text-1", "covered", viewing_browser.COVERED, 0.5),
-        viewing_browser.Dropped("page", "text-2", "both", viewing_browser.CUT, 0.375),
-        viewing_browser.Dropped("page", "text-2", "both", viewing_browser.COVERED, 0.125),
+        viewing_browser.Dropped("page", "text-0", "cut", viewing_browser.CUT, 0.25, by_size=True),
+        viewing_browser.Dropped(
+            "page", "text-1", "covered", viewing_browser.COVERED, 0.5, by_size=True
+        ),
+        viewing_browser.Dropped("page", "text-2", "both", viewing_browser.CUT, 0.375, by_size=True),
+        viewing_browser.Dropped(
+            "page", "text-2", "both", viewing_browser.COVERED, 0.125, by_size=True
+        ),
     )
 
 
@@ -769,6 +784,122 @@ def test_a_loss_smaller_than_the_sliver_in_the_spans_em_names_no_entry(
     found = dropped(tmp_path, span("graze", 0, em=em, lost={"covered": share, "cut": 1 / STRONG}))
     assert [(each.why, each.share) for each in found] == (
         [(viewing_browser.COVERED, share)] if named else []
+    )
+
+
+# What a cause takes: the sliver, or an island of the span's counted ink (DEC-054).
+
+
+def letter(hidden: int = 0, shown: int | None = 0) -> list[list[Any]]:
+    """A letter of a span as the tally gives its pixels: a block of ten rows of ten, of strong
+    ink, its last `hidden` pixels shown as `shown`, all of it otherwise."""
+    return [
+        [row, column, 0, shown if row * 10 + column >= 100 - hidden else islands.ALL]
+        for row in range(10)
+        for column in range(10)
+    ]
+
+
+def dot(dark: int = 0, shown: int | None = 0, row: int = 20) -> list[list[Any]]:
+    """A dot of two rows of two, apart from the letter, of darkness `dark`, each pixel shown as
+    `shown`: none of it under a cover, and `None` past the page's edge."""
+    return [[row + down, across, dark, shown] for down in (0, 1) for across in (0, 1)]
+
+
+def causes(pixels: Sequence[Sequence[Any]], least: float = 10.0) -> list[tuple[str, Any]]:
+    """What `_causes` names of a span whose tally gives `pixels`, its strong ink and its losses
+    counted from them, against a sliver of `least` device px."""
+    strong = [each for each in pixels if each[2] <= islands.STRONG]
+    count = {
+        "strong": len(strong),
+        "past": sum(each[3] is None for each in strong),
+        "hidden": sum(each[3] == 0 for each in strong),
+        "pixels": [list(each) for each in pixels],
+    }
+    return list(viewing_browser._causes(count, least))
+
+
+def test_a_dot_hidden_whole_under_the_sliver_is_named_covered_with_island() -> None:
+    """Four strong pixels, under a sliver of ten: the cover takes the dot's island, so the read
+    names it, though its size alone would not (DEC-054 point 1)."""
+    [(why, lost)] = causes(letter() + dot())
+    assert why == viewing_browser.COVERED
+    assert lost == viewing_browser.Lost(4 / 104, True, False)
+
+
+def test_a_loss_past_the_sliver_that_takes_no_island_is_named_by_its_size() -> None:
+    [(why, lost)] = causes(letter(hidden=20) + dot(shown=islands.ALL))
+    assert why == viewing_browser.COVERED
+    assert lost == viewing_browser.Lost(20 / 104, False, True)
+
+
+def test_a_graze_under_the_sliver_that_takes_no_island_is_left_unnamed() -> None:
+    """The last pixels of a letter hidden wholly, the rest of it showing: a sliver, and no
+    island (DEC-054 point 1)."""
+    assert causes(letter(hidden=3)) == []
+
+
+def test_a_dot_of_which_a_pixel_still_shows_at_its_level_takes_no_island() -> None:
+    """One pixel of the dot shows enough to be strong ink still, so the cover leaves some of
+    the island showing at each level it is an island at, and its size alone judges it."""
+    pixels = letter() + dot()
+    pixels[-1] = [*pixels[-1][:3], islands.ALL - islands.STRONG]
+    assert causes(pixels) == []
+
+
+def test_a_faint_dot_with_no_strong_ink_hidden_whole_is_named_with_the_share_of_its_ink() -> None:
+    """A full stop of faint ink alone, hidden whole: the span holds no strong ink, so its share
+    is of its counted ink, and reads 1 (DEC-054 point 3)."""
+    [(why, lost)] = causes(dot(dark=islands.FAINT))
+    assert why == viewing_browser.COVERED
+    assert lost == viewing_browser.Lost(1.0, True, False)
+
+
+def test_ink_lighter_than_the_counted_takes_no_island() -> None:
+    assert causes(dot(dark=islands.FAINT + 1)) == []
+
+
+def test_a_dot_wholly_past_the_pages_edge_is_named_cut_with_island() -> None:
+    """A cut takes an island only by cutting all of it (DEC-054 point 1)."""
+    [(why, lost)] = causes(letter() + dot(shown=None))
+    assert why == viewing_browser.CUT
+    assert lost == viewing_browser.Lost(4 / 104, True, False)
+
+
+def test_a_dot_partly_past_the_pages_edge_takes_no_island() -> None:
+    """Half of the dot past the edge, the rest of it showing on the page."""
+    pixels = letter() + dot(shown=None)
+    pixels[-2:] = [[*each[:3], islands.ALL] for each in pixels[-2:]]
+    assert causes(pixels) == []
+
+
+def test_each_cause_is_judged_alone_and_an_island_is_taken_by_one() -> None:
+    """Half of a dot past the edge and the other half under a cover: neither takes the island
+    whole, and neither loses the sliver (DEC-054 point 1, its known gaps)."""
+    pixels = letter() + dot()
+    pixels[-2:] = [[*each[:3], None] for each in pixels[-2:]]
+    assert causes(pixels) == []
+
+
+def test_a_tally_that_gives_no_pixels_judges_each_cause_by_the_sliver_alone() -> None:
+    """The tally gives a span's pixels only where it lost some of its counted ink, so a span it
+    gives none of takes no island."""
+    count = {"strong": 100, "past": 12, "hidden": 0, "pixels": None}
+    assert list(viewing_browser._causes(count, 10.0)) == [
+        (viewing_browser.CUT, viewing_browser.Lost(0.12, False, True))
+    ]
+
+
+def test_a_dot_under_the_sliver_is_an_entry_of_dropped_with_island(tmp_path: Path) -> None:
+    """Through the stand-in: a full stop of its own span, hidden whole, and a span whose cover
+    loses less than the sliver and takes no island, which names no entry."""
+    found = dropped(
+        tmp_path,
+        span(".", 0, letter=False, dot={"dark": 0, "lost": "covered"}),
+        span("graze", 1, lost={"covered": 1 / STRONG}),
+    )
+    assert found == (
+        viewing_browser.Dropped("page", "text-0", ".", viewing_browser.COVERED, 1.0, True),
     )
 
 
@@ -837,7 +968,7 @@ def test_spans_whose_widened_boxes_do_not_meet_are_drawn_alone_at_once(tmp_path:
         if mark == viewing_browser.MEASURED_MARK
     ]
     assert measured == [[0, 2], [1], []]
-    assert [len(images) for images, _, _ in evaluated(program, TALLY)] == [4, 4]
+    assert [len(images) for images, _, _, _ in evaluated(program, TALLY)] == [4, 4]
 
 
 def test_each_batch_is_read_in_its_letters_alone_then_in_the_page_drawn_whole(
@@ -893,7 +1024,9 @@ def test_the_cut_and_the_cover_are_read_in_each_mode_alone(tmp_path: Path) -> No
     """A span covered in the dark key alone, as a key may paint a part over it."""
     dim = span("dim", 1, **{"lost-when": {"prefers-color-scheme:dark": {"covered": 1}}})
     drawing, _ = in_modes(tmp_path, documents={FILE: one_page(span("hello", 0), dim)})
-    covered = (viewing_browser.Dropped("page", "text-1", "dim", viewing_browser.COVERED, 1.0),)
+    covered = (
+        viewing_browser.Dropped("page", "text-1", "dim", viewing_browser.COVERED, 1.0, True, True),
+    )
     assert [each.read.dropped for each in drawing.shown] == [(), (), covered, covered]
 
 
@@ -983,8 +1116,9 @@ LEFT_UNNAMED = {
 
 def test_the_planted_file_plants_each_loss_of_what_the_page_shows() -> None:
     """A span cut past its page's top edge, and as covered: the text under a later box, the
-    háček plant, a span wholly under another text, never named as one with no ink, and the
-    text a part covers by z-index, on a page of its own (DEC-037 point 5)."""
+    háček plant, the dot plant, a span wholly under another text, never named as one with no
+    ink, and the text a part covers by z-index, on a page of its own (DEC-037 point 5, DEC-054
+    point 4)."""
     named = {
         finding[:2]
         for finding in viewing_browser.PLANTED_FINDINGS
@@ -994,6 +1128,7 @@ def test_the_planted_file_plants_each_loss_of_what_the_page_shows() -> None:
         (viewing_browser.CUT, viewing_browser.CUT_PAST_THE_TOP),
         (viewing_browser.COVERED, viewing_browser.UNDER_A_BOX),
         (viewing_browser.COVERED, viewing_browser.HACEK),
+        (viewing_browser.COVERED, viewing_browser.DOT),
         (viewing_browser.COVERED, viewing_browser.UNDER_ANOTHER),
         (viewing_browser.COVERED, viewing_browser.RAISED),
     }
@@ -1093,6 +1228,74 @@ def test_the_hacek_plant_is_set_at_the_commands_text_floor() -> None:
     point 5)."""
     (viewing,) = load("visual-communication", "viewing")
     assert viewing_browser.TEXT_FLOOR == viewing.SMALLEST_TEXT
+
+
+def the_plant(document: dict[str, Any], element: str) -> dict[str, Any]:
+    """The span of the planted text `element` in the planted file `document`."""
+    [held] = [each for page in document["pages"] for each in page["texts"] if each["id"] == element]
+    return held["lines"][0][0]
+
+
+#: The dot plant drawn as a letter half of which its box hides, the rest showing, so the read
+#: names it by its size and takes no island; and the háček plant drawn as a dot its box hides
+#: whole, fewer pixels than the sliver, so the read names it for its island alone.
+WITHOUT_ISLAND = {"letter": True, "dot": None, "lost": {"covered": 0.5}}
+UNDER_THE_SLIVER = {"letter": False, "dot": {"dark": 0, "lost": "covered"}, "lost": {}}
+
+
+@pytest.mark.parametrize(
+    ("element", "drawn_as", "said"),
+    [
+        (viewing_browser.DOT, WITHOUT_ISLAND, "named the dot plant without `island`"),
+        (viewing_browser.HACEK, UNDER_THE_SLIVER, "named the háček plant for an island alone"),
+    ],
+    ids=["dot-without-island", "hacek-under-the-sliver"],
+)
+@pytest.mark.parametrize("forced", [False, True], ids=["first-read", "forced-palette"])
+def test_the_first_read_stops_where_the_dot_or_the_hacek_plant_is_named_otherwise(
+    tmp_path: Path, element: str, drawn_as: Mapping[str, Any], said: str, forced: bool
+) -> None:
+    """The dot plant must be named with `island`, and the háček plant by its size, in each
+    start and each forced palette (DEC-054 point 4)."""
+    file = viewing_browser.PLANTED_FORCED_FILE if forced else viewing_browser.PLANTED_FILE
+    document = planted(forced=forced)
+    the_plant(document, element).update(drawn_as)
+    if forced:
+        stop, _ = forced_stopped(tmp_path, documents={file: document})
+        assert f"the first read in the forced palette `{viewing_browser.PALETTES[0].name}` " in (
+            stop.what
+        )
+    else:
+        stop, _ = stopped(tmp_path, documents={file: document})
+    assert said in stop.what
+
+
+def test_the_dot_plant_is_set_at_the_text_floor_under_a_box_that_covers_its_line_alone() -> None:
+    """At each device scale down to 0.4, its em the text floor in device pixels, and its box,
+    drawn after it, from its face's ascent to its descent, meets no other text's line and no
+    other box (DEC-054 point 4)."""
+    for device in (0.4, 0.5, 0.8167, 1.0, 1.225, 2.0, 4.0):
+        page = viewing_browser._first_page(device, True)
+        laid = {each.element: each for each in page if isinstance(each, viewing_browser._Laid)}
+        plant = laid[viewing_browser.DOT]
+        assert plant.size == pytest.approx(viewing_browser.TEXT_FLOOR / device)
+        after = page[page.index(plant) + 1]
+        assert isinstance(after, viewing_browser._Layer)
+        [box] = after.boxes
+        top, bottom = box[1], box[1] + box[3]
+        assert top == pytest.approx(plant.baseline - viewing_browser.ASCENT * plant.size)
+        assert bottom == pytest.approx(plant.baseline + viewing_browser.DESCENT * plant.size)
+        for other in laid.values():
+            if other is plant:
+                continue
+            last = other.baseline + other.step * (len(other.lines) - 1)
+            over = other.baseline - viewing_browser.ASCENT * other.size
+            under = last + viewing_browser.DESCENT * other.size
+            assert under < top or over > bottom, (device, other.element)
+        for each in page:
+            if isinstance(each, viewing_browser._Layer) and each is not after:
+                for other_box in each.boxes:
+                    assert other_box[1] + other_box[3] < top or other_box[1] > bottom, device
 
 
 @pytest.mark.parametrize(
@@ -2002,8 +2205,9 @@ def test_a_real_browser_draws_each_loss_and_names_each_planted_fault_of_a_file(
     """Each start reads the planted file. Read as a file too, at the smallest device scale a
     start draws at, at one between whole pixels and at the step's own, it shows what the reads
     give: each loss of what the page shows among it, with the share its cause loses, and the
-    plants on either side of the sliver. What drew the page, and how it looks, this test
-    leaves to the machine (DEC-037 point 5)."""
+    plants on either side of the sliver, the háček plant named by its size, and the dot plant
+    with `island`. What drew the page, and how it looks, this test leaves to the machine
+    (DEC-037 point 5, DEC-054 point 4)."""
     file = tmp_path / "planted.html"
     face = viewing_browser.PLANTED_FACE.read_bytes()
     file.write_text(viewing_browser._planted_html(face, device=scale), encoding="utf-8")
@@ -2025,6 +2229,9 @@ def test_a_real_browser_draws_each_loss_and_names_each_planted_fault_of_a_file(
     }
     assert all(share is not None and 0 < share <= 1 for share in lost.values())
     assert lost[viewing_browser.HACEK] < 1
+    covered = {each.element: each for each in read.dropped if each.why == viewing_browser.COVERED}
+    assert covered[viewing_browser.HACEK].by_size
+    assert covered[viewing_browser.DOT].island
     assert drawing.browser
     images = drawing.shown[0].images
     assert [each.page for each in images] == [page.id for page in pages]

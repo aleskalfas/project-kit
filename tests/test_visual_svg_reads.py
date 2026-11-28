@@ -23,6 +23,7 @@ from scripts import visual_svg_reads as reads
 from tests import test_visual_communication_look as look_tests
 
 viewing_tool = look_tests.viewing_tool
+islands = look_tests.islands
 
 
 def loss(pixels: int, em: float = 10.0, *, at_an_edge: bool = False) -> reads.Loss:
@@ -65,7 +66,7 @@ def test_a_loss_in_one_outermost_row_or_column_of_the_ink_lies_in_an_edge() -> N
 
 def test_the_first_levels_are_the_tool_s_and_the_last_any_ink() -> None:
     assert reads.STRONG_INK == viewing_tool.STRONG
-    assert reads.LEVELS[: len(viewing_tool.LEVELS)] == viewing_tool.LEVELS
+    assert reads.LEVELS[: len(islands.LEVELS)] == islands.LEVELS
     assert reads.ANY_INK == 254
     assert list(reads.LEVELS) == sorted(reads.LEVELS)
 
@@ -74,12 +75,12 @@ def test_the_setting_as_built_names_what_the_tool_s_measure_names() -> None:
     """The tool finds islands at its levels, joined by sides and corners, and gone when all of
     it is hidden: the probe's setting of the same names the same."""
     built = reads.BUILT
-    assert built == reads.Measure(viewing_tool.LEVELS, len(viewing_tool.NEIGHBOURS), "all of it")
+    assert built == reads.Measure(islands.LEVELS, len(islands.NEIGHBOURS), "all of it")
     assert built in reads.MEASURES
     ink = {**STROKE, **SPECK, **FAINT}
     for hidden in ([(4, 1)], [(4, 0)], [(4, 0), (4, 1)], list(STROKE), list(ink)):
         named = built in reads.gone_islands(ink, hidden)
-        assert viewing_tool._takes_an_island(ink, hidden) == named, hidden
+        assert islands.takes_an_island(ink, hidden) == named, hidden
         assert reads.takes(ink, hidden, reads.TAKEN[0]) == named, hidden
 
 
@@ -345,7 +346,7 @@ def test_the_ways_that_read_what_still_shows_take_an_island_as_each_says() -> No
     assert island_hit == reads.AS_BUILT
     for hidden, shows in (([(0, 0)], edge), ([], faded), ([(3, 3)], {**faded, (3, 3): 0})):
         taken = reads.AS_BUILT in reads.cause_of(ink, hidden, 20.0, shows).taking
-        assert viewing_tool._takes_an_island(ink, hidden, shows) == taken
+        assert islands.takes_an_island(ink, hidden, shows) == taken
 
 
 def test_a_cause_is_named_by_the_threshold_at_its_share_or_by_the_island_it_takes() -> None:
