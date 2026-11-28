@@ -32,9 +32,9 @@ is read, and none is used up (DEC-016 point 5).
   reload: the step takes each key's signals from the renderer's declaration (`signals_of`)
   and the browser's module sets them (DEC-023 point 6). Its `dropped` names too each span the
   page does not show in full, cut by its page's edge or covered on it, with the share of its
-  strong ink each cause loses (DEC-037). Through the SVG renderer the tool's module reads
-  cover and cut too, and its entries take the same fields, and `island` where the cause takes
-  an island of the span's ink, leaving none of it showing at its level (DEC-045).
+  strong ink each cause loses (DEC-037), and `island` where the cause takes an island of the
+  span's ink, leaving none of it showing at its level (DEC-054). Through the SVG renderer the
+  tool's module reads cover and cut too, and its entries take the same fields (DEC-045).
   The browser is the one the configuration names (`browser_named`), or else the first found
   where Chrome and Chromium install themselves. Its profile lies in the clone's local folder,
   and the module removes it.
@@ -160,9 +160,9 @@ FORCED_UNSHOWN = (
 #: How many decimals the share of a span's strong ink that a cause loses keeps in the report.
 SHARE_PLACES = 3
 
-#: The key of a cut or covered entry, through the SVG renderer, whose cause takes an island of
+#: The key of a cut or covered entry, through either renderer, whose cause takes an island of
 #: the span's ink, such as a dot, leaving none of it showing at its level. Another entry holds
-#: no such key (DEC-045 point 2).
+#: no such key (DEC-045 point 2, DEC-054 point 3).
 ISLAND = "island"
 
 #: How many decimals a browser's device scale keeps, rounded up, so its flag names it whole.
@@ -826,6 +826,7 @@ class _Made:
                 "text": each.text,
                 "why": each.why,
                 **({} if each.share is None else {"share": round(each.share, SHARE_PLACES)}),
+                **({ISLAND: True} if each.island else {}),
             }
             for each in read.dropped
         )
