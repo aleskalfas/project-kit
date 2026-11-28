@@ -38,7 +38,7 @@ does. A sweep of ten to forty by tenths at five scales takes some minutes for `c
   and of each dot it leaves unnamed, the share of least grazes it names below an em of 25 and
   from 25 on, and whether it spares the least graze at an em of 40 at every scale,
   and names the row above it. Then what the reads as built name of each mark, by the threshold
-  or by the measure of islands (`_takes_an_island`), of the draws the threshold as built and
+  or by the measure of islands (`islands.takes_an_island`), of the draws the threshold as built and
   0.0125 each name with no pixel to spare how many the measure names too (`MARGINS`), and the
   graze steps the measure alone names. Last, for each setting of the measure (`Measure`), each
   mark's draws named by the threshold as built, by the measure, by both or by neither, where
@@ -162,8 +162,9 @@ MEASURES = tuple(
 
 #: The setting of the tool's levels and joining (`LEVELS`, `NEIGHBOURS`), with an island taken
 #: where all of it is hidden: as the tool takes one past the page's edge, where a pixel is cut
-#: or shows (`_takes_an_island` with no `shows`), and as (A) takes one under a box. Under a box
-#: the tool reads what still shows of each pixel too (`TAKEN`), which `Loss.island` holds.
+#: or shows (`islands.takes_an_island` with no `shows`), and as (A) takes one under a box.
+#: Under a box the tool reads what still shows of each pixel too (`TAKEN`), which
+#: `Loss.island` holds.
 BUILT = Measure(TOGETHER[-2], 8, GONE[0])
 
 
@@ -386,7 +387,7 @@ def measured(found: Read, tool: ModuleType) -> Loss:
     ink for the island measure, and whether `tool`'s reads as built name it."""
     strong = [pixel for pixel in found.hidden if found.ink[pixel] <= STRONG_INK]
     loss = loss_of(found.strong, strong)
-    island = tool._takes_an_island(found.ink, found.hidden, found.shows)
+    island = tool.takes_an_island(found.ink, found.hidden, found.shows)
     built = len(strong) >= tool._least(loss.em) or island
     return replace(loss, islands=gone_islands(found.ink, found.hidden), island=island, built=built)
 
@@ -819,7 +820,7 @@ def cover(args: argparse.Namespace) -> int:
     weighed = rules(tests.viewing_tool._least)
     print("\n".join(summary(every, weighed, float(tests.LEAST_GRAZE_EM))))
     print()
-    levels = tests.viewing_tool.LEVELS
+    levels = tests.islands.LEVELS
     margins = [each for each in weighed if each.name in MARGINS]
     print("\n".join(built_summary(every, margins, levels, float(tests.LEAST_GRAZE_EM))))
     print()
@@ -969,7 +970,7 @@ def at_edge(tests: ModuleType, edge: Edge, em: float, scale: float) -> AtEdge:
         named,
         strong.past,
         tool._least(strong.em),
-        tool._takes_an_island(strong.ink, strong.beyond),
+        tool.takes_an_island(strong.ink, strong.beyond),
         others,
     )
 
@@ -1060,7 +1061,7 @@ TAKEN = (
     "none of it still shows at its level, and a pixel of it hidden wholly",
     "the third or the sixth",
 )
-#: The way of taking an island the tool holds (`_takes_an_island`).
+#: The way of taking an island the tool holds (`islands.takes_an_island`).
 AS_BUILT = TAKEN[5]
 #: The shares of the em squared the threshold is weighed at.
 SHARES = (0.0125, 0.01)
@@ -1305,7 +1306,7 @@ def crossed(tests: ModuleType, folder: Path, dot: Dot, em: float, scale: float) 
             plant.place(box)
             hidden, shows = covered(plant, key, strong)
             cause = cause_of(strong.ink, hidden, strong.em, shows)
-            disagree += tests.viewing_tool._takes_an_island(strong.ink, hidden, shows) != (
+            disagree += tests.islands.takes_an_island(strong.ink, hidden, shows) != (
                 AS_BUILT in cause.taking
             )
             steps.append(Stepped(side, eighths, not left_at(shows, mine, level), cause))
@@ -1666,7 +1667,7 @@ def _by_geometry(each: ByGeometry) -> str:
     )
 
 
-#: The reads, as the profile names them in the tool's module, with what each is.
+#: The reads, as the profile names them in the modules it is read for, with what each is.
 READS = {
     "_strong": "the cut read, a span drawn alone on its swath",
     "_swath": "  of which, one swath drawn and walked",
@@ -1675,12 +1676,16 @@ READS = {
     "_drew": "the check for ink",
     "image": "a page drawn whole",
     "region": "a band of a page drawn whole",
-    "_takes_an_island": "the measure of islands, of the cut and the cover",
+    "takes_an_island": "the measure of islands, of the cut and the cover",
 }
 
 
-#: The module whose functions the profile is read for.
+#: The tool's module, whose draws of a swath the profile tells from its walk over its pixels.
 TOOL_MODULE = "viewing_tool.py"
+
+#: The modules whose functions the profile is read for: the tool's, and the measure of islands
+#: it takes (`islands.py`).
+READ_MODULES = (TOOL_MODULE, "islands.py")
 
 
 def cost_lines(stats: pstats.Stats, total: float) -> list[str]:
@@ -1691,7 +1696,7 @@ def cost_lines(stats: pstats.Stats, total: float) -> list[str]:
     found: dict[str, tuple[int, float]] = {}
     drawing = 0.0
     for (file, _, name), row in rows.items():
-        if not file.endswith(TOOL_MODULE):
+        if not file.endswith(READ_MODULES):
             continue
         if name in READS:
             found[name] = (row[1], row[3])
@@ -1707,7 +1712,7 @@ def cost_lines(stats: pstats.Stats, total: float) -> list[str]:
         if name in found:
             calls, spent = found[name]
             lines.append(f"{what}: {spent:.1f} s over {calls} call(s), {spent / calls:.3f} s each")
-            if name in ("_strong", "_shown", "_takes_an_island"):
+            if name in ("_strong", "_shown", "takes_an_island"):
                 reads += spent
     if "_swath" in found:
         walked = found["_swath"][1] - drawing
