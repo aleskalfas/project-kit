@@ -13,8 +13,8 @@ body: >
   whatever the release source lists, so it only finishes a move to it cut
   short, and the message of a pkit older than such a move, from `sync` or
   `upgrade`, names `pkit upgrade --pre`. `pkit unpin` refuses, and writes
-  nothing, in a project on a candidate. A candidate's own upgrade refuses, last of its checks, where the
-  migrations it would run for the backbone or a component start above the
-  versions it was cut from, naming entry from a final release at or below
-  them, or the next candidate (ADR-092 point 9). The CLI reference and the
-  lifecycle's upgrade flow say so.
+  nothing, in a project on a candidate. A candidate's own upgrade refuses, last
+  of its checks, where the migrations it would run for the backbone or a
+  component start above the versions it was cut from, naming entry from a final
+  release at or below them, or the next candidate (ADR-092 point 9). The CLI
+  reference and the lifecycle's upgrade flow say so.
