@@ -10,7 +10,9 @@ from pathlib import Path
 import click
 import pytest
 from click.testing import CliRunner
+from ruamel.yaml import YAMLError
 
+from project_kit import agents_overlay as ao
 from project_kit import data_points as dp
 from project_kit import install
 from project_kit import status as status_module
@@ -461,6 +463,90 @@ def test_status_classifies_unknown_agent_as_the_projects_own(installed_target: P
     assert "my-custom-agent" in result.output
     _, _, user_block = result.output.partition(OWN)
     assert "my-custom-agent" in user_block
+
+
+# --- optional categories the overlay leaves undefined (ADR-052 point 5) ------------
+
+OPTIONAL = "house-style"
+
+
+def _read_optionally(root: Path, *names: str) -> None:
+    """An agent of the project's for each name, reading `<house-style>` as an optional read."""
+    for name in names:
+        (root / ".pkit" / "agents" / "project" / f"{name}.md").write_text(
+            f"---\nname: {name}\nreads:\n  patterns:\n    - <{OPTIONAL}>\n---\nbody\n",
+            encoding="utf-8",
+        )
+
+
+def _overlay_gains(root: Path, text: str) -> None:
+    """The overlay the install wrote, with `text` after it."""
+    overlay = root / ".pkit" / "agents" / "project" / "overlay.yaml"
+    overlay.write_text(overlay.read_text(encoding="utf-8") + text, encoding="utf-8")
+
+
+def _after_the_counts(output: str) -> list[str]:
+    """The Agents section's lines after its two counts, `core` and `project`."""
+    lines = _section(output, "Agents").splitlines()
+    assert [line.split()[0] for line in lines[:2]] == ["core", "project"]
+    return lines[2:]
+
+
+@pytest.mark.parametrize(
+    ("overlay", "without"),
+    [
+        pytest.param("", ["producer", "reviewer"], id="left-out"),
+        pytest.param(f"{OPTIONAL}:\n", ["producer", "reviewer"], id="bare-key"),
+        pytest.param(f"{OPTIONAL}: []\n", None, id="empty-list"),
+        pytest.param(
+            f"overrides:\n  producer:\n    {OPTIONAL}:\n      - docs/style.md\n",
+            ["reviewer"],
+            id="one-agents-override",
+        ),
+        pytest.param(f"{OPTIONAL}:\n  - docs/style.md\n", None, id="defined"),
+    ],
+)
+def test_status_names_each_undefined_optional_category_with_its_agents(
+    installed_target: Path, overlay: str, without: list[str] | None
+) -> None:
+    """Status lists an optional category with each agent the overlay gives it no value
+    for, in the line `pkit agents` says, and nothing once every agent that reads it has
+    one, an explicit empty list among them. It reports it as optional and fails nothing."""
+    _read_optionally(installed_target, "producer", "reviewer")
+    _overlay_gains(installed_target, overlay)
+
+    result = CliRunner().invoke(status, [])
+    assert result.exit_code == 0, result.output
+    if without is None:
+        assert _after_the_counts(result.output) == []
+        return
+    line = ao.optional_reads_line({OPTIONAL: without})
+    assert _after_the_counts(result.output) == [f"    {'overlay':<18} {line}"]
+    assert f"{OPTIONAL} ({', '.join(without)})" in line
+    assert "deploy without it" in line
+
+    listed = CliRunner().invoke(main, ["--color", "never", "agents"])
+    assert listed.exit_code == 0, listed.output
+    assert line in listed.output
+
+
+def test_status_shows_no_optional_line_on_a_fresh_install(installed_target: Path) -> None:
+    """The overlay the first install writes leaves no optional category undefined."""
+    result = CliRunner().invoke(status, [])
+    assert result.exit_code == 0, result.output
+    assert _after_the_counts(result.output) == []
+
+
+def test_status_survives_an_overlay_that_does_not_parse(installed_target: Path) -> None:
+    """Status reads forgivingly: an overlay it cannot read leaves the line out."""
+    _read_optionally(installed_target, "producer")
+    _overlay_gains(installed_target, "not: [closed\n")
+    with pytest.raises(YAMLError):
+        ao.undefined_optional_reads(installed_target)
+
+    result = CliRunner().invoke(status, [])
+    assert result.exit_code == 0, result.output
+    assert _after_the_counts(result.output) == []
 
 
 def test_status_counts_flat_form_skills_in_source(installed_target: Path) -> None:

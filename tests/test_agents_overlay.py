@@ -998,6 +998,111 @@ def test_optional_absent_key_is_not_reported(tmp_path):
     assert "warning: " not in stderr
 
 
+def test_a_bare_key_is_undefined_as_the_deploy_reads_it(tmp_path):
+    """A bare key carries no value, so the deploy skips an agent that requires its
+    category and drops it where it is an optional read. The scan answers the same
+    of each agent."""
+    proj = _project(tmp_path, overlay="architecture-docs:\nproject-conventions:\n")
+    overlay = proj / ".pkit" / "agents" / "project" / "overlay.yaml"
+    core = proj / ".pkit" / "agents" / "core"
+    requires = _agent(core, "requires", owns=["<architecture-docs>"])
+    reads = _agent(core, "reads", reads_patterns=["<project-conventions>"])
+
+    statuses = {s.name: s for s in ao.agent_overlay_statuses(proj)}
+    for src, name, category in (
+        (requires, "requires", "architecture-docs"),
+        (reads, "reads", "project-conventions"),
+    ):
+        code, _fm, _stderr = _resolve_via_adapter(src, name, overlay)
+        assert (code == 0) is statuses[name].deployable
+        assert statuses[name].missing == (category,)
+    assert not statuses["requires"].deployable
+    assert statuses["reads"].deployable
+
+
+def test_an_agent_whose_own_override_is_bare_reaches_no_value_recorded_for_the_rest(tmp_path):
+    """An agent's own override wins over the top level, a bare one too. So a value
+    recorded at the top level is reached by the agents with no override of their own."""
+    proj = _project(tmp_path, overlay="overrides:\n  shadowed:\n    architecture-docs:\n")
+    core = proj / ".pkit" / "agents" / "core"
+    _agent(core, "plain", owns=["<architecture-docs>"])
+    _agent(core, "shadowed", owns=["<architecture-docs>"])
+
+    statuses = {s.name: s for s in ao.agent_overlay_statuses(proj)}
+    assert statuses["plain"].missing == statuses["shadowed"].missing == ("architecture-docs",)
+    assert ao.agents_reaching(proj) == {"architecture-docs": ["plain"]}
+
+
+def test_reconcile_writes_nothing_over_a_bare_key(tmp_path):
+    """A bare key is a key the adopter wrote, so `reconcile --write` leaves it as it
+    is, though the scan reads its category as undefined."""
+    text = "architecture-docs:\nproject-conventions:\n"
+    proj = _project(tmp_path, overlay=text)
+    core = proj / ".pkit" / "agents" / "core"
+    _agent(core, "requires", owns=["<architecture-docs>"])
+    _agent(core, "reads", reads_patterns=["<project-conventions>"])
+    (proj / "docs" / "architecture").mkdir(parents=True)  # the conventional folder, present
+
+    assert ao.missing_categories(proj) == ["architecture-docs", "project-conventions"]
+    added, _report = ao.reconcile_overlay(proj, write=True)
+    assert added == []
+    assert (proj / ".pkit" / "agents" / "project" / "overlay.yaml").read_text() == text
+
+
+_OPTIONAL = "house-style"
+
+
+@pytest.mark.parametrize(
+    ("overlay", "without"),
+    [
+        pytest.param("workflow-docs:\n  - README.md\n", ["producer", "reviewer"], id="left-out"),
+        pytest.param(f"{_OPTIONAL}:\n", ["producer", "reviewer"], id="bare-key"),
+        pytest.param(f"{_OPTIONAL}: []\n", None, id="empty-list"),
+        pytest.param(
+            f"overrides:\n  producer:\n    {_OPTIONAL}:\n      - docs/style.md\n",
+            ["reviewer"],
+            id="one-agents-override",
+        ),
+        pytest.param(f"{_OPTIONAL}:\n  - docs/style.md\n", None, id="defined"),
+    ],
+)
+def test_undefined_optional_reads_name_the_agents_that_deploy_without_each(
+    tmp_path, monkeypatch, overlay, without
+):
+    """An optional category is listed with each agent the overlay gives it no value
+    for, and not at all once every agent that reads it has one, an explicit empty
+    list among them. `pkit agents` says so in the one line `pkit status` says too."""
+    proj = _project(tmp_path, overlay=overlay)
+    core = proj / ".pkit" / "agents" / "core"
+    for name in ("producer", "reviewer"):
+        _agent(core, name, reads_patterns=[f"<{_OPTIONAL}>"])
+    _agent(core, "unrelated", reads_paths=["README.md"])
+
+    undefined = ao.undefined_optional_reads(proj)
+    assert undefined == ({_OPTIONAL: without} if without else {})
+
+    monkeypatch.chdir(proj)
+    result = CliRunner().invoke(main, ["--color", "never", "agents"])
+    assert result.exit_code == 0, result.output
+    assert "SKIPPED" not in result.output
+    if without:
+        assert ao.optional_reads_line(undefined) in result.output
+        assert f"{_OPTIONAL} ({', '.join(without)})" in result.output
+    else:
+        assert "Optional" not in result.output
+
+
+def test_a_category_one_agent_requires_is_no_optional_read(tmp_path):
+    """A category any agent names in a required channel is a skip cause, never an
+    enrichment, though another agent reads it optionally (`optional_categories`)."""
+    proj = _project(tmp_path, overlay="")
+    core = proj / ".pkit" / "agents" / "core"
+    _agent(core, "reader", reads_patterns=["<shared-cat>"])
+    _agent(core, "owner", owns=["<shared-cat>"])
+
+    assert ao.undefined_optional_reads(proj) == {}
+
+
 # --- adopt (issue #47) -------------------------------------------------------
 
 
