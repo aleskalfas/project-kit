@@ -121,9 +121,9 @@ or the cascade fold. The engine stays content-free.
 
 ## Rationale
 
-**Why comments, not a body region, for the source of truth.** Both are label-free and both bulk-read
-cheaply (`gh issue list --json comments` returns comment bodies inline, just as `--json body`
-returns the body). The decider is *atomicity*: a body region is a whole-object read-modify-write
+**Why comments, not a body region, for the source of truth.** Both are label-free, but comments
+cost a listing a read of each issue's log, where a body region is read in one call (refinement per
+[pkit:ADR-041] point 4). The decider is *atomicity*: a body region is a whole-object read-modify-write
 with no CAS, so concurrent claims clobber and the clash tie-break silently degrades to
 last-writer-wins; per-instance comments are discrete atomic objects, so the tie-break holds
 exactly as the label set's does. Correctness under concurrency, not read cost, chose the

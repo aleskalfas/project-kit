@@ -368,10 +368,15 @@ When a claim counts:
   typed number before the topology, does not count (DEC-059 point 9).
 - **Its take.** A claim counts only where it was made after the holder's current take
   of its seat. A claim made before the take is void, even where the same clone took
-  the seat again. So a claim that stopped counting at its seat's release does not count
-  again, with no write to its issue (DEC-059 point 5 and #2182). GitHub numbers the
-  comments of every issue from one sequence, so a claim made after the take has the
-  higher comment id.
+  the seat again. So, while the counted events of the seat's state issue stand, a
+  claim that stopped counting at its seat's release does not count again, with no
+  write to its issue (DEC-059 point 5 and #2182). GitHub numbers the comments of
+  every issue from one sequence, so a claim made after the take has the higher
+  comment id. The take can also move with no release: where a counted comment leaves
+  the seat's log ([ADR-071](ADR-071-state-issue-seam.md) point 4), or a reviewed
+  change names a new state issue for the seat (DEC-059 point 3). Such a move can void
+  a live claim, as a release would, or revive a released one, until a person releases
+  the seat by force (ADR-071 point 4).
 - **A handoff to a seat** names the target seat, its number and the key of its
   holder in the holders the caller passed. It counts for the target as a claim
   does.
@@ -837,9 +842,9 @@ enforced by the seam having no engine-side caller.
   three prior seam invariants staying scoped to their own substrates. Composes with
   DEC-014 (the guard's severity token) and DEC-026 (the event log aligns with the
   handoff audit comment). Does not restate DEC-043; cites it as the decision. Point 4
-  refines DEC-043's Implication on read cost in place: no command takes ownership
-  from the mirror, so a listing costs a read of the log of each issue it shows, not
-  one call. DEC-043's decision stands at that cost, since correctness under
+  refines DEC-043's Implication and Rationale on read cost in place: no command takes
+  ownership from the mirror, so a listing costs a read of the log of each issue it
+  shows, not one call. DEC-043's decision stands at that cost, since correctness under
   concurrency, not read cost, chose its substrate (DEC-043 Rationale). DEC-059's
   Implication on this record's fold points to point 4 for the mirror.
 - **Acceptance.** This ADR pins the contract for the comment substrate, by which
