@@ -309,9 +309,24 @@ HANDED_OUT_FILE_MISSING = "handed-out-file-missing"
 HANDED_OUT_FILE_CHANGED = "handed-out-file-changed"
 EXPORTS_UNREADABLE = "exports-unreadable"
 
-#: The properties of a scene element that are no property it draws: beside its structure,
-#: the parts its part says it lies over on purpose (DEC-066 point 2).
-_STRUCTURE = ("type", "id", "sources", "children", boxes.LIES_OVER)
+#: What no element draws: each property of an element that describes nothing an output shows
+#: its reader or gives a reader's tools, with the types it may stand on, `None` for every
+#: type (DEC-078 points 1 and 2). The comparison that finds a renderer's losses passes over
+#: each on an element of those types, and no renderer declares that it draws one. The page on
+#: components names the same, under what a scene holds.
+NOT_DRAWN: Mapping[str, frozenset[str] | None] = {
+    "id": None,
+    "sources": None,
+    boxes.LIES_OVER: None,
+    "component": frozenset({"group"}),
+    "version": frozenset({"group"}),
+    "options": frozenset({"group"}),
+}
+
+#: The tree, which the comparison reads and judges as no property: an element's type, which
+#: names its primitive's entry in a declaration, and a group's children, each compared in its
+#: turn (DEC-078 point 1).
+_TREE = ("type", "children")
 
 _CONTENT_FILE = re.compile(r"^content\.(?P<language>[^.]+)\.yaml$")
 
@@ -3953,10 +3968,21 @@ def renderers(piece: pl.Piece) -> list[str]:
     return sorted({PREVIEWS, *(renderer for renderer in found if renderer is not None)})
 
 
+def not_drawn(prop: str, kind: str) -> bool:
+    """Whether `prop`, on an element of the type `kind`, is one no element draws
+    (`NOT_DRAWN`)."""
+    if prop not in NOT_DRAWN:
+        return False
+    types = NOT_DRAWN[prop]
+    return types is None or kind in types
+
+
 def losses(scene: Mapping[str, Any], declaration: Mapping[str, Any]) -> list[seam.Loss]:
     """What a renderer will lose of a scene, known from its declaration before it runs
-    (DEC-005 point 9): a primitive it does not draw it refuses, and a property it does not
-    draw it leaves out. One whose format has a physical page and does not map the physical
+    (DEC-005 point 9): a primitive it does not draw it refuses, and a drawn property it does
+    not draw it leaves out. It passes over the tree, an element's type and a group's
+    children, and over what no element draws, of which no renderer reports a loss (DEC-078
+    points 1 and 2). One whose format has a physical page and does not map the physical
     size the scene's root holds onto it draws each page at its own unit, an approximation
     it names at the top; one whose format has none loses nothing (DEC-034 point 3)."""
     plugin = str(declaration["name"])
@@ -3984,7 +4010,9 @@ def losses(scene: Mapping[str, Any], declaration: Mapping[str, Any]) -> list[sea
             )
             continue
         for prop in element:
-            if prop not in _STRUCTURE and prop not in draws[kind]:
+            if prop in _TREE or not_drawn(prop, kind):
+                continue
+            if prop not in draws[kind]:
                 found.append(
                     seam.Loss(
                         plugin,

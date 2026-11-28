@@ -153,6 +153,8 @@ pkit:
         - visual-communication:DEC-075#1
         - visual-communication:DEC-075#2
         - visual-communication:DEC-075#3
+        - visual-communication:DEC-078#1
+        - visual-communication:DEC-078#2
       artefact:
         - .pkit/capabilities/visual-communication/files.md#what-the-location-holds
         - .pkit/capabilities/visual-communication/files.md#shapes
@@ -958,7 +960,22 @@ Which text fills `version` and `date`:
 
 The scene's root holds `piece`, its `lock`, the `language`, the `size-key`, its key over the size axes, `seam` (the version of the seam its plugins read), `pages` (the trace ids of its pages, in order: a top that is a page alone, what a slot of pages places, or each page of a top whose layouts are its pages' forms), `fixed-pages`, `physical-size` and `children`. `fixed-pages` says whether the pages are *fixed pages*: `true` where the top's layouts are its pages' forms and it asks for a height, by a formula or through its physical size, which each page then gets, as a deck's slides do (DEC-031 point 2). A site's pages take their own height, and a page alone and what a slot of pages places are none, so it is `false` for them. So a scene's pages are all fixed pages or none is, and the top's name decides nothing. `physical-size` holds the physical size of the piece's top, `{width, height}` in millimetres as the top declares it, or `null` where it declares none, and every page of the scene takes it ([A physical size](#a-physical-size)). Each element holds its `type`, `group`, a primitive's kind, or `path` for a sign, and its `id`, its trace id. It holds its frame, `x y width height`, relative to its parent, in px, rounded to 1/100 px, half away from zero. Then come its properties, `sources`, where each came from, and on a group its `children`, in drawing order.
 
-A placed component's group adds `component` (its `use`), `version` (its library's, none for a local component), `options` (the value each option takes) and, on a page, `page: true`. An element whose part names parts under `lies-over` adds `lies-over`, of any type (DEC-066 point 2): `ids`, the trace ids of the elements those parts draw in the scene, in the order the part names them, and `library`, the version that holds the part, as `<library>@<version>`, none for a local component. A part it names that draws nothing in the scene, such as a slot left empty or a part whose `when` does not hold, adds no id, and where none of them draws, the element holds no `lies-over`. It holds no mark of whether that version is released, which is read where a finding is read. It is no property an element draws, so it names no source, and no renderer declares it or reports a loss of it, as of an element's `type`, `id`, `sources` and `children`. A top whose layouts are its pages' forms holds no `page`. Its group holds its pages, each a group with `page: true`, whose `component` is the top's where its layout's drawing draws it, else the one the page names. A `repeat` part is a group too, holding its items. A `box`, an `ellipse` and a `line` add their paints and lengths, and a line its ends. A line adds `marker-start` and `marker-end` where it draws an arrowhead there. A tie's connector adds these:
+A placed component's group adds `component` (its `use`), `version` (its library's, none for a local component), `options` (the value each option takes) and, on a page, `page: true`. An element whose part names parts under `lies-over` adds `lies-over`, of any type (DEC-066 point 2): `ids`, the trace ids of the elements those parts draw in the scene, in the order the part names them, and `library`, the version that holds the part, as `<library>@<version>`, none for a local component. A part it names that draws nothing in the scene, such as a slot left empty or a part whose `when` does not hold, adds no id, and where none of them draws, the element holds no `lies-over`. It holds no mark of whether that version is released, which is read where a finding is read. It names no source, a fact of its own, which being a property no element draws does not decide (DEC-078 point 1). A top whose layouts are its pages' forms holds no `page`. Its group holds its pages, each a group with `page: true`, whose `component` is the top's where its layout's drawing draws it, else the one the page names. A `repeat` part is a group too, holding its items.
+
+**What no element draws.** A property of an element is *drawn* where it describes what an output shows its reader, or what it gives a reader's tools: its frame, its paints and lengths, its text, its lines and how far they reach, the picture it shows and the places in that picture, its route and its ends, that a group is a page, and what a reader who does not see the piece gets. Every other property is one *no element draws*, whatever it says: which element it is, where it and its values came from, which component drew a group, at which version and under which options, or what the owner of its part says of it to a check (DEC-078 point 1). So a group's `page` is drawn, since each page is drawn as a page of its own. A scene holds these properties that no element draws, each on the types it may stand on:
+
+| Property | The types it may stand on |
+|---|---|
+| `id` | any type |
+| `sources` | any type |
+| `lies-over` | any type |
+| `component` | `group` |
+| `version` | `group` |
+| `options` | `group` |
+
+No renderer declares that it draws one, and none reports a loss of one, before it runs or as it draws: an output that leaves one out shows its reader, and gives a reader's tools, all it would with it (DEC-078 point 2). An element's `type` and a group's `children` are the tree, not properties, so the list holds neither: the comparison that finds what a renderer will lose finds each element's entry in the renderer's declaration by its type, and compares each child in its turn.
+
+A `box`, an `ellipse` and a `line` add their paints and lengths, and a line its ends. A line adds `marker-start` and `marker-end` where it draws an arrowhead there. A tie's connector adds these:
 
 - **`rx`:** the radius of its turns, as its part gives it, where it gives one. A renderer fits each turn to its legs ([Ties and connectors](#ties-and-connectors)).
 - **`points`:** where its route turns, every point of it, its ends first and last. A connector whose route does not turn holds no `points`, and keeps its ends as `x1 y1 x2 y2`.
