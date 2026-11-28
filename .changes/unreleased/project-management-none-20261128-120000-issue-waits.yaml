@@ -1,0 +1,13 @@
+component: project-management
+kind: none
+body: >
+  Internal. DEC-085, proposed in this change for a person to accept (#3552),
+  decides that an issue records each wait as the tracker's own blocked-by
+  link, or as a typed `Blocked by: #N` line where the project selects it,
+  read for every command through one reader. A Task declares its waits or
+  that it waits for nothing, and starting or merging a Task is refused while
+  a wait is open, once a project turns the checks on with a key; until then
+  readiness is read from the `## Dependencies` prose as before. It refines
+  DEC-005, DEC-006, DEC-010, DEC-025, DEC-036, DEC-059, DEC-060, DEC-066 and
+  DEC-082 in place. Nothing is built until its build (#3553), which declares
+  its own changeset, so no surface moves here.
