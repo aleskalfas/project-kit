@@ -36,7 +36,7 @@ A *wait* is a recorded relation between two issues: the *waiting issue* is not t
 
 - **It ends,** for each Task whose wait it is, once the awaited issue's work has landed on the default branch, or on the integration branch that the Task's own change merges into, where the Task's body names one ([project-management:DEC-013-branch-and-pr-conventions]).
   - **An issue's work lands** on the branch its change merges into once the issue closes as completed: its change merged, or its work done with no change to merge ([project-management:DEC-006-state-machine-and-cascade], its closure triggers).
-  - **An issue whose body names an integration branch** closes on its merge into that branch. Its work lands on the default branch only once the issue that owns the branch closes as completed, the branch merged into the default branch. So a wait on it ends at its own close for a Task whose change merges into the same branch, and at the owning issue's close for any other.
+  - **An issue under a branch's owner whose body names that integration branch** closes once its work has merged into that branch, a container among them, whose children's work has. Its work lands on the default branch only once the issue that owns the branch closes as completed, the branch merged into the default branch. So a wait on it ends at its own close for a Task whose change merges into the same branch, and at the owning issue's close for any other.
   - **A change that closes both issues** lands the awaited issue's work with its own (point 8).
 - **An awaited issue closed otherwise,** such as not planned, leaves its work unlanded, so the wait stays open. The reader reports it (point 3), and a person points the wait at the issue that carries the work, or removes it.
 
@@ -88,11 +88,11 @@ Every command of the capability that writes a wait writes it through one writer.
 - **closes a loop of waits.** A loop is a chain of waits, none of them ended, that leads back to where it started. The chain counts:
   - **each wait recorded on an issue or on one of its ancestors** as the issue's own, container or Task, whether or not a Task has started (point 1)
   - **each container as waiting on its children,** since a container reaches Done only once they have
-  - **a wait by an issue outside an integration branch** on an issue whose change merges into that branch as a wait on the issue that owns the branch too, since for the waiting issue the work lands only at that issue's close (point 1)
+  - **a wait by an issue outside an integration branch** on an issue whose body names that branch as a wait on the issue that owns the branch too, since for the waiting issue the work lands only at that issue's close (point 1)
 
-  A wait on an ancestor is one such loop, and a container's wait on an issue under it is another. Where the writer cannot read the waits and parents the check needs, it refuses the wait and says why.
+  A wait on an ancestor is one such loop, and a container's wait on an issue under it is another. Where the writer cannot read the waits, the parents and the integration branches the check needs, it refuses the wait and says why.
 
-The reader reports each loop it finds, whatever closed it: a wait written outside the capability, a change of parent, an issue reopened, or an issue marked as the owner of an integration branch. It reports too each other wait that the writer would refuse, such as a link made on the tracker's page or a line typed into a body. Once the project turns the checks on (point 11), each also holds its waiting issue back:
+The reader reports each loop it finds, whatever closed it: a wait written outside the capability, a change of parent, an issue reopened, or an integration branch named on an issue, its owner's or one under it. It reports too each other wait that the writer would refuse, such as a link made on the tracker's page or a line typed into a body. Once the project turns the checks on (point 11), each also holds its waiting issue back:
 
 - **A wait on itself, its ancestor or in a loop** holds as any wait does (points 1 and 8), and so can hold work back for good.
 - **A wait that names no issue of the repository** leaves its waiting issue's readiness unknown, so the issue is not ready. That includes a link to another repository's issue.
@@ -206,7 +206,7 @@ Once the key is on, readiness reads the waits alone, and the section's prose hol
 
 **Why a container's wait holds back only a Task's start.** A Task that has not started costs nothing to hold back. A Task already started was started on what was known then, and its work may not rest on the awaited issue at all. Holding its merge would strand work in progress for a wait that may not concern it, and only a person can tell whether it does. So the capability lists the started Tasks, and a person records a wait on each whose work rests on the awaited issue, which holds its merge. A Task started by the bypass while an ancestor's wait was open was started on purpose, with an audited reason, as any start the bypass lets through.
 
-**Why the checks run when a wait is written.** A wait on itself, on an ancestor or in a loop can hold work back for good (point 4). A wait refused when written never holds work back. Found only when read, it already has. The reader still checks waits written elsewhere, since the capability checks no write it did not make, and loops that close with no wait written, such as by a change of parent or an issue reopened.
+**Why the checks run when a wait is written.** A wait on itself, on an ancestor or in a loop can hold work back for good (point 4). A wait refused when written never holds work back. Found only when read, it already has. The reader still checks waits written elsewhere, since the capability checks no write it did not make, and loops that close with no wait written, such as by a change of parent, an issue reopened or an integration branch named on an issue.
 
 **Why a loop counts each container's children.** A container reaches Done only once its children have. Say an issue waits on a container, and one of that container's children waits on the issue. Then the issue's wait can never end. The wait on an ancestor is one such case. An issue counts what its ancestors wait on too, so a container's wait on an issue under it makes that issue wait on itself, through the container.
 
