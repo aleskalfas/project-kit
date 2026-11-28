@@ -11,6 +11,8 @@ source:
   captured_at: 2026-05-21
 ---
 
+> **Partially superseded by [project-management:DEC-085-issue-waits].** Where a project turns DEC-085's checks on, a marked Task's change merges only into its integration branch, and an unmarked Task's into none; and until a branch merges or its owner closes as not planned, no issue's marker is removed, the owner's own among them, and no issue that names the branch is moved out from under its owner, each refused as a hard reject: a Task leaves the branch by being closed as not planned and filed anew outside it, where it declares its waits afresh. Overturned there: in "PR target dictated by marker", the audited way to target `main` while the marker is present, so far as the change then merges, and the "clean off-ramp" of removing the marker first; and in "Propagation to descendants", the bypassable-with-audit severity of removing the marker. Among what stands: the integration branch, its designation, branch creation, propagation, read-side recognition, cascade and closure and the squash invariant, and all of it where the checks are off.
+
 ## Context
 
 Implementer work produces branches and PRs. The capability has to fix these conventions tightly enough that the project-manager can derive branch names, generate PR titles, and validate everything at PR-open time without ambiguity. Looser conventions push the validation burden onto humans and produce inconsistencies (commit type mismatches with `type:*` label, missing `Closes #N`, branch names that don't tie back to issue numbers).

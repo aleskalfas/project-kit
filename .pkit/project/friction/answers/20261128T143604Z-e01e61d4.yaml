@@ -1,0 +1,1477 @@
+answers:
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-ready-task
+    read:
+      - 20261113T222453Z-06dececb.yaml
+      - 20261118T093416Z-ae3913ed.yaml
+      - 20261119T013318Z-c0734647.yaml
+      - 20261122T001341Z-1f604dc7.yaml
+      - 20261123T204526Z-d8337d55.yaml
+    revalidated:
+      deferred:
+        - anchor:
+            kind: record
+            value: project-management:DEC-005
+          reason: "DEC-005's top line, from DEC-085, has 'blocked by' between issues be the tracker's own link, or a typed line where the project selects it, read through one reader. The entry's 'no open dependency' reads the ## Dependencies section as next-task does today, and changes with DEC-085's build, project-kit#3553, as DEC-085's Implications say of the glossary."
+        - anchor:
+            kind: record
+            value: project-management:DEC-059#7
+          reason: "DEC-059 point 7, refined by DEC-085, has a ready Task in Backlog declare its waits and have none open, its ancestors' among them, read in full, and keeps the reading of the ## Dependencies section until a project turns DEC-085's checks on. The entry's 'no open dependency' reads that section as next-task does today, and changes with DEC-085's build, project-kit#3553, as DEC-085's Implications say of the glossary."
+  - artefact: tech-docs/analysis/project-management/domain-model/060-parallel-work.md
+    read:
+      - 20261029T002130Z-82af462f.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T220122Z-9823200c.yaml
+      - 20261106T000405Z-f16023ec.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261112T135407Z-115865f2.yaml
+      - 20261112T235648Z-31cd7a21.yaml
+      - 20261118T093416Z-ae3913ed.yaml
+      - 20261119T013318Z-c0734647.yaml
+      - 20261122T001341Z-1f604dc7.yaml
+      - 20261122T230042Z-201d3fa4.yaml
+      - 20261126T215411Z-182da8fc.yaml
+      - 20261126T220343Z-9f22cdc3.yaml
+      - 20261126T220933Z-3e415435.yaml
+      - 20261127T082720Z-4df0b388.yaml
+      - 20261128T041740Z-a8de64c8.yaml
+      - 20261128T044011Z-6120b37e.yaml
+      - 20261128T050447Z-34235571.yaml
+    revalidated:
+      at: 2026-11-28T14:37:30Z
+      outcome: unchanged
+      unchanged-because: "Save what the deferral of DEC-059 names, the view holds against this change, which makes the edits DEC-085 names and builds none of them: DEC-059 point 7 keeps the reading of the ## Dependencies section until a project turns DEC-085's checks on, so the ready Tasks the seats take are the ones the Ready Task section names today, and the topology, its seats, scopes, pools, ownerships and builder agents are as the view states them."
+      deferred:
+        - anchor:
+            kind: record
+            value: project-management:DEC-059
+          reason: "DEC-085's refinement of DEC-059 point 7 has a ready Task in Backlog declare its waits and have none open, its ancestors' among them, read in full, and keeps the reading of the ## Dependencies section until a project turns DEC-085's checks on. The Ready Task section, whose Task's ## Dependencies section names no open issue, and its states, which make a Task ready once its dependencies are closed, change with DEC-085's build, project-kit#3553, as DEC-085's Implications say of the analysis of parallel work. DEC-082's edits of DEC-059, accepted and not built, keep a seat's pace on its state issue, folded apart from its holder. They have a worker build as many Tasks at once as its pace allows, and rank a seat's ready Tasks nearest the Task whose work freed its slot. The Seat section's attributes and its state issue change with DEC-082's build, project-kit#3462. DEC-081's edit also lets a directing seat's message name the ready Task a worker takes next, which the view gains with the agent's messaging, project-kit#3523."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-084-take-next-task.md
+    read:
+      - 20261029T002130Z-82af462f.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T214054Z-3ec700bc.yaml
+      - 20261105T215849Z-25d2581b.yaml
+      - 20261105T221030Z-aedda51f.yaml
+      - 20261106T000405Z-f16023ec.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261107T123620Z-3d057b1b.yaml
+      - 20261107T125436Z-9442a4b6.yaml
+      - 20261107T132338Z-3c4c3246.yaml
+      - 20261107T144714Z-e8754301.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261112T135407Z-115865f2.yaml
+      - 20261112T235648Z-31cd7a21.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T104927Z-f6afe126.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261114T135441Z-fd5c2dc0.yaml
+      - 20261114T140804Z-6f794478.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T010054Z-99f01df7.yaml
+      - 20261115T112500Z-53d20551.yaml
+      - 20261115T180458Z-4e13664f.yaml
+      - 20261115T202513Z-2d70bae9.yaml
+      - 20261115T224856Z-cb4ecf23.yaml
+      - 20261116T095840Z-547638af.yaml
+      - 20261116T223146Z-fdad67d7.yaml
+      - 20261116T232343Z-e53423de.yaml
+      - 20261117T010941Z-d7ea213a.yaml
+      - 20261117T115722Z-5da8fae5.yaml
+      - 20261117T163349Z-7822125e.yaml
+      - 20261118T093416Z-ae3913ed.yaml
+      - 20261118T110156Z-9a08eba0.yaml
+      - 20261118T162554Z-507129b2.yaml
+      - 20261118T204901Z-88c68aa2.yaml
+      - 20261122T001341Z-1f604dc7.yaml
+      - 20261123T005053Z-b5822da6.yaml
+      - 20261123T204526Z-d8337d55.yaml
+      - 20261126T215411Z-182da8fc.yaml
+      - 20261127T082720Z-4df0b388.yaml
+      - 20261128T022501Z-85398747.yaml
+      - 20261128T030516Z-5c071134.yaml
+      - 20261128T033239Z-483cbbe0.yaml
+      - 20261128T035520Z-733e518b.yaml
+      - 20261128T041740Z-a8de64c8.yaml
+      - 20261128T044011Z-6120b37e.yaml
+      - 20261128T050447Z-34235571.yaml
+    revalidated:
+      deferred:
+        - anchor:
+            kind: record
+            value: project-management:DEC-005
+          reason: "DEC-005's top line, from DEC-085, has 'blocked by' between issues be the tracker's own link, or a typed line where the project selects it, read through one reader. Steps 2 and 3, which keep the Tasks whose ## Dependencies section names no open issue, read the section as next-task does today, and change with DEC-085's build, project-kit#3553, as DEC-085's Implications say of the analysis of parallel work."
+        - anchor:
+            kind: record
+            value: project-management:DEC-025
+          reason: "DEC-025, refined by DEC-085, says that DEC-085 decides how an issue's waits are recorded and read, and that only lanes wait for lived evidence. The open question 'Typed dependencies', which says typed Blocked by lines wait for lived evidence before they are built, and steps 2 and 3, which read the ## Dependencies section, change with DEC-085's build, project-kit#3553."
+        - anchor:
+            kind: record
+            value: project-management:DEC-059
+          reason: "DEC-059 point 7, refined by DEC-085, has a ready Task in Backlog declare its waits and have none open, its ancestors' among them, read in full, and keeps the reading of the ## Dependencies section until a project turns DEC-085's checks on. Steps 2 and 3, and the open question's 'DEC-059 names typed dependencies between Tasks for later', change with DEC-085's build, project-kit#3553."
+        - anchor:
+            kind: record
+            value: project-management:DEC-059#7
+          reason: "DEC-059 point 7, refined by DEC-085, has a ready Task in Backlog declare its waits and have none open, its ancestors' among them, read in full, and keeps the reading of the ## Dependencies section until a project turns DEC-085's checks on. Steps 2 and 3, which keep the Tasks whose section names no open issue, change with DEC-085's build, project-kit#3553, which brings the waits' reader to next-task."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-087-hand-over-to-next-scope.md
+    read:
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261113T104927Z-f6afe126.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T101625Z-39c9fced.yaml
+      - 20261115T202513Z-2d70bae9.yaml
+      - 20261115T224755Z-89ab25f5.yaml
+      - 20261116T223146Z-fdad67d7.yaml
+      - 20261116T232343Z-e53423de.yaml
+      - 20261118T093416Z-ae3913ed.yaml
+      - 20261118T204901Z-88c68aa2.yaml
+      - 20261122T001341Z-1f604dc7.yaml
+      - 20261123T204526Z-d8337d55.yaml
+      - 20261126T215411Z-182da8fc.yaml
+      - 20261127T082720Z-4df0b388.yaml
+      - 20261127T183743Z-856333ab.yaml
+    revalidated:
+      deferred:
+        - anchor:
+            kind: record
+            value: project-management:DEC-005
+          reason: "DEC-005's top line, from DEC-085, has 'blocked by' between issues be the tracker's own link, or a typed line where the project selects it, read through one reader. The precondition from UC-083 and step 3, where the next piece's Task waits through its ## Dependencies section, read the section as next-task does today, and change with DEC-085's build, project-kit#3553, as DEC-085's Implications say of the analysis of parallel work."
+        - anchor:
+            kind: record
+            value: project-management:DEC-025
+          reason: DEC-025, refined by DEC-085, says that DEC-085 decides how an issue's waits are recorded and read, and that only lanes wait for lived evidence. The open question 'Typed dependencies', which says typed Blocked by lines wait for lived evidence before they are built, changes with DEC-085's build, project-kit#3553.
+        - anchor:
+            kind: record
+            value: project-management:DEC-059#7
+          reason: "DEC-059 point 7, refined by DEC-085, has a ready Task in Backlog declare its waits and have none open, its ancestors' among them, read in full, and keeps the reading of the ## Dependencies section until a project turns DEC-085's checks on. Step 3 and the open question, where the next piece's Task is ready once this piece's Task closes and its section names no open issue, change with DEC-085's build, project-kit#3553."
+  - artefact: tech-docs/analysis/project-management/use-case-model/journeys/JRN-013-build-and-land-next-task.md
+    read:
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T131440Z-90d45a35.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T214054Z-3ec700bc.yaml
+      - 20261105T215849Z-25d2581b.yaml
+      - 20261105T220122Z-9823200c.yaml
+      - 20261105T221030Z-aedda51f.yaml
+      - 20261106T000405Z-f16023ec.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T123620Z-3d057b1b.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T125436Z-9442a4b6.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261107T163133Z-be7e7e83.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T101625Z-39c9fced.yaml
+      - 20261115T175013Z-4c973ec1.yaml
+      - 20261115T202513Z-2d70bae9.yaml
+      - 20261115T223351Z-f0ef2d62.yaml
+      - 20261116T095840Z-547638af.yaml
+      - 20261116T223146Z-fdad67d7.yaml
+      - 20261116T232343Z-e53423de.yaml
+      - 20261118T093416Z-ae3913ed.yaml
+      - 20261118T191220Z-3b107524.yaml
+      - 20261118T204901Z-88c68aa2.yaml
+      - 20261119T013318Z-c0734647.yaml
+      - 20261122T001341Z-1f604dc7.yaml
+      - 20261123T204526Z-d8337d55.yaml
+      - 20261126T215411Z-182da8fc.yaml
+      - 20261127T082720Z-4df0b388.yaml
+    revalidated:
+      deferred:
+        - anchor:
+            kind: record
+            value: project-management:DEC-059#7
+          reason: "DEC-059 point 7, refined by DEC-085, has a ready Task in Backlog declare its waits and have none open, its ancestors' among them, read in full, and keeps the reading of the ## Dependencies section until a project turns DEC-085's checks on. Step 1's need from UC-083, that a Task whose section names an issue still open is not ready until that issue closes, changes with DEC-085's build, project-kit#3553, as DEC-085's Implications say of the analysis of parallel work."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-083-plan-across-scopes.md
+    read:
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261112T135407Z-115865f2.yaml
+      - 20261112T235648Z-31cd7a21.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T104927Z-f6afe126.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261114T135441Z-fd5c2dc0.yaml
+      - 20261114T140804Z-6f794478.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T090812Z-225d76fb.yaml
+      - 20261115T101625Z-39c9fced.yaml
+      - 20261115T162304Z-326cf373.yaml
+      - 20261115T180458Z-4e13664f.yaml
+      - 20261115T202513Z-2d70bae9.yaml
+      - 20261115T215333Z-1b18b920.yaml
+      - 20261115T224755Z-89ab25f5.yaml
+      - 20261116T072033Z-1fa3401d.yaml
+      - 20261116T095840Z-547638af.yaml
+      - 20261116T103723Z-5450c4f7.yaml
+      - 20261117T010941Z-d7ea213a.yaml
+      - 20261118T093416Z-ae3913ed.yaml
+      - 20261118T110156Z-9a08eba0.yaml
+      - 20261118T162554Z-507129b2.yaml
+      - 20261118T204901Z-88c68aa2.yaml
+      - 20261119T000044Z-b8eeff55.yaml
+      - 20261119T013318Z-c0734647.yaml
+      - 20261122T001341Z-1f604dc7.yaml
+      - 20261123T204526Z-d8337d55.yaml
+      - 20261126T220933Z-3e415435.yaml
+      - 20261126T221238Z-1f395312.yaml
+      - 20261127T082720Z-4df0b388.yaml
+      - 20261127T183743Z-856333ab.yaml
+      - 20261128T052535Z-1edaaa88.yaml
+    revalidated:
+      at: 2026-11-28T14:38:45Z
+      outcome: unchanged
+      unchanged-because: Save what its deferrals name, the use case holds against this change, which makes the edits DEC-085 names and builds none of them. DEC-060's edits hold a Task back until the foundation's Feature's work lands once a project turns DEC-085's checks on, and answer how a Task In Progress waits for a change to the foundation; variant 3a's first plan, which files only the EPIC and the foundation's Feature, and its second plan, drafted once the planner closes that Feature, stand as DEC-060 point 3 decides.
+      deferred:
+        - anchor:
+            kind: record
+            value: project-management:DEC-005
+          reason: "DEC-005's top line, from DEC-085, has 'blocked by' between issues be the tracker's own link, or a typed line where the project selects it, read through one reader. Step 5, the postconditions and the minimal guarantee, where a Task's ## Dependencies section names the Tasks it waits on, change with DEC-085's build, project-kit#3553, which brings the writer of waits and the pm skill's filing steps, as DEC-085's Implications say."
+        - anchor:
+            kind: record
+            value: project-management:DEC-025
+          reason: DEC-025, refined by DEC-085, says that DEC-085 decides how an issue's waits are recorded and read, and that only lanes wait for lived evidence. The open question's 'Typed Blocked by lines, and the Tasks ready to start that those lines give, are DEC-025's. That record names them, to be built once lived evidence answers its open questions' changes with DEC-085's build, project-kit#3553.
+        - anchor:
+            kind: record
+            value: project-management:DEC-059#7
+          reason: "DEC-085's refinement of DEC-059 point 7 has a ready Task in Backlog declare its waits and have none open, its ancestors' among them, read in full, and keeps the reading of the ## Dependencies section until a project turns DEC-085's checks on. The worker and lead agents' line, where each Task names in that section the Tasks it waits on, and step 8, where the filed issues join the ready Tasks, change with DEC-085's build, project-kit#3553. DEC-081's refinement of DEC-059 point 7 lets a worker's directing seat name the ready Task the worker takes next. next-task --task, which takes such a Task only where the clone could take it of its own choosing, is built. Step 8, where each seat's agent takes its Tasks as UC-084 describes, gains the directing seat's message once the loop that sends and takes it is built, project-kit#3523."
+        - anchor:
+            kind: record
+            value: project-management:DEC-066#1
+          reason: "DEC-066 point 1, refined by DEC-085, has the later of two Tasks that share a file name the earlier among its dependencies, waits as DEC-085 point 1 defines them, and say in its ## Dependencies section that they share a file. The minimal guarantee that this section names the earlier Task reads the section as the only place a dependency is named, and changes with DEC-085's build, project-kit#3553."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/020-file-and-move/UC-060-file-task.md
+    read:
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T221030Z-aedda51f.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T104927Z-f6afe126.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261114T135441Z-fd5c2dc0.yaml
+      - 20261114T140804Z-6f794478.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T005305Z-e801f465.yaml
+      - 20261115T090812Z-225d76fb.yaml
+      - 20261115T101625Z-39c9fced.yaml
+      - 20261115T103656Z-b7cfd657.yaml
+      - 20261115T162304Z-326cf373.yaml
+      - 20261115T180458Z-4e13664f.yaml
+      - 20261115T202513Z-2d70bae9.yaml
+      - 20261115T215333Z-1b18b920.yaml
+      - 20261115T224755Z-89ab25f5.yaml
+      - 20261115T224856Z-cb4ecf23.yaml
+      - 20261116T033725Z-695e2785.yaml
+      - 20261116T071501Z-ef7c72db.yaml
+      - 20261116T072033Z-1fa3401d.yaml
+      - 20261116T073934Z-de939802.yaml
+      - 20261116T094702Z-8f6ea845.yaml
+      - 20261116T095840Z-547638af.yaml
+      - 20261116T103723Z-5450c4f7.yaml
+      - 20261117T010941Z-d7ea213a.yaml
+      - 20261117T163349Z-7822125e.yaml
+      - 20261118T093416Z-ae3913ed.yaml
+      - 20261118T110156Z-9a08eba0.yaml
+      - 20261118T162554Z-507129b2.yaml
+      - 20261118T191220Z-3b107524.yaml
+      - 20261118T204901Z-88c68aa2.yaml
+      - 20261119T000044Z-b8eeff55.yaml
+      - 20261119T013318Z-c0734647.yaml
+      - 20261122T001341Z-1f604dc7.yaml
+      - 20261122T230042Z-201d3fa4.yaml
+      - 20261123T204526Z-d8337d55.yaml
+    revalidated:
+      at: 2026-11-28T14:39:04Z
+      outcome: unchanged
+      unchanged-because: Save what the deferral of DEC-010 names, the use case holds against this change, which makes the edits DEC-085 names and builds none of them. DEC-005's top line overturns only 'blocked by' between issues, and leaves the containment, the parent reference and the sub-issue link the filing checks and makes. DEC-036 point 4 gains a waits selector beside containment's, and variant 6d's advisory hierarchy is as it was.
+      deferred:
+        - anchor:
+            kind: record
+            value: project-management:DEC-010
+          reason: "DEC-010, refined by DEC-085, adds a warning on a Task body's hint of a wait that no wait of the Task names, and has a Task that records no wait declare in its ## Dependencies section that it waits for nothing, which DEC-085 point 6 refuses to leave out once a project turns its checks on. Steps 9 and 10, which list what the filing warns of, and the refusals of variant 9a, change with DEC-085's build, project-kit#3553, which brings the flag on hints, the declaration's check and the pm skill's filing steps."
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-authorisation
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T225036Z-926c13c5.yaml
+      - 20261117T113804Z-95a59178.yaml
+      - 20261118T093416Z-ae3913ed.yaml
+      - 20261118T191220Z-3b107524.yaml
+    revalidated:
+      at: 2026-11-28T14:39:12Z
+      outcome: unchanged
+      unchanged-because: DEC-006 gains, once a project turns DEC-085's checks on, a refusal of a Task's start while a wait is open, which a person may bypass with an audited reason, and hard rejects on the merge of its change. Neither adds a move the issue lifecycle leaves to a person, nor changes that a person's authorisation is given in the session for one issue, so the entry holds.
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-cascade
+    read:
+      - 20261026T145234Z-564794a2.yaml
+      - 20261031T010527Z-8e577440.yaml
+      - 20261106T021311Z-6bc15d0b.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261115T225419Z-956603ce.yaml
+      - 20261116T033725Z-695e2785.yaml
+      - 20261117T113804Z-95a59178.yaml
+      - 20261118T204901Z-88c68aa2.yaml
+      - 20261119T000044Z-b8eeff55.yaml
+      - 20261119T013318Z-c0734647.yaml
+    revalidated:
+      at: 2026-11-28T14:39:16Z
+      outcome: unchanged
+      unchanged-because: DEC-006 gains the gates a Task's waits put on its start and on its change's merge, once a project turns DEC-085's checks on. Its cascade rule is as it was, so a move still brings forward each issue above that is behind, and a parent with no open child is still offered for closing.
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-completed-close
+    read:
+      - 20261113T222453Z-06dececb.yaml
+      - 20261117T113804Z-95a59178.yaml
+      - 20261119T000044Z-b8eeff55.yaml
+      - 20261119T013318Z-c0734647.yaml
+    revalidated:
+      at: 2026-11-28T14:39:20Z
+      outcome: unchanged
+      unchanged-because: DEC-006 gains gates on a Task's start and on the merge of its change, once a project turns DEC-085's checks on. A completed close is no merge, and still ends a Task whose work was no pull request, on a person's authorisation once every checkbox is ticked.
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-foundation
+    read:
+      - 20261115T101625Z-39c9fced.yaml
+      - 20261115T224755Z-89ab25f5.yaml
+      - 20261123T205048Z-8f7e6e4b.yaml
+      - 20261127T183743Z-856333ab.yaml
+    revalidated:
+      at: 2026-11-28T14:39:24Z
+      outcome: unchanged
+      unchanged-because: DEC-060 point 4 holds a Task that would make one of the foundation's choices back until the Feature's work lands, once a project turns DEC-085's checks on, and its Implications read dependencies as DEC-085 point 1 defines them. The foundation is still the first part of new work, filed as one Feature whose Tasks settle the shared choices before the slices are planned.
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-issue-lifecycle
+    read:
+      - 20261026T145234Z-564794a2.yaml
+      - 20261031T010527Z-8e577440.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261106T021311Z-6bc15d0b.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261115T224856Z-cb4ecf23.yaml
+      - 20261115T225419Z-956603ce.yaml
+      - 20261116T033725Z-695e2785.yaml
+      - 20261117T113804Z-95a59178.yaml
+      - 20261118T093416Z-ae3913ed.yaml
+      - 20261118T204901Z-88c68aa2.yaml
+    revalidated:
+      at: 2026-11-28T14:39:28Z
+      outcome: unchanged
+      unchanged-because: DEC-006 gains, once a project turns DEC-085's checks on, refusals of a Task's move into In Progress and of its change's merge while a wait is open. The states, their order and the person's hold on scheduling and ending the work are as they were, so the entry holds.
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-kind-of-work
+    read:
+      - 20261118T093416Z-ae3913ed.yaml
+      - 20261122T001341Z-1f604dc7.yaml
+    revalidated:
+      at: 2026-11-28T14:39:34Z
+      outcome: unchanged
+      unchanged-because: DEC-059 point 7 now defines a ready Task in Backlog by its waits, as DEC-085 decides. The type axis, its values and the prefix a Task's title opens with, which the entry states, are untouched.
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-parent-reference
+    read:
+      - 20261026T145234Z-564794a2.yaml
+    revalidated:
+      at: 2026-11-28T14:39:38Z
+      outcome: unchanged
+      unchanged-because: DEC-005's top line, from DEC-085, overturns only 'blocked by' in its row of textual relations, and leaves containment and its textual parent line standing. The parent reference is still the body's first line, naming the issue or Milestone the issue sits under, in the form its type declares.
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-scope
+    read:
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261117T010941Z-d7ea213a.yaml
+      - 20261118T093416Z-ae3913ed.yaml
+      - 20261119T013318Z-c0734647.yaml
+      - 20261122T001341Z-1f604dc7.yaml
+      - 20261123T204526Z-d8337d55.yaml
+    revalidated:
+      at: 2026-11-28T14:39:42Z
+      outcome: unchanged
+      unchanged-because: "DEC-059 point 7 now defines a ready Task in Backlog by its waits, as DEC-085 decides, and leaves the scope as it was: the part of a project's work that one agent of a topology takes issues from."
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-task
+    read:
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261117T113804Z-95a59178.yaml
+    revalidated:
+      at: 2026-11-28T14:39:46Z
+      outcome: unchanged
+      unchanged-because: DEC-006 gains the gates a Task's waits put on its start and on its change's merge, once a project turns DEC-085's checks on. A Task is still one unit of work that one pull request delivers, or that a completed close ends where the work is no pull request.
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-wont-do-close
+    read:
+      - 20261113T222453Z-06dececb.yaml
+      - 20261117T113804Z-95a59178.yaml
+      - 20261119T000044Z-b8eeff55.yaml
+      - 20261119T013318Z-c0734647.yaml
+    revalidated:
+      at: 2026-11-28T14:39:50Z
+      outcome: unchanged
+      unchanged-because: "DEC-006 gains gates on a Task's start and on its change's merge only, once a project turns DEC-085's checks on. A won't-do close from Todo or Backlog is untouched: a person still authorises it with a reason, every checkbox ticked or removed."
+  - artefact: tech-docs/analysis/project-management/domain-model/030-the-issue-lifecycle.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T225036Z-926c13c5.yaml
+      - 20261115T224856Z-cb4ecf23.yaml
+      - 20261117T113804Z-95a59178.yaml
+      - 20261118T093416Z-ae3913ed.yaml
+      - 20261118T191220Z-3b107524.yaml
+      - 20261118T204901Z-88c68aa2.yaml
+      - 20261119T013318Z-c0734647.yaml
+      - 20261122T001341Z-1f604dc7.yaml
+    revalidated:
+      at: 2026-11-28T14:39:56Z
+      outcome: unchanged
+      unchanged-because: DEC-006 gains, once a project turns DEC-085's checks on, a refusal of a Task's start while a wait is open, which a person may bypass with an audited reason, and hard rejects on the merge of its change. No project can turn them on before DEC-085's build, project-kit#3553, brings the key. The view's states, moves and authorisations stand, and its bypass covers any check refused by default, naming one only as an example.
+  - artefact: tech-docs/analysis/project-management/domain-model/010-issues-and-their-hierarchy.md
+    read:
+      - 20261026T145234Z-564794a2.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261117T113804Z-95a59178.yaml
+    revalidated:
+      at: 2026-11-28T14:40:00Z
+      outcome: unchanged
+      unchanged-because: DEC-005's top line, from DEC-085, overturns only 'blocked by' between issues, which the view does not describe, and leaves containment, sub-issues and the parent reference as the view states them. DEC-006's gates on a Task's start and merge apply only once a project turns DEC-085's checks on, and the view gives a Task no states. DEC-010's warning on a hint of a wait and its line that a Task waits for nothing lie outside the required sections the view lists for each type.
+  - artefact: tech-docs/analysis/project-management/domain-model/050-batch-planning.md
+    read:
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261112T135407Z-115865f2.yaml
+      - 20261112T235648Z-31cd7a21.yaml
+      - 20261115T215333Z-1b18b920.yaml
+      - 20261122T001341Z-1f604dc7.yaml
+    revalidated:
+      at: 2026-11-28T14:40:04Z
+      outcome: unchanged
+      unchanged-because: "DEC-060's points 2 and 3, on which the view rests, are as they were: a first plan files the foundation's Feature, its Tasks each name the one before among their dependencies, and a second plan slices the work once the Feature closes. Point 4's hold, which lasts until the Feature's work lands once a project turns DEC-085's checks on, and the Implications' reading of dependencies as DEC-085 point 1 defines them, add nothing the view states."
+  - artefact: tech-docs/analysis/project-management/domain-model/020-classification-of-issues.md
+    read:
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261115T224856Z-cb4ecf23.yaml
+      - 20261117T010941Z-d7ea213a.yaml
+    revalidated:
+      at: 2026-11-28T14:40:08Z
+      outcome: unchanged
+      unchanged-because: "DEC-036 point 4 gains a waits: native | textual selector beside containment's, which sets how waits are recorded and is no classification axis. The view describes the axes and how the substrate map binds them and the issue's state, which the edit leaves as they were, and lists no selector of containment either."
+  - artefact: tech-docs/analysis/project-management/use-case-model/actors/ACT-planner.md
+    read:
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261112T135407Z-115865f2.yaml
+      - 20261112T235648Z-31cd7a21.yaml
+      - 20261115T215333Z-1b18b920.yaml
+      - 20261117T010941Z-d7ea213a.yaml
+      - 20261118T093416Z-ae3913ed.yaml
+      - 20261122T001341Z-1f604dc7.yaml
+    revalidated:
+      at: 2026-11-28T14:40:15Z
+      outcome: unchanged
+      unchanged-because: DEC-059 point 7 now defines a ready Task in Backlog by its waits, as DEC-085 decides. The planner's authority over outcomes, its occasions and its context, which the actor states, are untouched.
+  - artefact: tech-docs/analysis/project-management/use-case-model/actors/ACT-planning-agent.md
+    read:
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261112T135407Z-115865f2.yaml
+      - 20261112T235648Z-31cd7a21.yaml
+      - 20261115T101625Z-39c9fced.yaml
+      - 20261115T215333Z-1b18b920.yaml
+      - 20261115T224755Z-89ab25f5.yaml
+      - 20261118T093416Z-ae3913ed.yaml
+      - 20261122T001341Z-1f604dc7.yaml
+      - 20261123T205048Z-8f7e6e4b.yaml
+      - 20261126T220933Z-3e415435.yaml
+      - 20261126T221238Z-1f395312.yaml
+      - 20261127T183743Z-856333ab.yaml
+    revalidated:
+      at: 2026-11-28T14:40:26Z
+      outcome: unchanged
+      unchanged-because: "DEC-059 point 7 now defines a ready Task in Backlog by its waits, as DEC-085 decides, and keeps the reading of the ## Dependencies section until a project turns DEC-085's checks on. The planning agent still files its work with no owner, so the work joins the ready Tasks every seat shares, or the pools of the Milestones the planner gives, and files nothing before the planner approves the batch plan. The planner's directing of its workers by message stays in the deferral of DEC-059 point 2."
+      deferred:
+        - anchor:
+            kind: record
+            value: project-management:DEC-059#2
+          reason: DEC-081's refinement of DEC-059 point 2 has a planner's seat direct the workers whose seats name it, by message where the harness carries messages. A message may wake a worker or name the ready Task it takes next, never work the tracker does not hold. The topology's directing seat and next-task --task are built. The actor, which only slices and files, gains the directing with the agent's messaging, its directives and reports, project-kit#3523.
+  - artefact: tech-docs/analysis/project-management/requirements/functional/040-work-in-parallel/REQ-062-work-found-from-tracker.md
+    read:
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T225009Z-4b2ffcb8.yaml
+      - 20261118T093416Z-ae3913ed.yaml
+      - 20261118T204901Z-88c68aa2.yaml
+      - 20261122T001341Z-1f604dc7.yaml
+      - 20261126T215411Z-182da8fc.yaml
+      - 20261127T082720Z-4df0b388.yaml
+      - 20261128T022501Z-85398747.yaml
+      - 20261128T030516Z-5c071134.yaml
+    revalidated:
+      at: 2026-11-28T14:40:30Z
+      outcome: unchanged
+      unchanged-because: DEC-013's top line, from DEC-085, overturns only the ways off an unmerged integration branch, where a project turns DEC-085's checks on. Each Task's branch is still named after the Task, so it is found from the issue, and what an instance owns is still read from GitHub.
+  - artefact: tech-docs/analysis/project-management/requirements/functional/REQ-042-held-moves-authorised.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T221030Z-aedda51f.yaml
+      - 20261105T225036Z-926c13c5.yaml
+      - 20261106T000405Z-f16023ec.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261114T201720Z-021bd185.yaml
+      - 20261115T103656Z-b7cfd657.yaml
+      - 20261115T180458Z-4e13664f.yaml
+      - 20261115T215333Z-1b18b920.yaml
+      - 20261115T223351Z-f0ef2d62.yaml
+      - 20261115T225419Z-956603ce.yaml
+      - 20261116T033725Z-695e2785.yaml
+      - 20261116T095840Z-547638af.yaml
+      - 20261116T112808Z-198ad446.yaml
+      - 20261117T113804Z-95a59178.yaml
+      - 20261118T093416Z-ae3913ed.yaml
+      - 20261118T191220Z-3b107524.yaml
+      - 20261118T204901Z-88c68aa2.yaml
+      - 20261119T000044Z-b8eeff55.yaml
+      - 20261119T013318Z-c0734647.yaml
+      - 20261128T022501Z-85398747.yaml
+      - 20261128T023250Z-8f79a27e.yaml
+    revalidated:
+      at: 2026-11-28T14:40:34Z
+      outcome: unchanged
+      unchanged-because: DEC-006 gains, once a project turns DEC-085's checks on, a refusal of a Task's start while a wait is open, which a person may bypass with an audited reason, and hard rejects on the merge of its change. Neither adds a move the person holds nor lets the agent make one, so a held move asked for directly is still made only on the person's authorisation.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-088-delegate-to-agent.md
+    read:
+      - 20261029T002130Z-82af462f.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261107T132338Z-3c4c3246.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261112T135407Z-115865f2.yaml
+      - 20261112T235648Z-31cd7a21.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261116T223146Z-fdad67d7.yaml
+      - 20261116T232343Z-e53423de.yaml
+      - 20261118T093416Z-ae3913ed.yaml
+      - 20261118T204901Z-88c68aa2.yaml
+      - 20261122T001341Z-1f604dc7.yaml
+      - 20261126T215411Z-182da8fc.yaml
+      - 20261127T082720Z-4df0b388.yaml
+    revalidated:
+      at: 2026-11-28T14:40:42Z
+      outcome: unchanged
+      unchanged-because: DEC-059 point 7 now defines a ready Task in Backlog by its waits, as DEC-085 decides. The lead's scope, for which the use case cites point 7, and the helper agent building a Task as the lead's instance are untouched.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-085-leave-task-to-its-owner.md
+    read:
+      - 20261029T002130Z-82af462f.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T021311Z-6bc15d0b.yaml
+      - 20261107T125436Z-9442a4b6.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T132338Z-3c4c3246.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T104927Z-f6afe126.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261114T201720Z-021bd185.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T180458Z-4e13664f.yaml
+      - 20261115T215333Z-1b18b920.yaml
+      - 20261115T223351Z-f0ef2d62.yaml
+      - 20261115T225419Z-956603ce.yaml
+      - 20261116T033725Z-695e2785.yaml
+      - 20261116T095840Z-547638af.yaml
+      - 20261116T112808Z-198ad446.yaml
+      - 20261116T223146Z-fdad67d7.yaml
+      - 20261116T232343Z-e53423de.yaml
+      - 20261117T010941Z-d7ea213a.yaml
+      - 20261117T163349Z-7822125e.yaml
+      - 20261117T173731Z-08ffa252.yaml
+      - 20261118T093416Z-ae3913ed.yaml
+      - 20261118T191220Z-3b107524.yaml
+      - 20261118T204901Z-88c68aa2.yaml
+      - 20261119T013318Z-c0734647.yaml
+      - 20261122T001341Z-1f604dc7.yaml
+      - 20261123T204526Z-d8337d55.yaml
+      - 20261126T215411Z-182da8fc.yaml
+      - 20261127T082720Z-4df0b388.yaml
+      - 20261128T022501Z-85398747.yaml
+      - 20261128T030516Z-5c071134.yaml
+      - 20261128T033239Z-483cbbe0.yaml
+      - 20261128T050447Z-34235571.yaml
+    revalidated:
+      at: 2026-11-28T14:40:47Z
+      outcome: unchanged
+      unchanged-because: DEC-059 point 7 now defines a ready Task in Backlog by its waits, as DEC-085 decides. The owner read before any change, the clash guard, and a Task taken over once its ownership no longer counts, which the use case describes, are untouched.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/010-plan/UC-063-plan-intent.md
+    read:
+      - 20261029T002130Z-82af462f.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261108T213649Z-c363a042.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T175333Z-b0d8bc0a.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261112T135407Z-115865f2.yaml
+      - 20261112T235648Z-31cd7a21.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T104927Z-f6afe126.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261114T135441Z-fd5c2dc0.yaml
+      - 20261114T140804Z-6f794478.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T090812Z-225d76fb.yaml
+      - 20261115T101625Z-39c9fced.yaml
+      - 20261115T162304Z-326cf373.yaml
+      - 20261115T180458Z-4e13664f.yaml
+      - 20261115T202513Z-2d70bae9.yaml
+      - 20261115T215333Z-1b18b920.yaml
+      - 20261115T224755Z-89ab25f5.yaml
+      - 20261116T071501Z-ef7c72db.yaml
+      - 20261116T072033Z-1fa3401d.yaml
+      - 20261116T094702Z-8f6ea845.yaml
+      - 20261116T095840Z-547638af.yaml
+      - 20261116T103723Z-5450c4f7.yaml
+      - 20261117T113804Z-95a59178.yaml
+      - 20261118T093416Z-ae3913ed.yaml
+      - 20261118T110156Z-9a08eba0.yaml
+      - 20261118T162554Z-507129b2.yaml
+      - 20261118T204901Z-88c68aa2.yaml
+      - 20261119T000044Z-b8eeff55.yaml
+      - 20261119T013318Z-c0734647.yaml
+      - 20261122T001341Z-1f604dc7.yaml
+      - 20261123T204526Z-d8337d55.yaml
+      - 20261127T183743Z-856333ab.yaml
+    revalidated:
+      at: 2026-11-28T14:40:54Z
+      outcome: unchanged
+      unchanged-because: DEC-005's top line, from DEC-085, overturns only 'blocked by' between issues, and leaves the containment by which step 4 gives each issue its parent. DEC-006's edits gate a Task's start and merge once a project turns DEC-085's checks on, and leave the scheduling of step 9. DEC-060's edits change how long the pool holds a Task back, not the first plan's filing of the foundation in step 4. The use case names no dependency, so its steps stand.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-086-resume-after-session-died.md
+    read:
+      - 20261029T002130Z-82af462f.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261107T132338Z-3c4c3246.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261116T223146Z-fdad67d7.yaml
+      - 20261116T232343Z-e53423de.yaml
+      - 20261118T093416Z-ae3913ed.yaml
+      - 20261118T110156Z-9a08eba0.yaml
+      - 20261118T162554Z-507129b2.yaml
+      - 20261118T204901Z-88c68aa2.yaml
+      - 20261122T001341Z-1f604dc7.yaml
+      - 20261123T204526Z-d8337d55.yaml
+      - 20261126T215411Z-182da8fc.yaml
+      - 20261127T082720Z-4df0b388.yaml
+      - 20261128T022501Z-85398747.yaml
+    revalidated:
+      at: 2026-11-28T14:41:00Z
+      outcome: unchanged
+      unchanged-because: DEC-059 point 7's edit changes only what makes a Task in Backlog ready, and variant 2c's Task In Progress whose ownership lapsed is ready as before. DEC-013's top line, from DEC-085, overturns only the ways off an unmerged integration branch, and each Task's branch is still named with its number, as step 3 finds it.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-082-set-up-topology.md
+    read:
+      - 20261029T002130Z-82af462f.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T104927Z-f6afe126.yaml
+      - 20261114T135441Z-fd5c2dc0.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T215333Z-1b18b920.yaml
+      - 20261117T010941Z-d7ea213a.yaml
+      - 20261118T093416Z-ae3913ed.yaml
+      - 20261118T110156Z-9a08eba0.yaml
+      - 20261118T162554Z-507129b2.yaml
+      - 20261119T013318Z-c0734647.yaml
+      - 20261122T001341Z-1f604dc7.yaml
+      - 20261122T230042Z-201d3fa4.yaml
+      - 20261123T192706Z-a190aa12.yaml
+      - 20261123T204526Z-d8337d55.yaml
+      - 20261127T082720Z-4df0b388.yaml
+      - 20261128T041740Z-a8de64c8.yaml
+      - 20261128T044011Z-6120b37e.yaml
+      - 20261128T050447Z-34235571.yaml
+      - 20261128T053809Z-f5edaf2f.yaml
+    revalidated:
+      at: 2026-11-28T14:41:06Z
+      outcome: unchanged
+      unchanged-because: DEC-059 point 7 now defines a ready Task in Backlog by its waits, as DEC-085 decides. The topology, its seats, their scopes and the warning of a workstream no seat may take, which the use case sets up, are untouched, and seats that may take one workstream still share the ready Tasks.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-089-land-alongside-others.md
+    read:
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T131440Z-90d45a35.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T220122Z-9823200c.yaml
+      - 20261105T221030Z-aedda51f.yaml
+      - 20261105T225036Z-926c13c5.yaml
+      - 20261106T000405Z-f16023ec.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T123620Z-3d057b1b.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T125436Z-9442a4b6.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261107T163133Z-be7e7e83.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261109T083359Z-579a84ef.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T104927Z-f6afe126.yaml
+      - 20261113T220619Z-6d103fc1.yaml
+      - 20261114T135441Z-fd5c2dc0.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T215333Z-1b18b920.yaml
+      - 20261115T223351Z-f0ef2d62.yaml
+      - 20261116T095840Z-547638af.yaml
+      - 20261116T112808Z-198ad446.yaml
+      - 20261116T223146Z-fdad67d7.yaml
+      - 20261116T232343Z-e53423de.yaml
+      - 20261118T093416Z-ae3913ed.yaml
+      - 20261118T110156Z-9a08eba0.yaml
+      - 20261118T162554Z-507129b2.yaml
+      - 20261118T191220Z-3b107524.yaml
+      - 20261119T013318Z-c0734647.yaml
+      - 20261122T001341Z-1f604dc7.yaml
+      - 20261123T005053Z-b5822da6.yaml
+      - 20261124T012529Z-dee71133.yaml
+      - 20261126T215411Z-182da8fc.yaml
+      - 20261127T082720Z-4df0b388.yaml
+    revalidated:
+      at: 2026-11-28T14:41:15Z
+      outcome: unchanged
+      unchanged-because: DEC-013's top line, from DEC-085, overturns, where a project turns DEC-085's checks on, only the ways off an unmerged integration branch. The landing on the default branch, and the merge queue variant 5a rests on, stand as the use case says.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/020-file-and-move/UC-061-move-issue.md
+    read:
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261031T010527Z-8e577440.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T214054Z-3ec700bc.yaml
+      - 20261105T215849Z-25d2581b.yaml
+      - 20261105T221030Z-aedda51f.yaml
+      - 20261106T000405Z-f16023ec.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T123620Z-3d057b1b.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T125436Z-9442a4b6.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T132338Z-3c4c3246.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T104927Z-f6afe126.yaml
+      - 20261113T220619Z-6d103fc1.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261114T113546Z-35debc4d.yaml
+      - 20261114T123314Z-f9bc9653.yaml
+      - 20261114T135441Z-fd5c2dc0.yaml
+      - 20261114T140804Z-6f794478.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T010054Z-99f01df7.yaml
+      - 20261115T030556Z-b31ada15.yaml
+      - 20261115T101625Z-39c9fced.yaml
+      - 20261115T103656Z-b7cfd657.yaml
+      - 20261115T180458Z-4e13664f.yaml
+      - 20261115T202513Z-2d70bae9.yaml
+      - 20261115T215333Z-1b18b920.yaml
+      - 20261115T223351Z-f0ef2d62.yaml
+      - 20261115T224856Z-cb4ecf23.yaml
+      - 20261115T225419Z-956603ce.yaml
+      - 20261116T033725Z-695e2785.yaml
+      - 20261116T060759Z-75e99435.yaml
+      - 20261116T095840Z-547638af.yaml
+      - 20261116T112808Z-198ad446.yaml
+      - 20261116T223146Z-fdad67d7.yaml
+      - 20261116T232343Z-e53423de.yaml
+      - 20261117T010941Z-d7ea213a.yaml
+      - 20261117T113804Z-95a59178.yaml
+      - 20261117T163349Z-7822125e.yaml
+      - 20261118T093416Z-ae3913ed.yaml
+      - 20261118T110156Z-9a08eba0.yaml
+      - 20261118T162554Z-507129b2.yaml
+      - 20261118T191220Z-3b107524.yaml
+      - 20261118T203809Z-2a808b7c.yaml
+      - 20261118T204901Z-88c68aa2.yaml
+      - 20261118T215357Z-e7129e16.yaml
+      - 20261119T000044Z-b8eeff55.yaml
+      - 20261119T004922Z-6938dc59.yaml
+      - 20261119T013318Z-c0734647.yaml
+      - 20261122T001341Z-1f604dc7.yaml
+      - 20261122T230042Z-201d3fa4.yaml
+      - 20261123T204526Z-d8337d55.yaml
+      - 20261124T095331Z-7ce7457d.yaml
+      - 20261128T022501Z-85398747.yaml
+    revalidated:
+      at: 2026-11-28T14:41:21Z
+      outcome: unchanged
+      unchanged-because: DEC-006 gains, once a project turns DEC-085's checks on, a refusal of a Task's move into In Progress while a wait is open, bypassable with an audited reason, and hard rejects on its change's merge. No project can turn them on before DEC-085's build, project-kit#3553, brings the key, so start-work moves the Task as step 6 says. DEC-013's top line leaves the title check and the branch that steps 6 and 7 rest on.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-090-see-who-works-on-what.md
+    read:
+      - 20261029T002130Z-82af462f.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T221030Z-aedda51f.yaml
+      - 20261106T000405Z-f16023ec.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T123620Z-3d057b1b.yaml
+      - 20261107T125436Z-9442a4b6.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T163133Z-be7e7e83.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261112T235648Z-31cd7a21.yaml
+      - 20261115T010054Z-99f01df7.yaml
+      - 20261115T223351Z-f0ef2d62.yaml
+      - 20261115T224856Z-cb4ecf23.yaml
+      - 20261116T095840Z-547638af.yaml
+      - 20261116T112808Z-198ad446.yaml
+      - 20261117T113804Z-95a59178.yaml
+      - 20261118T093416Z-ae3913ed.yaml
+      - 20261118T191220Z-3b107524.yaml
+      - 20261118T204901Z-88c68aa2.yaml
+      - 20261119T013318Z-c0734647.yaml
+      - 20261122T001341Z-1f604dc7.yaml
+      - 20261123T192706Z-a190aa12.yaml
+      - 20261123T204526Z-d8337d55.yaml
+      - 20261123T233417Z-17aede6c.yaml
+      - 20261128T022501Z-85398747.yaml
+      - 20261128T030516Z-5c071134.yaml
+      - 20261128T033239Z-483cbbe0.yaml
+      - 20261128T041740Z-a8de64c8.yaml
+      - 20261128T044011Z-6120b37e.yaml
+      - 20261128T050447Z-34235571.yaml
+    revalidated:
+      at: 2026-11-28T14:41:27Z
+      outcome: unchanged
+      unchanged-because: DEC-006 gains gates on a Task's start and on its change's merge, once a project turns DEC-085's checks on. The states In Progress and Review, which the planner reads for each owned Task, are as they were.
+  - artefact: tech-docs/analysis/project-management/use-case-model/journeys/JRN-012-take-up-and-land-task.md
+    read:
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T214054Z-3ec700bc.yaml
+      - 20261105T215849Z-25d2581b.yaml
+      - 20261105T220122Z-9823200c.yaml
+      - 20261105T221030Z-aedda51f.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T234348Z-1f64d843.yaml
+      - 20261106T000405Z-f16023ec.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T123620Z-3d057b1b.yaml
+      - 20261107T125436Z-9442a4b6.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T163133Z-be7e7e83.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261109T083359Z-579a84ef.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T030556Z-b31ada15.yaml
+      - 20261115T103656Z-b7cfd657.yaml
+      - 20261115T215333Z-1b18b920.yaml
+      - 20261115T223351Z-f0ef2d62.yaml
+      - 20261115T224755Z-89ab25f5.yaml
+      - 20261115T225419Z-956603ce.yaml
+      - 20261116T095840Z-547638af.yaml
+      - 20261116T112808Z-198ad446.yaml
+      - 20261116T223146Z-fdad67d7.yaml
+      - 20261116T232343Z-e53423de.yaml
+      - 20261117T113804Z-95a59178.yaml
+      - 20261118T093416Z-ae3913ed.yaml
+      - 20261118T191220Z-3b107524.yaml
+      - 20261118T204901Z-88c68aa2.yaml
+      - 20261119T000044Z-b8eeff55.yaml
+      - 20261119T013318Z-c0734647.yaml
+    revalidated:
+      at: 2026-11-28T14:41:32Z
+      outcome: unchanged
+      unchanged-because: DEC-006's gates on a Task's start and on its change's merge apply only once a project turns DEC-085's checks on, which DEC-085's build, project-kit#3553, makes possible; they add refusals and lift none, so the journey's minimal guarantees hold. DEC-013's top line leaves the branch and the pull request the journey lands from.
+  - artefact: tech-docs/analysis/project-management/use-case-model/journeys/JRN-004-set-up-and-adjust-topology.md
+    read:
+      - 20261029T002130Z-82af462f.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T131440Z-90d45a35.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T221030Z-aedda51f.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T144714Z-e8754301.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T101625Z-39c9fced.yaml
+      - 20261115T175013Z-4c973ec1.yaml
+      - 20261115T202513Z-2d70bae9.yaml
+      - 20261115T222227Z-a8c41e80.yaml
+      - 20261116T223146Z-fdad67d7.yaml
+      - 20261116T232343Z-e53423de.yaml
+      - 20261118T093416Z-ae3913ed.yaml
+      - 20261118T110156Z-9a08eba0.yaml
+      - 20261118T162554Z-507129b2.yaml
+      - 20261119T013318Z-c0734647.yaml
+      - 20261122T001341Z-1f604dc7.yaml
+      - 20261123T204526Z-d8337d55.yaml
+      - 20261126T215411Z-182da8fc.yaml
+      - 20261127T082720Z-4df0b388.yaml
+      - 20261128T041740Z-a8de64c8.yaml
+      - 20261128T044011Z-6120b37e.yaml
+      - 20261128T050447Z-34235571.yaml
+      - 20261128T053809Z-f5edaf2f.yaml
+    revalidated:
+      at: 2026-11-28T14:41:36Z
+      outcome: unchanged
+      unchanged-because: DEC-059 point 7 now defines a ready Task in Backlog by its waits, as DEC-085 decides. The topologies set up, compared and adjusted in the journey, their seats and scopes, are untouched.
+  - artefact: .pkit/capabilities/project-management/rule-sets/pm.md#RS-PM-001
+    revalidated:
+      at: 2026-11-28T14:41:44Z
+      outcome: unchanged
+      unchanged-because: DEC-013's top line, from DEC-085, overturns only the ways off an unmerged integration branch, where a project turns DEC-085's checks on. A pull request that closes issues still names each with a closing keyword first in its body, as the rule says.
+  - artefact: .pkit/capabilities/project-management/rule-sets/pm.md#RS-PM-003
+    read:
+      - 20261115T224856Z-cb4ecf23.yaml
+      - 20261117T010941Z-d7ea213a.yaml
+    revalidated:
+      at: 2026-11-28T14:41:48Z
+      outcome: unchanged
+      unchanged-because: "DEC-036 point 4 gains a waits: native | textual selector, which sets how waits are recorded and is no classification axis. Each issue still carries one value on each required axis the substrate map carries, and never two."
+  - artefact: .pkit/capabilities/software-engineering/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T235716Z-019daf66.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261101T155246Z-cdd2022b.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T225036Z-926c13c5.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T013502Z-01dc9885.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T131245Z-5afe6d5a.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261107T163133Z-be7e7e83.yaml
+      - 20261108T000436Z-9e30da30.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T223323Z-d168f4f5.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T231918Z-ee80c064.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T083359Z-579a84ef.yaml
+      - 20261109T103219Z-76953beb.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T145230Z-c78b596e.yaml
+      - 20261111T205252Z-4cfa1660.yaml
+      - 20261111T211406Z-59d1a8df.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261112T091032Z-823069cd.yaml
+      - 20261112T094911Z-6ef4bac4.yaml
+      - 20261112T123303Z-7c4eb2ad.yaml
+      - 20261112T221110Z-a675de74.yaml
+      - 20261113T194652Z-522f1d81.yaml
+      - 20261113T200930Z-431fc6c0.yaml
+      - 20261114T165854Z-0aa5ab74.yaml
+      - 20261114T191101Z-fd895e57.yaml
+      - 20261115T090052Z-ef00fc82.yaml
+      - 20261115T144216Z-dac3a5e6.yaml
+      - 20261115T223351Z-f0ef2d62.yaml
+      - 20261115T225309Z-fb593e04.yaml
+      - 20261116T071805Z-ffb1106a.yaml
+      - 20261116T072934Z-f7ff88d6.yaml
+      - 20261116T223146Z-fdad67d7.yaml
+      - 20261116T232343Z-e53423de.yaml
+      - 20261116T234025Z-ff90f250.yaml
+      - 20261117T001230Z-ded9fa7f.yaml
+      - 20261118T093416Z-ae3913ed.yaml
+      - 20261118T191220Z-3b107524.yaml
+      - 20261118T204901Z-88c68aa2.yaml
+      - 20261119T013318Z-c0734647.yaml
+      - 20261123T001151Z-75d67d5f.yaml
+    revalidated:
+      at: 2026-11-28T14:41:59Z
+      outcome: unchanged
+      unchanged-because: "DEC-060 point 4 holds a Task that would make one of a foundation's choices back until the Feature's work lands, once a project turns DEC-085's checks on, and its Implications read dependencies as DEC-085 point 1 defines them. 'A foundation fills the corpus' still holds: the foundation comes first, with the records of its choices and then the walking skeleton, whose conventions enter the corpus."
+  - artefact: docs/capabilities/software-engineering/README.md
+    read:
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261102T151637Z-974a0d9a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031311Z-415182b4.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T222708Z-59c67901.yaml
+      - 20261105T225036Z-926c13c5.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T013502Z-01dc9885.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T131245Z-5afe6d5a.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261107T163133Z-be7e7e83.yaml
+      - 20261107T194026Z-d540372c.yaml
+      - 20261108T000436Z-9e30da30.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T223323Z-d168f4f5.yaml
+      - 20261108T231918Z-ee80c064.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T083359Z-579a84ef.yaml
+      - 20261109T095138Z-4bf93c42.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T145230Z-c78b596e.yaml
+      - 20261111T161234Z-995dc8d9.yaml
+      - 20261111T205252Z-4cfa1660.yaml
+      - 20261111T211406Z-59d1a8df.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261111T221925Z-a0e54751.yaml
+      - 20261111T222332Z-9c425d5a.yaml
+      - 20261112T091032Z-823069cd.yaml
+      - 20261112T094911Z-6ef4bac4.yaml
+      - 20261112T221110Z-a675de74.yaml
+      - 20261113T194652Z-522f1d81.yaml
+      - 20261113T200930Z-431fc6c0.yaml
+      - 20261114T165854Z-0aa5ab74.yaml
+      - 20261114T191101Z-fd895e57.yaml
+      - 20261115T090052Z-ef00fc82.yaml
+      - 20261115T144216Z-dac3a5e6.yaml
+      - 20261115T223351Z-f0ef2d62.yaml
+      - 20261115T225309Z-fb593e04.yaml
+      - 20261116T071805Z-ffb1106a.yaml
+      - 20261116T223146Z-fdad67d7.yaml
+      - 20261116T232343Z-e53423de.yaml
+      - 20261117T001230Z-ded9fa7f.yaml
+      - 20261117T222004Z-7a8ddb3a.yaml
+      - 20261118T093416Z-ae3913ed.yaml
+      - 20261118T191220Z-3b107524.yaml
+      - 20261118T204901Z-88c68aa2.yaml
+      - 20261119T013318Z-c0734647.yaml
+      - 20261123T001151Z-75d67d5f.yaml
+    revalidated:
+      at: 2026-11-28T14:42:10Z
+      outcome: unchanged
+      unchanged-because: DEC-060's edits change only how long the pool holds a Task back for a foundation, and how dependencies are read. The guide's walking skeleton is still the thin slice a foundation builds end to end before the slices after it are planned, as DEC-060 says. What COR-072's build changes stays in the deferrals kept.
+      deferred:
+        - anchor:
+            kind: record
+            value: COR-050
+          reason: "Its \"Answers no change owes\" has the default branch's configuration name the delegate as `friction.delegate`, deciding each answer another agent drafted; the build moves the name into the delegation setting and has the delegate decide only at answer or higher. Its follow-up: the build of COR-072 (#3417)."
+        - anchor:
+            kind: record
+            value: COR-064
+          reason: "Its \"Answers no change owes\" has the default branch's configuration name the delegate as `friction.delegate`, deciding each answer another agent drafted; the build moves the name into the delegation setting and has the delegate decide only at answer or higher. Its follow-up: the build of COR-072 (#3417)."
+        - anchor:
+            kind: record
+            value: COR-070
+          reason: "Its \"Answers no change owes\" has the default branch's configuration name the delegate as `friction.delegate`, deciding each answer another agent drafted; the build moves the name into the delegation setting and has the delegate decide only at answer or higher. Its follow-up: the build of COR-072 (#3417)."
+        - anchor:
+            kind: record
+            value: project-management:DEC-055
+          reason: "Its \"Answers no change owes\" has the default branch's configuration name the delegate as `friction.delegate`, deciding each answer another agent drafted; the build moves the name into the delegation setting and has the delegate decide only at answer or higher. Its follow-up: the build of COR-072 (#3417)."
+  - artefact: .pkit/capabilities/project-management/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T193339Z-5bd2a791.yaml
+      - 20261029T002130Z-82af462f.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261031T010527Z-8e577440.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T210254Z-faa0ccce.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T214054Z-3ec700bc.yaml
+      - 20261105T214057Z-5a0ecd5b.yaml
+      - 20261105T215849Z-25d2581b.yaml
+      - 20261105T220309Z-d2431027.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T123620Z-3d057b1b.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T132338Z-3c4c3246.yaml
+      - 20261107T134817Z-fbfbe8a0.yaml
+      - 20261107T144714Z-e8754301.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261107T153702Z-907fa2fc.yaml
+      - 20261107T163133Z-be7e7e83.yaml
+      - 20261107T195325Z-6b9f96fa.yaml
+      - 20261108T000436Z-9e30da30.yaml
+      - 20261108T015222Z-bdacd3c0.yaml
+      - 20261108T213649Z-c363a042.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T223622Z-2a5e1da3.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261109T074625Z-5e6cbb22.yaml
+      - 20261109T083359Z-579a84ef.yaml
+      - 20261109T103219Z-76953beb.yaml
+      - 20261109T112020Z-9faec713.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T175333Z-b0d8bc0a.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261112T160032Z-7fd436db.yaml
+      - 20261112T163245Z-ea50e1b3.yaml
+      - 20261112T221110Z-a675de74.yaml
+      - 20261112T235648Z-31cd7a21.yaml
+      - 20261113T104927Z-f6afe126.yaml
+      - 20261113T220619Z-6d103fc1.yaml
+      - 20261113T221227Z-8ea6b98a.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261113T224621Z-e14c21a4.yaml
+      - 20261114T003340Z-7383c183.yaml
+      - 20261114T010735Z-06110bd1.yaml
+      - 20261114T014159Z-54a2f4af.yaml
+      - 20261114T113546Z-35debc4d.yaml
+      - 20261114T123314Z-f9bc9653.yaml
+      - 20261114T201720Z-021bd185.yaml
+      - 20261114T201738Z-88b7102c.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T010054Z-99f01df7.yaml
+      - 20261115T030556Z-b31ada15.yaml
+      - 20261115T090812Z-225d76fb.yaml
+      - 20261115T091317Z-42b6403e.yaml
+      - 20261115T101625Z-39c9fced.yaml
+      - 20261115T103656Z-b7cfd657.yaml
+      - 20261115T162304Z-326cf373.yaml
+      - 20261115T180458Z-4e13664f.yaml
+      - 20261115T202513Z-2d70bae9.yaml
+      - 20261115T213811Z-fcb1a04e.yaml
+      - 20261115T215333Z-1b18b920.yaml
+      - 20261115T223351Z-f0ef2d62.yaml
+      - 20261115T224755Z-89ab25f5.yaml
+      - 20261115T224856Z-cb4ecf23.yaml
+      - 20261115T225419Z-956603ce.yaml
+      - 20261116T033725Z-695e2785.yaml
+      - 20261116T060759Z-75e99435.yaml
+      - 20261116T071501Z-ef7c72db.yaml
+      - 20261116T072033Z-1fa3401d.yaml
+      - 20261116T073934Z-de939802.yaml
+      - 20261116T075435Z-97191300.yaml
+      - 20261116T094702Z-8f6ea845.yaml
+      - 20261116T095840Z-547638af.yaml
+      - 20261116T103723Z-5450c4f7.yaml
+      - 20261116T110629Z-7871f194.yaml
+      - 20261116T112419Z-c3215b11.yaml
+      - 20261116T180023Z-57d33665.yaml
+      - 20261116T223146Z-fdad67d7.yaml
+      - 20261116T223221Z-8a885d2a.yaml
+      - 20261116T223818Z-0ab49eeb.yaml
+      - 20261116T225010Z-97b5aecd.yaml
+      - 20261116T225513Z-0d37c985.yaml
+      - 20261116T225522Z-83980882.yaml
+      - 20261116T225640Z-9b864975.yaml
+      - 20261116T230417Z-5d3639ec.yaml
+      - 20261116T232343Z-e53423de.yaml
+      - 20261116T233535Z-b44a843f.yaml
+      - 20261117T005457Z-37ce25dd.yaml
+      - 20261117T005816Z-bbf7fd59.yaml
+      - 20261117T010941Z-d7ea213a.yaml
+      - 20261117T011424Z-02e2722e.yaml
+      - 20261117T013904Z-1e19dbb0.yaml
+      - 20261117T021128Z-4bdf8d04.yaml
+      - 20261117T021240Z-547bb550.yaml
+      - 20261117T105341Z-07d093d7.yaml
+      - 20261117T113804Z-95a59178.yaml
+      - 20261117T155137Z-c5db0cd8.yaml
+      - 20261117T163349Z-7822125e.yaml
+      - 20261117T164543Z-11e32fdc.yaml
+      - 20261117T175844Z-0d920537.yaml
+      - 20261117T190214Z-f12213c3.yaml
+      - 20261117T211538Z-365d6e26.yaml
+      - 20261117T214633Z-81f6c17c.yaml
+      - 20261117T225058Z-5989be1a.yaml
+      - 20261118T093416Z-ae3913ed.yaml
+      - 20261118T110156Z-9a08eba0.yaml
+      - 20261118T162554Z-507129b2.yaml
+      - 20261118T163314Z-ba363845.yaml
+      - 20261118T173342Z-71c87010.yaml
+      - 20261118T191220Z-3b107524.yaml
+      - 20261118T203809Z-2a808b7c.yaml
+      - 20261118T204901Z-88c68aa2.yaml
+      - 20261118T215357Z-e7129e16.yaml
+      - 20261118T215800Z-85501d61.yaml
+      - 20261119T000044Z-b8eeff55.yaml
+      - 20261119T004304Z-e84ccc6b.yaml
+      - 20261119T004922Z-6938dc59.yaml
+      - 20261119T013318Z-c0734647.yaml
+      - 20261119T073457Z-2f27facd.yaml
+      - 20261122T230042Z-201d3fa4.yaml
+      - 20261123T005053Z-b5822da6.yaml
+      - 20261123T192706Z-a190aa12.yaml
+      - 20261123T204526Z-d8337d55.yaml
+      - 20261124T012529Z-dee71133.yaml
+      - 20261124T024003Z-d84dbce3.yaml
+      - 20261127T101057Z-2773efc3.yaml
+      - 20261127T183743Z-856333ab.yaml
+      - 20261128T022501Z-85398747.yaml
+      - 20261128T023546Z-46195b5c.yaml
+    revalidated:
+      at: 2026-11-28T14:42:28Z
+      outcome: updated
+      deferred:
+        - anchor:
+            kind: path
+            value: .pkit/capabilities/project-management/decisions/**
+          reason: "DEC-074, accepted in this change, has pre-check's board check read the board on each run and warn where the board does not answer, fail a configuration that declares a board and gives no board number its schema admits, and give each check's outcome under a key that keeps its check for good, the report kept stable as ADR-097 and the CLI reference's statement of it keep every command's machine-readable output, and has the skill's first step show pre-check's warnings; DEC-017 and DEC-037 take the edits it names, and ADR-031 and ADR-096 the facts it corrects. The change builds none of it, so pre-check, the skill and back-fill still run as the README describes them, with main's statement of the documents the commands print among it, which already has no key come to mean anything else. The README's table of what pre-check covers, its account of Step 0 under 'Verify with pre-check', the pre-check row under 'When the board does not answer', which leaves to project-kit#3193 whether the check reads the board, and the fields 'The prerequisites: pre-check' lists for its report, which name no key for each check, change with DEC-074's build, #3243, which brings pre-check, the skill and the README to the record together."
+        - anchor:
+            kind: record
+            value: ADR-031
+          reason: "ADR-031 point 5 now says the fourth member of back-fill's gate is back-fill's own, computed apart from pre-check, the fact DEC-074 corrects. The README's account of back-fill's gate and of what pre-check covers changes with DEC-074's build, #3243, which brings pre-check, the skill and the README to the record together."
+        - anchor:
+            kind: record
+            value: ADR-096
+          reason: "ADR-096 now cites DEC-074 where it said project-kit#3193 proposes that the board check warn. The README's pre-check row under 'When the board does not answer', which still leaves that to project-kit#3193, changes with DEC-074's build, #3243, which brings pre-check, the skill and the README to the record together."
+        - anchor:
+            kind: record
+            value: ADR-097
+          reason: "ADR-097 now cites DEC-074 point 4 where it spoke of project-kit#3193's draft: DEC-074 gives each of pre-check's checks a key in its report that keeps its check for good, and cites ADR-097 for how the report stays stable. None of ADR-097's points changes, so 'What the commands print for a program' keeps to the rule as it did. The fields 'The prerequisites: pre-check' lists for the report, which name no key for each check, change with DEC-074's build, #3243, which brings pre-check, the skill and the README to the record together."

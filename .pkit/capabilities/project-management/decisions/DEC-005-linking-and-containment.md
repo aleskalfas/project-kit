@@ -11,6 +11,8 @@ source:
   captured_at: 2026-05-21
 ---
 
+> **Partially superseded by [project-management:DEC-085-issue-waits].** "Blocked by" between two issues is the tracker's own blocked-by link, or a typed `Blocked by: #N` line in the waiting issue's `## Dependencies` section where the project selects it, read for every command through one reader. Overturned: "Blocked by" in the relations table's row of textual relations. Among what stands: containment, its native sub-issues and its textual parent line, and "follow-up to" and "see also", textual in a body section.
+
 ## Context
 
 The hierarchy from [project-management:DEC-004-six-level-hierarchy] needs a mechanism that links children to parents in a way that's both UI-visible (so a parent surfaces its children automatically) and readable in contexts where the GitHub UI isn't rendering (PR bodies, diffs, exported issues, archived snapshots). It also needs containment rules so the validator can refuse impossible filings (a Feature inside a Feature, an EPIC under another EPIC).
