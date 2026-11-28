@@ -34,11 +34,11 @@ A wait that is written can be checked, but a wait left out leaves no trace. A Ta
 
 A *wait* is a recorded relation between two issues: the *waiting issue* is not to start until the *awaited issue*'s work has landed. Until then the wait is *open*. An open wait holds work back once the project turns the checks on, and holds nothing until then (point 11). It orders work in sequence, the conflict DEC-025 names. Where another record speaks of an issue's dependencies, as where a Task names another among them, it means the issue's waits once the project turns the checks on, and the issues its `## Dependencies` section names until then (point 11).
 
-- **It ends,** for each Task whose wait it is, once the awaited issue's work has landed on the default branch, or on the integration branch that the Task's own change merges into, where the Task's body names one ([project-management:DEC-013-branch-and-pr-conventions]).
+- **It ends,** for each Task whose wait it is, once the awaited issue's work has landed on the default branch, or on the integration branch the Task's body names, where it names one ([project-management:DEC-013-branch-and-pr-conventions]).
   - **An issue's work lands** on the branch its change merges into once the issue closes as completed: its change merged, or its work done with no change to merge ([project-management:DEC-006-state-machine-and-cascade], its closure triggers).
-  - **An issue under a branch's owner whose body names that integration branch** closes once its work has merged into that branch, a container among them, whose children's work has. Its work lands on the default branch only once the issue that owns the branch closes as completed, the branch merged into the default branch. So a wait on it ends at its own close for a Task whose change merges into the same branch, and at the owning issue's close for any other.
+  - **An issue whose body names an integration branch,** other than the issue that owns the branch, closes once its work has merged into that branch, a container among them, whose children's work has. Its work lands on the default branch only once the issue that owns the branch closes as completed, the branch merged into the default branch. So a wait on it ends at its own close for a Task whose body names the same branch, and for any other at the owning issue's close as completed.
   - **A change that closes both issues** lands the awaited issue's work with its own (point 8).
-- **An awaited issue closed otherwise,** such as not planned, leaves its work unlanded, so the wait stays open. The reader reports it (point 3), and a person points the wait at the issue that carries the work, or removes it.
+- **An awaited issue closed otherwise,** such as not planned, leaves its work unlanded, so the wait stays open. So does an awaited issue whose work reaches the default branch only through an integration branch whose owner closed otherwise. The reader reports either (point 3), and a person points the wait at the issue that carries the work, or removes it.
 
 A parent is no wait. A child may start while its parent is open, and a parent reaches Done only once every child has ([project-management:DEC-006-state-machine-and-cascade]).
 
@@ -76,7 +76,7 @@ The reader reads both forms, whichever the project selects. An issue waits on ea
 - **A tracker that has no links** gives a complete answer from the typed lines. That absence is one the reader establishes, as [pkit:ADR-035] establishes a tracker without sub-issues, never one inferred from a failure's status or text. A read it cannot attribute to the absence leaves the answer incomplete.
 - **Where the reader cannot establish the absence,** a project that selects typed lines may declare that its tracker has no links. The reader still reads links there. A read that answers counts, even with no link, and the reader reports the declaration as false. Only a read it cannot attribute falls back to the declaration, and gives a complete answer from the typed lines.
 
-The waits the reader gives a Task are its own and its ancestors' (point 1), each ancestor's read as above, and it tells the Task's own from its ancestors'. An ancestor whose waits it cannot read in full, or a parent it cannot tell, makes the answer on the ancestors' waits incomplete, and leaves the answer on the Task's own as it is.
+The waits the reader gives a Task are its own and its ancestors' (point 1), each ancestor's read as above, and it tells the Task's own from its ancestors'. An ancestor whose waits it cannot read in full, or a parent it cannot tell, makes the answer on the ancestors' waits incomplete, and leaves the answer on the Task's own as it is. A wait whose end the reader cannot tell, for want of the integration branch an issue's body names or the state of that branch's owner, makes the answer it belongs to incomplete.
 
 ### 4. A wait is checked when it is written
 
@@ -88,11 +88,11 @@ Every command of the capability that writes a wait writes it through one writer.
 - **closes a loop of waits.** A loop is a chain of waits, none of them ended, that leads back to where it started. The chain counts:
   - **each wait recorded on an issue or on one of its ancestors** as the issue's own, container or Task, whether or not a Task has started (point 1)
   - **each container as waiting on its children,** since a container reaches Done only once they have
-  - **a wait by an issue outside an integration branch** on an issue whose body names that branch as a wait on the issue that owns the branch too, since for the waiting issue the work lands only at that issue's close (point 1)
+  - **a wait by an issue whose body does not name an integration branch,** on an issue whose body does, as a wait on the issue that owns the branch too, since for the waiting issue the work lands only at that issue's close (point 1)
 
   A wait on an ancestor is one such loop, and a container's wait on an issue under it is another. Where the writer cannot read the waits, the parents and the integration branches the check needs, it refuses the wait and says why.
 
-The reader reports each loop it finds, whatever closed it: a wait written outside the capability, a change of parent, an issue reopened, or an integration branch named on an issue, its owner's or one under it. It reports too each other wait that the writer would refuse, such as a link made on the tracker's page or a line typed into a body. Once the project turns the checks on (point 11), each also holds its waiting issue back:
+The reader reports each loop it finds, whatever closed it: a wait written outside the capability, a change of parent, an issue reopened, or an integration branch named on an issue or removed from one. It reports too each other wait that the writer would refuse, such as a link made on the tracker's page or a line typed into a body. Once the project turns the checks on (point 11), each also holds its waiting issue back:
 
 - **A wait on itself, its ancestor or in a loop** holds as any wait does (points 1 and 8), and so can hold work back for good.
 - **A wait that names no issue of the repository** leaves its waiting issue's readiness unknown, so the issue is not ready. That includes a link to another repository's issue.
@@ -129,6 +129,7 @@ Once the project turns the checks on (point 11), the moves that start a Task and
 - **Starting a Task,** its move into In Progress, whichever command makes it, is refused while one of its waits is open, its own or an ancestor's. A person may bypass the refusal with an audited reason (DEC-014).
 - **Merging a Task's change** is refused while one of its own waits is open, since the work it rests on has not landed. The refusal is a hard reject. An ancestor's wait holds no merge (point 1).
 - **An answer that is not whole, or a Task that is undeclared** (points 3 and 6), refuses either move in the same way, since neither shows that no wait is open. For the merge, only the answer on the Task's own waits counts.
+- **A change merged into a base other than the integration branch its Task's body names,** as DEC-013 lets a person do with an audited reason, is refused while a wait of the Task's own has ended only on that branch, since the work it rests on is not on the base. The refusal is a hard reject. A person moves the change to the branch, or removes the branch from the Task's body, and the wait then ends as for any Task that names none.
 - **A wait on an issue the change itself closes** lands with the change, since its merge lands that issue's work too. So it holds no merge of that change. What a change closes is what its pull request names as closed ([project-management:DEC-013-branch-and-pr-conventions]).
 
 ### 9. A change that rests on unfinished work waits on it
