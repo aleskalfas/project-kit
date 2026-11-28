@@ -1,7 +1,7 @@
 ---
 id: DEC-078
 title: What no element draws is kept in one list, and no renderer declares it drawn
-status: proposed
+status: accepted
 date: 2026-11-28
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
