@@ -4122,20 +4122,24 @@ def test_a_first_hop_cut_short_goes_on_when_it_is_run_again(
 
 
 def test_a_move_under_pre_cut_short_hands_over_again_when_it_is_run_again(
-    installed_target: Path, stub_ls_remote: _RecordingRun, monkeypatch: pytest.MonkeyPatch
+    installed_target: Path,
+    stub_ls_remote: _RecordingRun,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     """`pkit upgrade --pre` cut short leaves the candidate recorded as the target,
     the pin at the release the project left. Run again, its routed child hands
     over to the candidate once more, whose upgrade finishes the move (ADR-089
-    point 8). It targets the candidate the project records, with no lookup, so a
-    newer candidate or final release published since takes no part (ADR-092 point
-    7, ADR-065 point 9)."""
-    candidate = "3.0.0rc1"
+    point 8). It targets the candidate the project records, whatever the source
+    lists, so a newer candidate or final release published since takes no part
+    (ADR-092 point 7, ADR-065 point 9). Its one lookup only names the newer
+    candidate."""
+    candidate, later = "3.0.0rc1", "3.0.0rc2"
     router.pin_file_path(installed_target).write_text(f"{_this_pkit()}\n", encoding="utf-8")
     manifest.record_backbone_target(installed_target, candidate)
     monkeypatch.setenv(router._LOOP_GUARD_ENV, "1")
     stub_ls_remote.ls_remote_returncode = 0
-    stub_ls_remote.ls_remote_stdout = _tag_output(_this_pkit(), candidate, "3.0.0rc2", "3.0.0")
+    stub_ls_remote.ls_remote_stdout = _tag_output(_this_pkit(), candidate, later, "3.0.0")
     handed: list[tuple[str, list[str]]] = []
     monkeypatch.setattr(
         upgrade, "run_bypassed", lambda pin, argv, _environ=None: handed.append((pin, argv)) or 0
@@ -4145,7 +4149,8 @@ def test_a_move_under_pre_cut_short_hands_over_again_when_it_is_run_again(
 
     assert handed == [(candidate, ["upgrade"])]
     assert router.read_version_pin(installed_target) == candidate
-    assert stub_ls_remote.ls_remote_calls == []
+    assert f"A later release candidate is published: {later}." in capsys.readouterr().out
+    assert len(stub_ls_remote.ls_remote_calls) == 1
 
 
 def test_the_lookup_under_pre_counts_candidates_in_their_normal_form_alone() -> None:
@@ -4285,33 +4290,89 @@ def test_a_plain_upgrade_moves_a_project_on_a_candidate_to_no_later_release(
     assert _tree_bytes(installed_target) == before
 
 
-def test_pre_on_a_candidate_targets_it_and_takes_no_later_release(
+def _on_a_candidate_under_its_pin(
+    target: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> str:
+    """Put *target* on a candidate above this pkit, pinned there, and run this upgrade
+    as that candidate's routed child. Returns the candidate."""
+    candidate = _a_candidate_above_this_pkit()
+    _run_as(monkeypatch, _real_source_copy(tmp_path), candidate)
+    _put_on(target, candidate)
+    _pin(target, candidate)
+    monkeypatch.setenv(router._LOOP_GUARD_ENV, "1")
+    return candidate
+
+
+def test_pre_on_a_candidate_names_a_later_candidate_and_takes_no_later_release(
     installed_target: Path,
     tmp_path: Path,
     stub_ls_remote: _RecordingRun,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """Under `--pre`, a project on a candidate targets that candidate, with no lookup:
-    a later candidate and its final release take no part, and the project stays
-    where it is (ADR-092 point 7, ADR-065 point 9)."""
-    candidate = _a_candidate_above_this_pkit()
-    later = candidate.replace("rc1", "rc2")
-    _run_as(monkeypatch, _real_source_copy(tmp_path), candidate)
-    _put_on(installed_target, candidate)
-    _pin(installed_target, candidate)
-    monkeypatch.setenv(router._LOOP_GUARD_ENV, "1")
+    """Under `--pre`, a project on a candidate targets that candidate, and stays where
+    it is, writing nothing. It names the newest candidate published later than its
+    own, a withdrawn one passed by and the final release not taken for one, and the
+    ways off that lead to it (ADR-092 points 4 and 7, ADR-065 point 9)."""
+    candidate = _on_a_candidate_under_its_pin(installed_target, tmp_path, monkeypatch)
+    later, withdrawn = candidate.replace("rc1", "rc2"), candidate.replace("rc1", "rc3")
     stub_ls_remote.ls_remote_returncode = 0
-    stub_ls_remote.ls_remote_stdout = _tag_output(candidate, later, _the_final_of(candidate))
+    stub_ls_remote.ls_remote_stdout = _tag_output(
+        candidate, later, withdrawn, _the_final_of(candidate)
+    ) + _withdrawals(withdrawn)
     _no_hand_over(monkeypatch, "`--pre` on a candidate takes no later release")
+    before = _tree_bytes(installed_target)
 
     upgrade.run_upgrade(installed_target, pre=True)
 
-    out = capsys.readouterr().out
+    out = _one_line(capsys.readouterr().out)
+    assert (
+        f"A later release candidate is published: {later}. `pkit upgrade --pre` moves this "
+        f"project to no release but {candidate}, the candidate its manifest records"
+    ) in out
+    assert f"To leave {candidate}, leave the testers' branch" in out
+    assert "(PRJ-016 point 4)" in out
+    assert withdrawn not in out
     assert f"Already at the release candidate this project records (v{candidate})" in out
     assert f"Already at backbone v{candidate}" in out
-    assert stub_ls_remote.ls_remote_calls == []
     assert router.read_version_pin(installed_target) == candidate
+    assert _tree_bytes(installed_target) == before
+
+
+@pytest.mark.parametrize("lookup", ["offline", "no-later-candidate"])
+def test_pre_on_a_candidate_with_no_later_one_to_name_says_what_it_said_before(
+    installed_target: Path,
+    tmp_path: Path,
+    stub_ls_remote: _RecordingRun,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    lookup: str,
+) -> None:
+    """Under `--pre`, a project on a candidate where no later candidate is published,
+    a withdrawn one and the final release being none, or where the lookup fails,
+    prints only that it is at its candidate, with no warning, and writes nothing
+    (ADR-092 point 7)."""
+    candidate = _on_a_candidate_under_its_pin(installed_target, tmp_path, monkeypatch)
+    if lookup == "no-later-candidate":
+        withdrawn = candidate.replace("rc1", "rc2")
+        stub_ls_remote.ls_remote_returncode = 0
+        stub_ls_remote.ls_remote_stdout = _tag_output(
+            candidate, withdrawn, _the_final_of(candidate)
+        ) + _withdrawals(withdrawn)
+    _no_hand_over(monkeypatch, "`--pre` on a candidate takes no later release")
+    before = _tree_bytes(installed_target)
+
+    upgrade.run_upgrade(installed_target, pre=True)
+
+    captured = capsys.readouterr()
+    assert captured.out.splitlines() == [
+        f"Already at the release candidate this project records (v{candidate}); the pin stays.",
+        f"Already at backbone v{candidate}; nothing to upgrade.",
+    ]
+    assert captured.err == ""
+    assert len(stub_ls_remote.ls_remote_calls) == 1
+    assert router.read_version_pin(installed_target) == candidate
+    assert _tree_bytes(installed_target) == before
 
 
 @pytest.mark.parametrize("run", ["unpinned", "bypassed", "router-fallback"])
@@ -4350,18 +4411,21 @@ def test_a_later_pkit_refuses_to_move_a_project_on_a_candidate_before_any_other_
 
 
 def test_pre_hands_a_move_cut_short_over_to_its_candidate_alone(
-    installed_target: Path, stub_ls_remote: _RecordingRun, monkeypatch: pytest.MonkeyPatch
+    installed_target: Path,
+    stub_ls_remote: _RecordingRun,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     """In a project with no pin, a move onto a candidate cut short is finished by
     `pkit upgrade --pre`, which hands over to the candidate the project records,
-    not to a later one, and pins the project there (ADR-092 point 7)."""
+    not to a later one, names the later one, and pins the project there (ADR-092
+    point 7)."""
     candidate = _a_candidate_above_this_pkit()
+    later = candidate.replace("rc1", "rc2")
     _put_on(installed_target, candidate, completed=_this_pkit())
     assert router.read_version_pin(installed_target) is None
     stub_ls_remote.ls_remote_returncode = 0
-    stub_ls_remote.ls_remote_stdout = _tag_output(
-        _this_pkit(), candidate, candidate.replace("rc1", "rc2")
-    )
+    stub_ls_remote.ls_remote_stdout = _tag_output(_this_pkit(), candidate, later)
     handed: list[tuple[str, list[str]]] = []
     monkeypatch.setattr(
         upgrade, "run_bypassed", lambda pin, argv, _environ=None: handed.append((pin, argv)) or 0
@@ -4371,6 +4435,7 @@ def test_pre_hands_a_move_cut_short_over_to_its_candidate_alone(
 
     assert handed == [(candidate, ["upgrade"])]
     assert router.read_version_pin(installed_target) == candidate
+    assert f"A later release candidate is published: {later}." in capsys.readouterr().out
 
 
 @pytest.mark.parametrize("lookup", ["offline", "no-later-release"])
