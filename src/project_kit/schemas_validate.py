@@ -5,8 +5,8 @@ capability YAML schema ships a companion JSON Schema at the side-by-side
 path `<name>.schema.json`; cross-schema data references use the typed
 token form `[<namespace>:<id>]`. This module discovers schema pairs,
 validates each YAML against its companion via the `jsonschema` library
-(shape pass), and resolves every typed-token reference against the
-target namespace's id collection (resolver pass).
+(shape pass), and resolves every typed-token reference against the ids
+the target namespace holds (resolver pass).
 
 Two passes run by default:
 
