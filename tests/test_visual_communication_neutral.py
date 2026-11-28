@@ -165,7 +165,7 @@ def test_it_gives_every_shared_role_but_its_logo_a_value_in_every_combination(
 
 def test_it_draws_the_starter_at_its_defaults(brand: Any) -> None:
     own = read(STARTER / "roles.yaml")["roles"]
-    assert not brand.names("starter")
+    assert not brand.chain_reaches("starter")
     assert set(own).isdisjoint(brand.roles)
     for role, declared in own.items():
         default = str(declared["default"]).strip("{}")
