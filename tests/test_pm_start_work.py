@@ -925,6 +925,19 @@ def test_the_clash_guard_refuses_an_issue_another_instance_owns(run_main, sw, ca
     assert 'pass --bypass "<reason>"' in err
 
 
+def test_a_comment_log_that_cannot_be_read_whole_refuses_before_anything(run_main, capsys) -> None:
+    """The guard folds the issue's whole comment log (ADR-041 point 1): a log cut
+    short could miss another instance's claim, so the start refuses before any
+    branch, assignee or move."""
+    github = _assigned_42()
+    github.failing.add("page")
+    rc, mutations = run_main(_task(["type:bug", "state:backlog"]), instance=2, github=github)
+    assert rc == 2
+    assert mutations == []
+    err = capsys.readouterr().err
+    assert "[refused] start-work #42: #42's comment log could not be read whole" in err
+
+
 def test_a_bypass_posts_its_reason_and_starts_the_work_unclaimed(run_main, sw, capsys) -> None:
     """The audit comment comes first, the issue stays the other instance's, and
     the composed move is handed the same reason, so it posts no second comment."""
