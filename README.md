@@ -231,8 +231,8 @@ Upgrading backbone: 1.134.0 -> <VERSION>
     • 1.140.0/001-retire-pkit-router-shim.sh
   created    .claude/agents/rule-set-reviewer.md
 Pinned project-kit to <VERSION> (.pkit/version-pin).
-$ (cd older-project && pkit status | grep "Backbone version")
-  Backbone version:      <VERSION>   (matches its pin; up to date: the latest release is v<any>)
+$ (cd older-project && pkit status | grep -o "Backbone version.*matches its pin")
+Backbone version:      <VERSION>   (matches its pin
 ```
 
 The upgrade ran the migrations up to the newer version, release 1.140.0's among them, and deployed the `rule-set-reviewer`, an agent 1.134.0 lacked.

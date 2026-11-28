@@ -15,6 +15,7 @@ from packaging.version import Version
 from project_kit import data_points as dp
 from project_kit import install, router, upgrade
 from project_kit import status as status_module
+from project_kit.acting_account import OFFLINE_VARIABLE
 from project_kit.cli import main, status
 from project_kit.manifest import (
     ORIGIN_EXTERNALLY_SOURCED,
@@ -41,16 +42,23 @@ def personal_skills(
     return folder
 
 
+# Status's own lookup of the latest release, kept before the guard below stands in for it.
+_STATUS_LOOKUP = status_module._latest_release
+
+
 @pytest.fixture(autouse=True)
 def no_release_lookup(monkeypatch: pytest.MonkeyPatch) -> None:
     """Status looks up the latest release for no project but a pinned one that matches
-    its pin. A test of that line answers the lookup itself (`_latest_release`); in every
-    other test a lookup fails the test, so none reaches the network."""
+    its pin, and reaches the release source through its `_latest_release` alone. A test
+    of that line answers the lookup itself (`_latest_release` below); in every other
+    test a lookup fails the test, so none reaches the network. The offline marker is
+    removed, so a run of the suite that carries it tests the same lines."""
 
     def lookup() -> Version | None:
         raise AssertionError("status looked up the latest release")
 
-    monkeypatch.setattr(upgrade, "latest_released_version", lookup)
+    monkeypatch.setattr(status_module, "_latest_release", lookup)
+    monkeypatch.delenv(OFFLINE_VARIABLE, raising=False)
 
 
 @pytest.fixture
@@ -644,7 +652,19 @@ def _latest_release(monkeypatch: pytest.MonkeyPatch, version: str | None) -> Non
     """Answer status's lookup of the latest release with *version*, or with none, as a
     lookup that fails answers."""
     found = Version(version) if version is not None else None
-    monkeypatch.setattr(upgrade, "latest_released_version", lambda: found)
+    monkeypatch.setattr(status_module, "_latest_release", lambda: found)
+
+
+def test_status_looks_the_latest_release_up_as_upgrade_does(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The lookup the tests below answer is upgrade's own: the highest release tag of
+    the release source, a release candidate passed over."""
+    tags = ("v3.0.0", "v3.1.0", "v3.2.0rc1")
+    listing = "".join(f"{'0' * 40}\trefs/tags/{tag}\n" for tag in tags)
+    monkeypatch.setattr(upgrade, "_distribution_tags", lambda: listing)
+
+    assert _STATUS_LOOKUP() == Version("3.1.0")
 
 
 @pytest.mark.parametrize("older", [None, "0.0.1"], ids=["the latest release", "ahead of it"])
@@ -686,7 +706,7 @@ def test_status_names_a_newer_release_and_says_the_pin_is_behind_it(
 def test_status_says_it_did_not_check_where_the_lookup_fails(
     installed_target: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Offline, say: the line says so, and claims neither of the two."""
+    """With no network, say: the line says so, and claims neither of the two."""
     pin = _pin_at_the_record(installed_target)
     _latest_release(monkeypatch, None)
 
@@ -702,21 +722,82 @@ def test_status_says_it_did_not_check_where_the_lookup_fails(
     assert "behind" not in line
 
 
-@pytest.mark.parametrize("pin", ["0.0.1", "main"], ids=["another release", "no version"])
-def test_status_names_a_pin_the_record_differs_from_and_looks_up_no_release(
-    installed_target: Path, pin: str
+def test_status_looks_up_no_release_under_the_offline_marker(
+    installed_target: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Run by a pkit that is not the pin, as under the router's fallback, the record is
-    that pkit's release and not the pin. No release is looked up, so the line names the
-    pin and does not say "up to date"."""
-    router.write_version_pin(installed_target, pin)
+    """Under the offline marker status asks the release source nothing: the guard's
+    lookup stays in place and is never called. The line names the marker as why it did
+    not check, and claims neither of the two."""
+    pin = _pin_at_the_record(installed_target)
+    monkeypatch.setenv(OFFLINE_VARIABLE, "1")
 
     result = CliRunner().invoke(status, [])
 
     assert result.exit_code == 0, result.output
     line = _backbone_line(result.output)
-    assert line.endswith(f"   (differs from its pin, {pin} — {PREVIEW})")
+    assert line == (
+        f"  Backbone version:      {pin}   (matches its pin; did not check for a newer "
+        "release: the offline marker (PKIT_OFFLINE) is set)"
+    )
     assert "up to date" not in line
+    assert "behind" not in line
+
+
+def test_status_names_a_pin_the_record_differs_from_and_looks_up_no_release(
+    installed_target: Path,
+) -> None:
+    """Run by a pkit that is not the pin, as under the router's fallback, the record is
+    that pkit's release and not the pin. No release is looked up, so the line names the
+    pin and does not say "up to date"."""
+    router.write_version_pin(installed_target, "0.0.1")
+
+    result = CliRunner().invoke(status, [])
+
+    assert result.exit_code == 0, result.output
+    line = _backbone_line(result.output)
+    assert line.endswith(f"   (differs from its pin, 0.0.1 — {PREVIEW})")
+    assert "up to date" not in line
+
+
+def test_status_says_a_pin_that_names_no_version_names_none_and_looks_up_no_release(
+    installed_target: Path,
+) -> None:
+    router.write_version_pin(installed_target, "main")
+
+    result = CliRunner().invoke(status, [])
+
+    assert result.exit_code == 0, result.output
+    line = _backbone_line(result.output)
+    assert line.endswith(f"   (its pin, main, names no version — {PREVIEW})")
+    assert "up to date" not in line
+
+
+def test_a_record_that_is_its_pins_own_text_is_not_said_to_differ_from_it() -> None:
+    """A pin and a record that hold the same text, which names no version: the line
+    says that the pin names none, never that the two differ."""
+    gloss = status_module._pinned_gloss("main", "main")
+
+    assert gloss == f"its pin, main, names no version — {PREVIEW}"
+
+
+def test_status_prints_a_pins_unprintable_characters_as_their_escapes(
+    installed_target: Path,
+) -> None:
+    """The pin file is the project's own, and a repository may commit anything in it. An
+    escape sequence or a line break in it reaches the terminal as its escape, so the
+    backbone line stays one line and nothing after it is rewritten."""
+    router.pin_file_path(installed_target).write_text(
+        "0.0.1\x1b[2K\n  Backbone version:      9.9.9   (up to date)\n", encoding="utf-8"
+    )
+
+    result = CliRunner().invoke(status, [])
+
+    assert result.exit_code == 0, result.output
+    line = _backbone_line(result.output)
+    assert line.endswith(
+        "   (its pin, 0.0.1\\x1b[2K\\n  Backbone version:      9.9.9   (up to date), "
+        f"names no version — {PREVIEW})"
+    )
 
 
 def test_a_pinned_projects_record_is_compared_with_the_running_pkit_first(

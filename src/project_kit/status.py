@@ -29,12 +29,17 @@ from project_kit.install import find_source_kit, find_target_root
 from project_kit.manifest import BackboneManifest, read_backbone_manifest, read_kit_version
 
 if TYPE_CHECKING:
+    from packaging.version import Version
+
     from project_kit.connections import Binding, PointBinding, RoleBinding, Wiring
     from project_kit.data_points import ResolvedPoint
     from project_kit.upgrade import ComponentMove
 
 # The indent of an entry listed under a status line's label.
 _LIST_INDENT = " " * 25
+
+# What the backbone line names where an upgrade would move the project or its pin.
+_UPGRADE_PREVIEW = "run `pkit upgrade --dry-run` to preview"
 
 # What the adapter section names for settings, skills or agents `.claude/` lacks: `pkit sync`
 # runs each installed adapter's scripts, the settings merge and the skill and agent deploys
@@ -135,7 +140,7 @@ def _report_backbone_version(target_root: Path, source_kit: Path) -> None:
     pin = read_version_pin(target_root) if transitions else None
     # Compared as public versions, as a transition compares them (ADR-089 point 5).
     if source_version and public_version(installed) != public_version(source_version):
-        gloss = f"source {source_version} — run `pkit upgrade --dry-run` to preview"
+        gloss = f"source {source_version} — {_UPGRADE_PREVIEW}"
     elif transitions and manifest.transition_incomplete:
         gloss = "the target of an incomplete transition"
     elif pin is not None:
@@ -157,30 +162,46 @@ def _pinned_gloss(installed: str, pin: str) -> str:
     the latest release, looked up as `pkit upgrade` looks it up (ADR-063 point
     1): behind it, with the release named, or up to date, which it says only
     once the lookup found no newer release. Where the lookup fails, it says
-    that it did not check, and claims neither.
+    that it did not check, and claims neither. Under the offline marker
+    (ADR-057 point 3) it looks nothing up, and says that it did not check
+    because the marker is set.
 
     Where the record is not the pin, neither is the running pkit, as under the
     router's fallback or its bypass. The gloss then names the pin, and looks
-    nothing up.
+    nothing up: a pin that names no version is said to name none, whatever the
+    record holds, and any other to differ from the record. The pin file is
+    printed with each unprintable character as its escape, so nothing in it
+    moves the cursor or adds a line on the terminal status is read on.
     """
+    from project_kit.acting_account import OFFLINE_VARIABLE
+    from project_kit.friction_check import printable
     from project_kit.migrations import public_version
-    from project_kit.upgrade import latest_released_version
 
     pinned = public_version(pin)
-    if pinned is None or pinned != public_version(installed):
-        return f"differs from its pin, {pin} — run `pkit upgrade --dry-run` to preview"
-    latest = latest_released_version()
+    if pinned is None:
+        return f"its pin, {printable(pin)}, names no version — {_UPGRADE_PREVIEW}"
+    if pinned != public_version(installed):
+        return f"differs from its pin, {printable(pin)} — {_UPGRADE_PREVIEW}"
+    unchecked = "matches its pin; did not check for a newer release"
+    if os.environ.get(OFFLINE_VARIABLE):
+        return f"{unchecked}: the offline marker ({OFFLINE_VARIABLE}) is set"
+    latest = _latest_release()
     if latest is None:
-        return (
-            "matches its pin; did not check for a newer release: the release source "
-            "could not be read"
-        )
+        return f"{unchecked}: the release source could not be read"
     if latest > pinned:
         return (
-            f"matches its pin; the pin is behind the latest release, v{latest} — "
-            "run `pkit upgrade --dry-run` to preview"
+            f"matches its pin; the pin is behind the latest release, v{latest} — {_UPGRADE_PREVIEW}"
         )
     return f"matches its pin; up to date: the latest release is v{latest}"
+
+
+def _latest_release() -> Version | None:
+    """The latest release, looked up as `pkit upgrade` looks it up (ADR-063
+    point 1), or None where the lookup fails. Status reaches the release source
+    through this function alone, so its tests answer the lookup here."""
+    from project_kit.upgrade import latest_released_version
+
+    return latest_released_version()
 
 
 def _report_transition_state(
