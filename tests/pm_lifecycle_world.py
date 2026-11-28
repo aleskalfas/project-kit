@@ -29,6 +29,7 @@ from __future__ import annotations
 import contextlib
 import importlib.util
 import io
+import itertools
 import json
 import re
 import shutil
@@ -73,6 +74,9 @@ AUTHORED_BODY = (
     "## Doc impact\n\nNo doc impact.\n"
 )
 
+_LOG_PAGE = re.compile(r"repos/\{owner\}/\{repo\}/issues/(\d+)/comments\?per_page=(\d+)&page=(\d+)")
+_COMMENT_URL = re.compile(r"#issuecomment-(\d+)$")
+
 sys.path.insert(0, str(SCRIPTS_DIR))
 import _lib  # noqa: E402
 from _lib import bootstrap_gate, session_guard  # noqa: E402
@@ -108,10 +112,14 @@ class Tracker:
     milestone, and its merged pull requests.
 
     An issue is read through `gh issue view` and through its REST record
-    (`gh api repos/{owner}/{repo}/issues/<n>`), which also carries its native
-    parent: `native_parents` maps an issue to the issue it is natively a
-    sub-issue of, in this repository or — given as `owner/repo#<n>` — in
-    another. The issues are listed through `gh issue list`, and a parent's
+    (`gh api repos/{owner}/{repo}/issues/<n>`). Its comment log is also read a
+    page at a time through GitHub's REST endpoint (`gh api
+    repos/{owner}/{repo}/issues/<n>/comments?per_page=…&page=…`), each comment
+    with the id that ends the url `gh issue view` gives it, numbered across the
+    repository's issues in the order they were posted. The REST record also
+    carries the issue's native parent: `native_parents` maps an issue to the
+    issue it is natively a sub-issue of, in this repository or — given as
+    `owner/repo#<n>` — in another. The issues are listed through `gh issue list`, and a parent's
     native sub-issues in this repository through `gh api …/sub_issues`, in the
     entry shape GitHub answers with. A closed issue's `state_reason` is
     GitHub's close reason enum
@@ -123,7 +131,7 @@ class Tracker:
     view` fails, as a predicate's read of an unreachable issue does;
     `comments_fail` holds issues whose `gh issue comment` fails, posting
     nothing; `comment_reads_fail` holds issues whose comments cannot be read,
-    while every other field of theirs can."""
+    through either read, while every other field of theirs can."""
 
     def __init__(self) -> None:
         #: This repository's `owner/name`, which each issue's url names.
@@ -140,6 +148,7 @@ class Tracker:
         self.comments_fail: set[int] = set()
         self.comment_reads_fail: set[int] = set()
         self.closes = 0
+        self._comment_ids = itertools.count(1)
 
     def merge(self, pr: int, closes: list[int], merged_by: str = MERGER, branch: str = "") -> None:
         """Merge pull request `pr`, whose body closes `closes`, as `merged_by`,
@@ -200,8 +209,15 @@ class Tracker:
             if number in self.comments_fail:
                 return _done(argv, 1, stderr="HTTP 502: Bad Gateway")
             body = _option(argv, "--body")
+            cid = next(self._comment_ids)
             self.comments[number].append(
-                {"body": body, "viewerDidAuthor": True, "includesCreatedEdit": False}
+                {
+                    "body": body,
+                    "viewerDidAuthor": True,
+                    "includesCreatedEdit": False,
+                    "url": f"https://github.com/{self.repository}/issues/{number}"
+                    f"#issuecomment-{cid}",
+                }
             )
             return _done(argv)
         if argv[1:3] == ["pr", "view"]:
@@ -222,6 +238,10 @@ class Tracker:
         if argv[1:3] == ["issue", "list"]:
             fields = str(_option(argv, "--json")).split(",")
             return _done(argv, stdout=json.dumps([self._row(n, fields) for n in self.issues]))
+        page = _LOG_PAGE.fullmatch(argv[-1])
+        if argv[1] == "api" and page:
+            number, size, index = (int(g) for g in page.groups())
+            return self._log_page(argv, number, size, index)
         listed = re.fullmatch(r"repos/\{owner\}/\{repo\}/issues/(\d+)/sub_issues", argv[-1])
         if argv[1] == "api" and listed:
             return self._sub_issues(argv, int(listed.group(1)))
@@ -255,6 +275,28 @@ class Tracker:
         elif parent is not None:
             record["parent_issue_url"] = f"{REPOSITORY_URL}/issues/{parent}"
         return _done(argv, stdout=json.dumps(record))
+
+    def _log_page(
+        self, argv: list[str], number: int, size: int, index: int
+    ) -> subprocess.CompletedProcess[str]:
+        """A page of the issue's comment log, each comment as GitHub's REST
+        answer gives it: its id, its author, the invoker, its creation and its
+        body."""
+        if number in self.comment_reads_fail:
+            return _done(argv, 1, stderr="HTTP 502: Bad Gateway")
+        rows = []
+        for comment in self.comments[number][(index - 1) * size : index * size]:
+            cid = _COMMENT_URL.search(comment["url"])
+            assert cid is not None, f"a comment on #{number} carries no id: {comment}"
+            rows.append(
+                {
+                    "id": int(cid.group(1)),
+                    "user": {"login": INVOKER.github_login, "type": "User"},
+                    "created_at": MOMENT,
+                    "body": comment["body"],
+                }
+            )
+        return _done(argv, stdout=json.dumps(rows))
 
     def reads(self, number: int) -> int:
         """How many times the issue was read, through either read."""

@@ -66,8 +66,11 @@ no other seam: a claim counts only while the clone it names holds the seat it
 names, judged when it is read. The holder names its take of the seat, the
 comment on the seat's state issue that made it the holder. A claim counts only
 where GitHub gave its comment a higher id than the take's, so a seat's release
-frees its clone's claims for good, even where the same clone takes the seat
-again (DEC-059 point 5, #2182). A claim that names no seat does not count, and a
+frees its clone's claims, even where the same clone takes the seat again
+(DEC-059 point 5, #2182). That holds while the counted events of the seat's
+state issue stand: a take that moves with no release, as where one of them
+leaves the log, can revive a released claim or void a live one (ADR-041 point
+7). A claim that names no seat does not count, and a
 claim whose seat was not read cannot be judged, which no consumer treats as free.
 Renewal and lapse are not judged yet.
 
@@ -183,7 +186,7 @@ UNJUDGED = "unjudged"
 #: Why a claim is void, or cannot be judged.
 NO_SEAT = "it names no seat"
 SEAT_RELEASED = "its clone no longer holds its seat"
-SEAT_RELEASED_SINCE = "its seat was released after it was made"
+MADE_BEFORE_TAKE = "it was made before its seat's current take"
 SEAT_UNREAD_REASON = "its seat's holder could not be read"
 SEAT_NOT_READ = "its seat is not among the seats read"
 NO_COMMENT_ID = "its comment's id could not be read"
@@ -196,8 +199,8 @@ class Holder:
 
     ``take`` is the id of the comment on the seat's state issue whose claim made
     the clone the holder, its current take of the seat. A holder read from a
-    state issue always names it. Where a caller names none, a claim is judged
-    on its clone alone."""
+    state issue always names it. A held seat named with none is a holder not
+    read whole, so its clone's claims cannot be judged."""
 
     state: str
     login: str | None = None
@@ -362,9 +365,8 @@ def parse_events(comments: Iterable[Any], assignee_login: str | None) -> list[Ow
     Not built yet: a stamp whose author is of a kind unknown, such as a bot's
     account the service gives with no suffix, still counts on an issue whose
     assignee bears its login. DEC-079 point 2 holds it, neither counted nor
-    freed, and waits on the claim commands reading an issue's comments from
-    GitHub's REST interface, which gives each author's kind, where they read
-    gh's JSON now, which gives none (ADR-094 point 3).
+    freed, and waits on this fold reading each author's kind, which the log
+    gives (:func:`read_log`, ADR-094 point 3).
     """
     out: list[OwnershipEvent] = []
     if not assignee_login:
@@ -443,11 +445,14 @@ def judge_claim(
     claim that names no seat, or whose seat is free or held by another clone, is
     void. A seat that is unread, or not among the holders, leaves it unjudged.
 
-    A seat's release frees its clone's claims for good (DEC-059 point 5), so a
-    claim counts only where it came after the holder's take of the seat. GitHub
+    A seat's release frees its clone's claims (DEC-059 point 5), so a claim
+    counts only where it came after the holder's take of the seat. GitHub
     numbers the comments of every issue from one sequence, so the claim's id is
     then the higher. A claim made before the take is void, even where the same
-    clone took the seat again. One whose id was not read is unjudged (#2182)."""
+    clone took the seat again, and so is one made before a take that moved with
+    no release (ADR-041 point 7). One whose id was not read is unjudged (#2182),
+    and so is one whose seat is held by its clone with no take named, since its
+    seat's holder was not read whole."""
     if not event.seat:
         return ClaimJudgement(instance, None, event.clone, VOID, NO_SEAT)
     holder = holders.get(event.seat)
@@ -459,11 +464,11 @@ def judge_claim(
     if not (holder.state == SEAT_HELD and holder.clone == event.clone and same_account):
         return ClaimJudgement(instance, event.seat, event.clone, VOID, SEAT_RELEASED)
     if holder.take is None:
-        return ClaimJudgement(instance, event.seat, event.clone, COUNTS)
+        return ClaimJudgement(instance, event.seat, event.clone, UNJUDGED, SEAT_UNREAD_REASON)
     if event.comment_id is None:
         return ClaimJudgement(instance, event.seat, event.clone, UNJUDGED, NO_COMMENT_ID)
     if event.comment_id <= holder.take:
-        return ClaimJudgement(instance, event.seat, event.clone, VOID, SEAT_RELEASED_SINCE)
+        return ClaimJudgement(instance, event.seat, event.clone, VOID, MADE_BEFORE_TAKE)
     return ClaimJudgement(instance, event.seat, event.clone, COUNTS)
 
 

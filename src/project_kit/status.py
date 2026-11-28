@@ -1033,6 +1033,28 @@ def _report_agents_inventory(target_root: Path) -> None:
     project_count = _count_artifacts(agents_root / "project")
     click.echo(f"    {'core':<18} {core_count}")
     click.echo(f"    {'project':<18} {project_count}")
+    for line in _optional_reads_lines(target_root):
+        click.echo(line)
+
+
+def _optional_reads_lines(target_root: Path) -> list[str]:
+    """Beside the counts: each optional category the overlay leaves undefined, with
+    the agents that deploy without it (ADR-052 point 5). Nothing where every such
+    category is defined.
+
+    The scan and the words are `pkit agents`' own (`agents_overlay`), so the two
+    never disagree. Reads forgivingly: an overlay that does not parse, or a picker
+    that cannot be reached, leaves the line out.
+    """
+    from project_kit import agents_overlay
+
+    try:
+        undefined = agents_overlay.undefined_optional_reads(target_root)
+    except Exception:  # soft probe; status fails on no overlay or picker it cannot read
+        return []
+    if not undefined:
+        return []
+    return [f"    {'overlay':<18} {agents_overlay.optional_reads_line(undefined)}"]
 
 
 def _list_subdir_names(parent: Path) -> list[str]:

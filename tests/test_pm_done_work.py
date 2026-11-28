@@ -668,6 +668,10 @@ def test_invoke_move_issue_exits_zero_when_issue_already_done(dw, tmp_path, monk
         "    }\n"
         "    print(json.dumps(data))\n"
         "    sys.exit(0)\n"
+        "# gh api …/issues/<N>/comments?… (a page of the comment log) — none.\n"
+        "if args[:1] == ['api'] and '/comments?' in args[1]:\n"
+        "    print('[]')\n"
+        "    sys.exit(0)\n"
         "# gh issue edit (label reconciliation) — accept silently.\n"
         "if 'issue' in args and 'edit' in args:\n"
         "    sys.exit(0)\n"
@@ -3252,6 +3256,19 @@ if args[:2] == ["api", "graphql"] and any("closedByPullRequestsReferences" in a 
         "timelineItems": {"nodes": []},
     }
     print(json.dumps({"data": {"repository": {"issue": issue}}}))
+    sys.exit(0)
+if args[:1] == ["api"] and "/comments?" in args[1]:
+    path, query = args[1].split("?", 1)
+    issue = state["issues"].get(path.split("/")[-2])
+    if issue is None:
+        sys.exit(1)
+    asked = dict(part.split("=", 1) for part in query.split("&"))
+    size, page = int(asked["per_page"]), int(asked["page"])
+    rows = [
+        {"id": i + 1, "user": c.get("author"), "created_at": "", "body": c.get("body", "")}
+        for i, c in enumerate(issue.get("comments", []))
+    ]
+    print(json.dumps(rows[(page - 1) * size : page * size]))
     sys.exit(0)
 if args[:1] == ["api"] and args[1].startswith("repos/{owner}/{repo}/issues/"):
     number = args[1].rsplit("/", 1)[1]

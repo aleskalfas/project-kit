@@ -18,7 +18,8 @@ from typing import Any
 import pytest
 from ruamel.yaml import YAML
 
-from tests.pm_ownership_support import FakeGitHub, clone_with, topology_with
+from tests.pm_ownership_support import EARLIEST_TAKE, FakeGitHub, clone_with, topology_with
+from tests.pm_state_issue_fakes import COMMENT_IDS
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 CAP_ROOT = REPO_ROOT / ".pkit" / "capabilities" / "project-management"
@@ -262,7 +263,7 @@ def _stamp(tp, instance: int, seat: str | None = None, key: str | None = None) -
         seat_number=instance if seat else None,
         clone=key,
     )
-    return {"author": {"login": "me"}, "body": body}
+    return {"id": next(COMMENT_IDS), "author": {"login": "me"}, "body": body}
 
 
 def test_a_backlog_task_is_in_the_pool_only_with_no_owner(tp) -> None:
@@ -283,7 +284,7 @@ def test_a_backlog_task_this_clone_alone_claims_is_its_own(tp) -> None:
     assert not tp.owned_by(_owner(tp, [_stamp(tp, 2), _stamp(tp, 1)]), 2, tp.BACKLOG)
     assert not tp.owned_by(_owner(tp, [_stamp(tp, 2)]), 2, tp.IN_PROGRESS)
     claim = [_stamp(tp, 2, "worker-2", "k2")]
-    held = tp.ownership.Holder(tp.ownership.SEAT_HELD, "me", "k2")
+    held = tp.ownership.Holder(tp.ownership.SEAT_HELD, "me", "k2", EARLIEST_TAKE)
     free = tp.ownership.Holder(tp.ownership.SEAT_FREE)
     assert tp.owned_by(_owner(tp, claim, {"worker-2": held}), 2, tp.BACKLOG)
     assert not tp.owned_by(_owner(tp, claim, {"worker-2": free}), 2, tp.BACKLOG)
@@ -291,7 +292,7 @@ def test_a_backlog_task_this_clone_alone_claims_is_its_own(tp) -> None:
 
 def test_a_task_whose_seat_was_released_returns_to_the_pool(tp) -> None:
     """DEC-059 points 5 and 9: judged when read, with no write to the issue."""
-    held = tp.ownership.Holder(tp.ownership.SEAT_HELD, "me", "k1")
+    held = tp.ownership.Holder(tp.ownership.SEAT_HELD, "me", "k1", EARLIEST_TAKE)
     free = tp.ownership.Holder(tp.ownership.SEAT_FREE)
     unread = tp.ownership.Holder(tp.ownership.SEAT_UNREAD)
     claim = [_stamp(tp, 1, "worker-1", "k1")]
@@ -344,7 +345,7 @@ def test_outside_a_topology_a_clone_takes_with_no_scope(tp, tmp_path, monkeypatc
 def test_a_seat_gives_its_scope(tp, tmp_path, monkeypatch) -> None:
     ic = _claims(tp)
     scope = _scope(types=("test",))
-    holders = {"tester": ic.ownership.Holder(ic.ownership.SEAT_HELD, "me", "k2")}
+    holders = {"tester": ic.ownership.Holder(ic.ownership.SEAT_HELD, "me", "k2", EARLIEST_TAKE)}
     seat = ic.Seat("tester", 2, ic.WORKER, scope)
     topology_with(ic, monkeypatch, ic.Topology(seat, holders), key="k2")
     taker = tp.taker(tmp_path, "me", {})
