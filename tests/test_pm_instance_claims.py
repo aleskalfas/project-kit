@@ -1058,13 +1058,13 @@ def test_a_release_judges_claims_as_the_claim_and_the_guard_do(ic, root) -> None
 # the key `k2`, and took `worker-2`, the topology's third seat.
 
 
-def _doc(*, retired: bool = False, scope: dict | None = None) -> dict:
+def _doc(*, retired: bool = False, scope: dict | None = None, worker_1_issue: int = 12) -> dict:
     worker_2 = {"name": "worker-2", "role": "worker", "state_issue": 13, "retired": retired}
     if scope is not None:
         worker_2["scope"] = scope
     seats = [
         {"name": "planner", "role": "planner", "organizer": True, "state_issue": 11},
-        {"name": "worker-1", "role": "worker", "state_issue": 12},
+        {"name": "worker-1", "role": "worker", "state_issue": worker_1_issue},
         worker_2,
     ]
     return {"schema_version": 1, "seats": seats}
@@ -1228,7 +1228,27 @@ def test_a_seat_taken_again_by_its_clone_revives_none_of_its_claims(ic, root, mo
     assert owner is not None and owner.owners == frozenset()
     judged = owner.judgement(2)
     assert judged is not None and judged.verdict == ic.ownership.VOID
-    assert judged.reason == "its seat was released after it was made"
+    assert judged.reason == "it was made before its seat's current take"
+
+
+def test_a_take_moved_with_no_release_voids_a_claim_made_before_it(ic, root, monkeypatch) -> None:
+    """A reviewed change names a new state issue for `worker-1`, and its clone
+    takes the seat there, with no release. The claim it made before is void, and
+    its reason names the take, since no release happened (ADR-041 point 7)."""
+    _snap, repo = _seated(ic)
+    gh = FakeGitHub()
+    gh.add(7)
+    gh.post(7, _seat_stamp(ic, "worker-1", 2, "k1"))
+    seat_issue(ic, repo, 14, "worker-1", ("me", "k1"))
+    snap = seat_snapshot(ic, _doc(worker_1_issue=14), repo)
+    snapshot_with(ic, monkeypatch, snap, hint="worker-2")
+    clone = ic.this_clone(root, "me")
+    assert clone is not None
+    owner = ic.read_owner(7, clone, {}, run=gh)
+    assert owner is not None and owner.owners == frozenset()
+    judged = owner.judgement(2)
+    assert judged is not None and judged.verdict == ic.ownership.VOID
+    assert judged.reason == "it was made before its seat's current take"
 
 
 def test_a_task_taken_over_while_its_seat_was_free_stays_the_takers(ic, root, monkeypatch) -> None:

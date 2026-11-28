@@ -501,7 +501,7 @@ def test_a_comments_id_comes_from_the_log_or_from_its_url(io) -> None:
 @pytest.mark.parametrize(
     ("cid", "verdict", "reason"),
     [
-        pytest.param(9, "void", "its seat was released after it was made", id="before-the-take"),
+        pytest.param(9, "void", "it was made before its seat's current take", id="before-the-take"),
         pytest.param(11, "counts", None, id="after-the-take"),
         pytest.param(None, "unjudged", "its comment's id could not be read", id="no-id"),
     ],
@@ -509,9 +509,10 @@ def test_a_comments_id_comes_from_the_log_or_from_its_url(io) -> None:
 def test_a_claim_counts_only_where_it_came_after_its_clones_take_of_its_seat(
     io, cid, verdict, reason
 ) -> None:
-    """DEC-059 point 5: a seat's release frees its clone's claims for good, so
-    the same clone, taking the seat again, revives none of them (#2182). The
-    claim's comment and the take's are ordered by the ids GitHub gave them."""
+    """DEC-059 point 5: a seat's release frees its clone's claims, so the same
+    clone, taking the seat again, revives none of them (#2182). The claim's
+    comment and the take's are ordered by the ids GitHub gave them, whatever
+    moved the take (ADR-041 point 7)."""
     comments = [_seat_comment(io, event="claim", instance=1, seat="w-1", key="k1", cid=cid)]
     holders = {"w-1": io.Holder(io.SEAT_HELD, "alice", "k1", take=10)}
     res = io.resolve_owner(comments=comments, labels=[], assignee_login="alice", holders=holders)

@@ -29,8 +29,9 @@ no issue and is guarded by nothing. A claim names the seat, its number and the
 clone's key, in the audit-log facility's stamp (point 9). It counts only while
 that clone holds that seat, and only where the clone made it after its current
 take of the seat, judged when it is read. So a seat's release frees its clone's
-claims for good, with no write, even where the same clone takes the seat again
-(point 5). A planner's seat files with no owner, so its work enters the shared
+claims, with no write, even where the same clone takes the seat again (point
+5), while the counted events of the seat's state issue stand (ADR-041 point 7).
+A planner's seat files with no owner, so its work enters the shared
 pool, and a lead's seat files with no owner the work it leaves to its workers
 ([project-management:DEC-081-delegation-between-seats] point 3). Every other
 filing claims at filing; a worker claims at ``start-work`` (point 7). Renewal, lapse and parking
