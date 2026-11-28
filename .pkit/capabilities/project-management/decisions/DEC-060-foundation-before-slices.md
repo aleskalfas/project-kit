@@ -41,7 +41,7 @@ The first plan files an EPIC for the work ([project-management:DEC-004-six-level
 
 ### 4. Tasks that would make a choice the foundation settles wait for it
 
-- **A Task outside the foundation, not yet started,** in Todo or Backlog, that would make one of the foundation's choices names the foundation's Feature among its dependencies, so the pool holds it back until the Feature closes (DEC-059 point 7). The first plan adds the Feature to each such Task already filed. A Task filed later names it where the Feature's body lists its choice.
+- **A Task outside the foundation, not yet started,** in Todo or Backlog, that would make one of the foundation's choices names the foundation's Feature among its dependencies, so the pool holds it back until the Feature closes (DEC-059 point 7), or, once a project turns on DEC-085's checks, until the Feature's work lands (refinement per [project-management:DEC-085-issue-waits] point 1). The first plan adds the Feature to each such Task already filed. A Task filed later names it where the Feature's body lists its choice.
 - **A Task In Progress or in Review** that already makes one of those choices goes on. The foundation's first Task names it among its dependencies, and its records start from what that Task chose.
 
 The pool holds these Tasks back in a project with a topology. In a project with none, whoever hands out the work follows the same order.
@@ -83,7 +83,8 @@ A Task that finds a choice of the foundation does not hold makes no other choice
 ## Implications
 
 - **Batch planning** gains the first stage: naming the shared choices, the EPIC with its outline, the foundation's Feature, and the judgement for each choice at the gate. Each role's procedure that slices work follows it (#2143), as does filing a Task during work, which names an open foundation's Feature where point 4 says.
-- **No command changes.** The rule rests on the readiness that DEC-059 point 7 decides, on dependencies, which stay prose (DEC-005), and on the checkbox gate at close.
-- **Named, and not decided here:** how a Task In Progress waits for a change to the foundation, since a dependency holds back only a Task in Backlog; a shared choice found during work, which no foundation named; which of two leads plans a foundation for a choice their scopes share; a warning for a Task filed without an open foundation among its dependencies; and, where software-engineering is installed, how the landing holds a skeleton's change whose corpus entries no person has accepted (refinement per [software-engineering:DEC-004-skeleton-conventions-in-corpus]).
+- **No command changes.** The rule rests on the readiness that DEC-059 point 7 decides, on dependencies, as [project-management:DEC-085-issue-waits] point 1 defines them, and on the checkbox gate at close.
+- **Named, and not decided here:** a shared choice found during work, which no foundation named; which of two leads plans a foundation for a choice their scopes share; a warning for a Task filed without an open foundation among its dependencies; and, where software-engineering is installed, how the landing holds a skeleton's change whose corpus entries no person has accepted (refinement per [software-engineering:DEC-004-skeleton-conventions-in-corpus]).
+- **A Task In Progress waits for a change to the foundation** through a wait recorded on it: once a project turns on DEC-085's checks, the wait holds the merge of the Task's change until the change to the foundation lands (refinement per [project-management:DEC-085-issue-waits] point 8).
 - **The analysis of parallel work** (#2096) gains the two stages in its use case of planning across scopes.
 - **DEC-029 and DEC-059 point 7 are refined in place,** each with a pointer to this record, at DEC-029's batch-planning steps and at DEC-059's line on vertical slicing.
