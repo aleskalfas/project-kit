@@ -171,9 +171,10 @@ claim whose comment id was not read is unjudged too, where its seat's take decid
 The shared reader reads no log whole that holds a comment with no id, so a command's
 fold has every claim's comment id.
 
-The fold leaves no claim unjudged for a log not read whole, since no command folds such
-a log. An issue that cannot be read, or whose log cannot be read whole, is a failed
-read before any fold. Each caller treats that failed read as point 5 treats an
+Point 7 leaves a claim unjudged where the seam could not read the log whole, and the
+shared reader meets that case before any fold: it reads a log whole or fails, so no
+command folds a log cut short. An issue that cannot be read, or whose log cannot be
+read whole, is a failed read, and each caller treats it as point 5 treats an
 unjudged claim: the guard and the move back from In Progress refuse, and the pool
 skips the Task. The claim and the release fail, and `seats` reports the Task as
 unread, so whether a released seat left it cannot be told.
@@ -413,21 +414,23 @@ What it reads:
 - **A Task In Progress,** whose claim alone lapses: the seam folds its whole log
   (point 1).
 - **Any other issue:** the seam may read the issue's mirror in place of its log
-  (point 4). It judges the mirror's seat and key against the holders itself, with
-  the mirror named as its source. The mirror carries no claim's comment id, so the
-  seam cannot judge the claim by its take. Where the clone the mirror names took its
-  seat again, a claim made before that take shows as counting, though a fold finds
-  it void. So a mirror read does not give the result a fold gives.
-- **What a mirror read allows:** a consumer may pass over an issue whose claim the
-  mirror shows counting, and a listing may show a person what the mirror reads. Before
+  (point 4). It judges the claim the mirror names against the holders itself, as it
+  judges any claim, with the mirror named as its source. The mirror carries no
+  claim's comment id, so where the clone it names holds the seat it names, the
+  seat's take decides the claim, and the mirror read leaves it unjudged, as a fold
+  leaves a claim whose comment id it could not read. A claim counts only where its
+  clone holds its seat, so a mirror read shows no claim counting.
+- **What a mirror read allows:** a listing may show a person what the mirror reads.
+  No consumer treats a claim the mirror leaves unjudged as free (point 5), and before
   a consumer offers an issue as free, treats it as free or acts on it as its owner,
   the seam folds the whole log. A missing or garbled mirror never makes an issue free
   without that fold.
-- **What passing over by the mirror costs:** an issue whose claim a later take of
-  its seat voided stays passed over by a consumer that reads its mirror alone.
-  Neither the seat's release nor the take writes to the issue (DEC-059 point 5), so
-  its mirror still names the claim. The issue loses its owner, as DEC-059 point 5
-  has a released seat's work do, only once a consumer folds its log.
+- **What only a fold judges:** where a clone took its seat again, each claim it made
+  before that take stopped counting at the seat's release, with no write to its issue
+  (DEC-059 point 5). The issue's mirror can go on naming such a claim, and a fold of
+  the log finds it void. So the pool folds the log of each Task whose mirror leaves
+  its claim unjudged, and no mirror keeps from a pool a Task that DEC-059 point 7
+  puts in it.
 - **The claim path's re-read** folds the whole log, whatever the Task's state
   (DEC-035 point 6).
 
@@ -494,10 +497,11 @@ stand for the fold of a Task In Progress, whose claim lapses by the time of read
 so the guard and the pool ask the seam to fold that Task's log (point 7). A
 seat's release writes nothing to the issues its clone claimed (DEC-059 point 5), so
 the seam judges the mirror's seat and key against the seats' holders before the
-mirror stands in for any other issue. That judgement leaves out the claim's take,
-since the mirror carries no claim's comment id: where the clone took its seat
-again, a void claim shows as counting (point 7). The mirror carries no author
-either, so it only ever lets a consumer pass over an issue, never treat one as free.
+mirror stands in for any other issue. The mirror carries no claim's comment id, so
+where the clone it names holds its seat, the seat's take decides the claim, and that
+judgement leaves it unjudged (point 7). The mirror carries no author either, so a
+mirror read never makes an issue free: a consumer treats an issue as free, or acts
+on it, only from the folded log.
 
 ### 5. Failure-posture neutrality — the constructors report, the caller decides
 
@@ -650,14 +654,23 @@ tell a claim made after the take from one made before. Counting such a claim cou
 revive a released one, and voiding it could hand a live Task to the pool. An unjudged
 claim costs a retry, never a takeover.
 
-**Why the mirror only lets a consumer pass over an issue.** DEC-043 keeps a
-listing's cost at one call by reading the mirror, and DEC-059 makes the mirror unfit
-to stand for a fold that lapses. A mirror that names a counting claim can only make
-a consumer leave an issue alone. The issue may no longer be owned: where the
-claim's clone took its seat again, the mirror has no comment id to judge the take
-by. Leaving it alone is safe whatever made the mirror stale, and costs the issue's
-return to its pool until a fold, never a second owner. Acting on an issue, or
-treating it as free, rests on the folded log alone.
+**Why a mirror read leaves a claim unjudged where its seat's take decides it.**
+DEC-043 keeps a listing's cost at one call by reading the mirror, and DEC-059 makes
+the mirror unfit to stand for a fold that lapses. The mirror carries no claim's
+comment id, so a mirror read is a read of a claim whose comment id was not read, and
+the rule point 7 gives such a claim decides it: the mirror and the fold judge one
+claim by one rule, and the mirror needs none of its own. Counting the claim could
+revive one a seat's release voided, and voiding it would read a live clone's claim
+as released. Leaving it unjudged costs a fold, never a takeover or a second owner,
+and acting on an issue, or treating it as free, rests on the folded log alone.
+
+**Why the pool folds a Task its mirror leaves unjudged.** A seat's release takes its
+clone's claims with no write to their issues (DEC-059 point 5), so where the clone
+took its seat again, a Task's mirror can name a claim the release voided until an
+ownership event on the Task rewrites it. A pool that passed such a Task over by its
+mirror would keep it out for that long, though DEC-059 point 7 puts each open Task in
+Backlog with no owner in the pool. Folding costs the pool a read of the log of each
+Task it would otherwise pass over, beyond the one call its listing makes.
 
 **Why one event builder for two seams.** An ownership event and a state issue's
 event are the same shape of comment, a hidden stamp and a line a person reads.
@@ -759,6 +772,27 @@ enforced by the seam having no engine-side caller.
   another seat took over while the seat was free would have two owners.
 - **A claim whose comment id was not read counts, or is void.** Rejected — counting
   it could revive a released claim, and voiding it could hand a live Task to the pool.
+- **A mirror read shows a claim counting where its clone holds its seat,** judging
+  its seat and key alone. Rejected — it counts a claim whose comment id was not read,
+  which the fold leaves unjudged (point 7), so the mirror and the fold would judge one
+  claim by two rules, and the mirror would show counting a claim the fold finds void.
+- **The mirror carries the claim's comment id,** so a mirror read judges the take.
+  Rejected — the mirror region's shape is the audit-log facility's to decide
+  (DEC-044, as Boundaries says), and a mirror written before it would carry no id,
+  so a mirror read would leave such a claim unjudged all the same. Leaving it
+  unjudged needs no rule beyond the one point 7 gives a claim whose comment id was
+  not read.
+- **A mirror read folds the log where the holder's take is later than the mirror's
+  last rewrite.** Rejected — the rewrite has no comment id, so the seam would order it
+  and the take by time, where point 7 orders a claim and a take by comment id. A time
+  the mirror's region holds is a clone's clock, against DEC-059 point 9, and GitHub's
+  time of the description's last edit moves with any edit to the description, so a
+  mirror naming a claim the take voided could read as rewritten after the take and
+  show the claim counting.
+- **The pool passes over a Task its mirror leaves unjudged.** Rejected — where the
+  clone took its seat again, no event on the Task need follow to rewrite its mirror,
+  so the mirror may name the voided claim with no end, and a Task DEC-059 point 7
+  puts in the pool would stay out of it.
 - **Each consumer judges the mirror against the holders.** Rejected — a second
   resolver in every consumer, the scatter point 1 forbids.
 - **The mirror stands for the fold of a Task In Progress.** Rejected — the claim
