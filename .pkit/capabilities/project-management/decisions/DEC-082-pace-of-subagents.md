@@ -104,7 +104,7 @@ So no new build takes a slot that a waiting review could use. The first review t
 ### 5. A new Task is the next that nothing blocks, nearest the work just done
 
 - **Nothing blocks a Task** that the one reckoning of ready work holds ready for the agent ([project-management:DEC-025-parallelization-primitive]):
-  - No open issue stands among its dependencies ([project-management:DEC-005-linking-and-containment]).
+  - It is ready in sequence, as DEC-059 point 7 reckons it (refinement per [project-management:DEC-085-issue-waits]).
   - It shares no file with a Task in flight. Of two Tasks that share a file, the later names the earlier among its dependencies, and starts only once the earlier has merged ([project-management:DEC-066-fold-tasks-that-share-a-file] point 1). So the first condition holds it back, and the reckoning reads nothing more from the code.
   - Its seat may take it, by the seat's scope (DEC-059 point 7), and by its pools where the topology declares them ([project-management:DEC-061-pools-of-workers] point 5).
 - **Nearest first.** The agent takes first the Tasks that share the Feature of the Task whose work freed the slot, then those that share its EPIC, then those in its Milestone, each where it has one, and then the rest of what it may take. Within each, the Tasks rank by priority, the highest first. Where no Task's work freed the slot, as at the start of a session, priority alone orders them. So a Task of higher priority elsewhere waits until the nearer Tasks are taken.
