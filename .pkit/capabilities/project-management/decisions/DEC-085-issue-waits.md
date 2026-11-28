@@ -44,8 +44,8 @@ A parent is no wait. A child may start while its parent is open, and a parent re
 
 **A wait on a container is its Tasks' wait too, before they start.** Where a Feature, an Umbrella or an EPIC waits on an issue, every Task under it, at any depth, waits on that issue too, a Task filed under it later among them. So a Task's waits are its own and its ancestors', and the reader gives them all (point 3). An ancestor's wait holds back a Task that has not started: it counts in readiness and at the start (points 3 and 8). It holds no merge, and so holds nothing of a Task already started, one in In Progress or in Review (point 8).
 
-- **The started Tasks are listed.** While a container's wait is open, the capability lists the Tasks under it that have started: the writer to whoever writes the wait, and the reader in its reports, so a wait written outside the capability lists them too.
-- **A started Task whose work rests on the awaited issue** waits on it through a wait of its own, which whoever finds that records, and which holds its merge (points 8 and 9).
+- **The started Tasks are listed.** While a container's wait is open, the capability lists the Tasks under it that have started. The writer lists them to whoever writes the wait, and the reader lists them in its reports, which covers a wait written outside the capability.
+- **A started Task whose work rests on the awaited issue** waits on it through a wait of its own, which holds its merge (points 8 and 9). Whoever finds that its work rests there records that wait.
 
 A wait takes one of two forms:
 
@@ -85,11 +85,11 @@ Every command of the capability that writes a wait writes it through one writer.
 - **names no issue of the waiting issue's repository,** such as a pull request, a number that is not there, or another repository's issue
 - **names the waiting issue itself**
 - **names the waiting issue's own ancestor,** each parent read as the parent links give it (DEC-005, DEC-039)
-- **closes a loop of waits.** A loop counts each container as waiting on its children, since a container reaches Done only once they have, and each Task as waiting on what its ancestors wait on (point 1). A wait on an ancestor is the shortest such loop, and a container's wait on an issue under it is another.
+- **closes a loop of waits.** A loop counts open waits only. It counts each container as waiting on its children, since a container reaches Done only once they have, and each Task as waiting on what its ancestors wait on (point 1), whether or not the Task has started. A wait on an ancestor is the shortest such loop, and a container's wait on an issue under it is another.
 
 The reader checks a wait written outside the capability, such as a link made on the tracker's page or a line typed into a body. It reports each that the writer would refuse. Once the project turns the checks on (point 11), each also holds its waiting issue back:
 
-- **A wait on itself, its ancestor or in a loop** never ends, since what it awaits is open until after it.
+- **A wait on itself, its ancestor or in a loop** holds back for good each Task on it that has not started, since what such a Task awaits is open until after it.
 - **A wait that names no issue of the repository** leaves its waiting issue's readiness unknown, so the issue is not ready. That includes a link to another repository's issue.
 
 A person mends what the reader reports.
@@ -201,9 +201,11 @@ Once the key is on, readiness reads the waits alone, and the section's prose hol
 
 **Why a container's wait holds back only a Task's start.** A Task that has not started costs nothing to hold back. A Task already started was started on what was known then, and its work may not rest on the awaited issue at all. Holding its merge would strand work in progress for a wait that may not concern it, and only a person can tell whether it does. So the capability lists the started Tasks, and a person records a wait on each whose work rests on the awaited issue, which holds its merge. A Task started by the bypass while an ancestor's wait was open was started on purpose, with an audited reason, as any start the bypass lets through.
 
-**Why the checks run when a wait is written.** A wait on itself, on an ancestor or in a loop never ends, since what it awaits closes only after it. Refused when written, it never holds work back. Found only when read, it already has. The reader still checks waits written elsewhere, since the capability checks no write it did not make.
+**Why the checks run when a wait is written.** A wait on itself, on an ancestor or in a loop holds back for good each Task on it that has not started, since what such a Task awaits closes only after it. Refused when written, it never holds work back. Found only when read, it already has. The reader still checks waits written elsewhere, since the capability checks no write it did not make.
 
-**Why a loop counts each container's children.** A container reaches Done only once its children have. Say an issue waits on a container, and one of that container's children waits on the issue. Then the issue's wait never ends. The wait on an ancestor is the shortest such case. A Task waits on what its ancestors wait on too, so a container's wait on an issue under it never ends either: the Tasks under that issue, or the issue itself where it is a Task, wait on it through the container.
+**Why a loop counts each container's children.** A container reaches Done only once its children have. Say an issue waits on a container, and one of that container's children waits on the issue. Then the issue's wait never ends. The wait on an ancestor is the shortest such case. A Task waits on what its ancestors wait on too, so a container's wait on an issue under it holds back for good each Task under that issue that has not started, or the issue itself where it is a Task: they wait on it through the container.
+
+**Why a loop counts an ancestor's wait on a Task already started.** Such a wait holds nothing of that Task (point 1), so a loop through it may end once the Task lands. The writer refuses the loop all the same. A started Task can be moved back to Backlog ([project-management:DEC-006-state-machine-and-cascade]), and a Task filed under the container later starts unstarted, and either would then be held for good. A check that read each Task's state would have to run again at every such move and filing. So a container whose other Tasks come after one of its own Tasks records the wait on each of those other Tasks, not on itself.
 
 **Why the prose counts as no wait.** Prose says many things about other issues: what waits on this one, what it belongs to, what it follows from. A reader that counts every number in it reads each as a wait, as #3548 and #2290 show. A typed line or a link says one thing.
 
@@ -243,6 +245,7 @@ Once the key is on, readiness reads the waits alone, and the section's prose hol
 - **Read only the selected form.** Rejected: a wait written by hand in the other form would be lost, and its issue would start early. Where the tracker has no links, the reader establishes it, or the project declares it (point 3).
 - **Refuse a wait whose waiting issue is not a Task, and report one found.** Rejected, as "Why a wait on a container is its Tasks' wait too" says: it would refuse the link a person most naturally writes.
 - **Hold the merge of each Task under a container whose wait is open, a Task already started among them.** Rejected, as "Why a container's wait holds back only a Task's start" says.
+- **Count in a loop only the ancestors' waits of Tasks not yet started.** Rejected, as "Why a loop counts an ancestor's wait on a Task already started" says.
 - **Keep reading the prose, and teach the reader to tell a wait from context.** Rejected: no reading of free prose is sure, and a wrong guess holds work back or lets it start early.
 - **End a wait however its awaited issue closed.** Rejected, as "Why a wait ends only when its work lands" says.
 - **End a wait once its awaited issue closes, on whichever branch its change merged into.** Rejected, as "Why a wait ends on the default branch, or the Task's own integration branch" says.
