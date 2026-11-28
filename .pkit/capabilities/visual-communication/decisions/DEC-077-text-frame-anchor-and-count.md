@@ -1,7 +1,7 @@
 ---
 id: DEC-077
 title: Each text's frame names its anchor, its count of lines and whether its width was given
-status: proposed
+status: accepted
 date: 2026-11-27
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
