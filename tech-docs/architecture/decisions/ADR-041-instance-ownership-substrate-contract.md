@@ -748,8 +748,6 @@ enforced by the seam having no engine-side caller.
   nothing,** in every project or only in one with a topology. Rejected — a stale
   mirror would hold an issue with no limit, and it frees none, since it has no author
   a consumer can check ("Why no command takes ownership from the mirror" above).
-- **The mirror stands for the fold of a Task In Progress.** Rejected — the claim
-  lapses by the time of reading, which the mirror's last rewrite cannot know.
 - **The stamp's time orders the fold in a project with a topology.** Rejected — a
   clone writes that time, and the clocks of the sandboxes would decide a lapse
   (DEC-059 point 9).
@@ -845,8 +843,13 @@ enforced by the seam having no engine-side caller.
   refines DEC-043's Implication and Rationale on read cost in place: no command takes
   ownership from the mirror, so a listing costs a read of the log of each issue it
   shows, not one call. DEC-043's decision stands at that cost, since correctness under
-  concurrency, not read cost, chose its substrate (DEC-043 Rationale). DEC-059's
-  Implication on this record's fold points to point 4 for the mirror.
+  concurrency, not read cost, chose its substrate (DEC-043 Rationale). Point 4 also
+  refines in place DEC-059's Implication on this record's fold. It makes it say that
+  no command takes ownership from the mirror, for any issue, and that lapse alone
+  would keep the mirror from standing for the fold of a Task In Progress. It drops
+  from that Implication the clause that the fold reads the logs of Tasks In Progress,
+  the only claims that lapse, since every command folds the log of each issue it
+  reads.
 - **Acceptance.** This ADR pins the contract for the comment substrate, by which
   DEC-043 refines the **foundational DEC-035**. So accepting it needs the
   maintainer's sign-off, not the architect's alone. The seam, its two constructors
