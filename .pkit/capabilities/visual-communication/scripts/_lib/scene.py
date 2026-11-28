@@ -259,8 +259,12 @@ class SceneResult:
     (`signs.shown`, DEC-036 point 8). `smallest` holds what the piece's top declares of the
     smallest text size of each medium, and `heights`, for each page by its trace, whether it
     asks for a height and whether the top's own drawing draws it, which the check of a
-    text's size reads (`text_size`, DEC-055 points 2, 3 and 7). Neither is in the scene, so
-    no renderer reads either."""
+    text's size reads (`text_size`, DEC-055 points 2, 3 and 7). `added` holds, for each text
+    that holds a line feed the engine added, by its trace, the place among its paragraphs,
+    from 0, of each paragraph such a line feed ends, one after each path of a list of paths
+    but the last, which the check of a paragraph that ends on a kept word does not read
+    (`paragraph_ends`, DEC-056 point 1, DEC-075 point 1). None of the three is in the
+    scene, so no renderer reads any."""
 
     scene: Scene
     findings: list[Finding]
@@ -270,6 +274,7 @@ class SceneResult:
     shown: list[signs.Shown] = field(default_factory=list)
     smallest: SmallestText | None = None
     heights: dict[str, PageHeight] = field(default_factory=dict)
+    added: dict[str, frozenset[int]] = field(default_factory=dict)
 
 
 def compute_scene(
@@ -325,6 +330,7 @@ def compute_scene(
         shown=signs.shown(root) if root is not None else [],
         smallest=smallest_text(ctx, top) if root is not None else None,
         heights=page_heights(root) if root is not None else {},
+        added=emitter.added,
     )
 
 
@@ -362,13 +368,16 @@ def _proportioned(component: Component, size: str) -> bool:
 
 class _Emitter:
     """Turns placed instances into the scene's elements, computing each value as it goes, and
-    names each image of a picture role it leaves out, since the brand gives it no file."""
+    names each image of a picture role it leaves out, since the brand gives it no file. It
+    keeps, for each text that holds a line feed the engine added, the paragraphs such a line
+    feed ends (`SceneResult.added`)."""
 
     def __init__(self, ctx: Context, pages: list[str]) -> None:
         self.ctx = ctx
         self.pages = pages
         self.facts: dict[str, list[str]] = {}
         self.unvalued: dict[str, str] = {}
+        self.added: dict[str, frozenset[int]] = {}
 
     def root(self, top: Instance) -> Element:
         """The top's group. A top whose layouts are its pages' forms and asks for no height
@@ -593,6 +602,8 @@ class _Emitter:
         element.set("text", node.text, instance.source_of_text(node.part))
         if "fact" in props:
             self.facts.setdefault(props["fact"], []).append(element.id)
+        if node.added:
+            self.added[element.id] = frozenset(node.text.count("\n", 0, at) for at in node.added)
         split = broken.paragraphs or paragraphs([run.text for run in node.runs])
         element.set(
             "paragraphs",

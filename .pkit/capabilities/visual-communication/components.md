@@ -142,6 +142,9 @@ pkit:
         - visual-communication:DEC-055#7
         - visual-communication:DEC-055#8
         - visual-communication:DEC-055#10
+        - visual-communication:DEC-075#1
+        - visual-communication:DEC-075#2
+        - visual-communication:DEC-075#3
       artefact:
         - .pkit/capabilities/visual-communication/files.md#what-the-location-holds
         - .pkit/capabilities/visual-communication/files.md#shapes
@@ -1025,5 +1028,6 @@ Each drawn property names its source in `sources`:
 - **A run's sign** is a square as wide as the run's font size, centred on its letters, with the gap `space.sign-gap` gives after it. It lies before the run's first character that is no space or line feed, on that character's line, and the engine measures it within the line with that character, so no line breaks between the two (DEC-036 point 3). Runs next to each other in one paragraph that name one concept and draw its sign draw one sign, before the first.
 - **A run's ground** lies behind each piece of the run on each line it spans, its sign included, and leaves out the spaces at the run's two ends. Where it starts and where it ends, it takes the room `space.ground-room` gives within the line, and corners of the radius `space.ground-corner` gives. Where a line breaks it, it is square. Runs next to each other in one paragraph that take one ground take it once, with room at its two ends alone.
 - **The language's rules** are read by the primary subtag of the scene's language. In Czech, `cs`, a one-letter word and a short preposition never end a line: each moves to the next line with the word after it, whichever runs hold them. The short prepositions are před, nad, pod, přes, za, na, do, od and ve, in any case, each a whole word followed by a space. Other languages follow Unicode's rules alone.
+- **A line feed** ends a paragraph, and the engine carries no word across it, drops none and joins no two paragraphs. So a paragraph that ends on a word the language's rules keep off a line's end ends its last line on that word (DEC-075 point 3). Where a line feed written in the text ends such a paragraph, and the text goes on after the line feed, the check names the paragraph, `kept-word-ends-paragraph`, and asks for attention where the text is written (DEC-075 points 1 and 2; [Scenes](checks.md#scenes) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->).
 - **A word wider than its line** may break after a `/` in it. A word still wider stays whole, and the text overflows: it holds `overflow: true`, and the check reports it.
 - **Never shrunk.** The engine never makes text smaller to fit, and never hyphenates.
