@@ -29,12 +29,17 @@ from project_kit.install import find_source_kit, find_target_root
 from project_kit.manifest import BackboneManifest, read_backbone_manifest, read_kit_version
 
 if TYPE_CHECKING:
+    from packaging.version import Version
+
     from project_kit.connections import Binding, PointBinding, RoleBinding, Wiring
     from project_kit.data_points import ResolvedPoint
     from project_kit.upgrade import ComponentMove
 
 # The indent of an entry listed under a status line's label.
 _LIST_INDENT = " " * 25
+
+# What the backbone line names where an upgrade would move the project or its pin.
+_UPGRADE_PREVIEW = "run `pkit upgrade --dry-run` to preview"
 
 # What the adapter section names for settings, skills or agents `.claude/` lacks: `pkit sync`
 # runs each installed adapter's scripts, the settings merge and the skill and agent deploys
@@ -100,10 +105,14 @@ def _report_backbone_version(target_root: Path, source_kit: Path) -> None:
     """Installed backbone version (from the manifest) vs. what the source ships.
 
     The at-a-glance "am I current?" line — pairs with `pkit version` (source)
-    and points at `pkit upgrade --dry-run` for the full delta when behind.
+    and points at `pkit upgrade --dry-run` for the full delta when behind. Under
+    a pin the source is the pin's own release, so a record equal to it says only
+    that the project matches its pin: the line then reads as `_pinned_gloss`
+    gives it (#3556).
     """
     from project_kit.install import is_self_host
     from project_kit.migrations import public_version
+    from project_kit.router import read_version_pin
 
     manifest = read_backbone_manifest(target_root)
     installed = manifest.backbone_version if manifest else ""
@@ -126,16 +135,73 @@ def _report_backbone_version(target_root: Path, source_kit: Path) -> None:
         return
     # No transition runs in the methodology's source repository (ADR-065 point 3).
     transitions = not is_self_host(target_root, source_kit)
+    # Nor is a pin read there: the router runs the checkout's own code before any pin
+    # (ADR-039).
+    pin = read_version_pin(target_root) if transitions else None
     # Compared as public versions, as a transition compares them (ADR-089 point 5).
     if source_version and public_version(installed) != public_version(source_version):
-        gloss = f"source {source_version} — run `pkit upgrade --dry-run` to preview"
+        gloss = f"source {source_version} — {_UPGRADE_PREVIEW}"
     elif transitions and manifest.transition_incomplete:
         gloss = "the target of an incomplete transition"
+    elif pin is not None:
+        gloss = _pinned_gloss(installed, pin)
     else:
         gloss = "up to date"
     click.echo(f"  {'Backbone version:':<22} {installed}   ({gloss})")
     if transitions and source_version:
         _report_transition_state(target_root, source_kit, manifest, source_version)
+
+
+def _pinned_gloss(installed: str, pin: str) -> str:
+    """The backbone line's gloss in a pinned project whose record, *installed*,
+    is the running pkit's release, its transition complete (#3556).
+
+    The router runs a pinned project under its pin's release, so the record
+    equals that release whatever has been released since. The gloss therefore
+    says that the project matches its pin, and then how the pin stands against
+    the latest release, looked up as `pkit upgrade` looks it up (ADR-063 point
+    1): behind it, with the release named, or up to date, which it says only
+    once the lookup found no newer release. Where the lookup fails, it says
+    that it did not check, and claims neither. Under the offline marker
+    (ADR-057 point 3) it looks nothing up, and says that it did not check
+    because the marker is set.
+
+    Where the record is not the pin, neither is the running pkit, as under the
+    router's fallback or its bypass. The gloss then names the pin, and looks
+    nothing up: a pin that names no version is said to name none, whatever the
+    record holds, and any other to differ from the record. The pin file is
+    printed with each unprintable character as its escape, so nothing in it
+    moves the cursor or adds a line on the terminal status is read on.
+    """
+    from project_kit.acting_account import OFFLINE_VARIABLE
+    from project_kit.friction_check import printable
+    from project_kit.migrations import public_version
+
+    pinned = public_version(pin)
+    if pinned is None:
+        return f"its pin, {printable(pin)}, names no version — {_UPGRADE_PREVIEW}"
+    if pinned != public_version(installed):
+        return f"differs from its pin, {printable(pin)} — {_UPGRADE_PREVIEW}"
+    unchecked = "matches its pin; did not check for a newer release"
+    if os.environ.get(OFFLINE_VARIABLE):
+        return f"{unchecked}: the offline marker ({OFFLINE_VARIABLE}) is set"
+    latest = _latest_release()
+    if latest is None:
+        return f"{unchecked}: the release source could not be read"
+    if latest > pinned:
+        return (
+            f"matches its pin; the pin is behind the latest release, v{latest} — {_UPGRADE_PREVIEW}"
+        )
+    return f"matches its pin; up to date: the latest release is v{latest}"
+
+
+def _latest_release() -> Version | None:
+    """The latest release, looked up as `pkit upgrade` looks it up (ADR-063
+    point 1), or None where the lookup fails. Status reaches the release source
+    through this function alone, so its tests answer the lookup here."""
+    from project_kit.upgrade import latest_released_version
+
+    return latest_released_version()
 
 
 def _report_transition_state(
@@ -967,6 +1033,28 @@ def _report_agents_inventory(target_root: Path) -> None:
     project_count = _count_artifacts(agents_root / "project")
     click.echo(f"    {'core':<18} {core_count}")
     click.echo(f"    {'project':<18} {project_count}")
+    for line in _optional_reads_lines(target_root):
+        click.echo(line)
+
+
+def _optional_reads_lines(target_root: Path) -> list[str]:
+    """Beside the counts: each optional category the overlay leaves undefined, with
+    the agents that deploy without it (ADR-052 point 5). Nothing where every such
+    category is defined.
+
+    The scan and the words are `pkit agents`' own (`agents_overlay`), so the two
+    never disagree. Reads forgivingly: an overlay that does not parse, or a picker
+    that cannot be reached, leaves the line out.
+    """
+    from project_kit import agents_overlay
+
+    try:
+        undefined = agents_overlay.undefined_optional_reads(target_root)
+    except Exception:  # soft probe; status fails on no overlay or picker it cannot read
+        return []
+    if not undefined:
+        return []
+    return [f"    {'overlay':<18} {agents_overlay.optional_reads_line(undefined)}"]
 
 
 def _list_subdir_names(parent: Path) -> list[str]:

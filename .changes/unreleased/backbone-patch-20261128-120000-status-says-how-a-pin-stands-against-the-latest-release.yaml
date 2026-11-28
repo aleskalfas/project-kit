@@ -1,0 +1,13 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  In a pinned project, `pkit status` says that the project matches its pin, and
+  whether the pin is behind the latest release, which it names. It said `up to
+  date` whatever had been released since the pin. To tell, it now reads the
+  release source's tags, as `pkit upgrade` does, and where it cannot read them,
+  as with no network, it says that it did not check. Under the offline marker,
+  `PKIT_OFFLINE=1`, it reads nothing and says so. An unpinned project's line
+  reads as before, and a pinned project gets the new wording once its pin is
+  this release or a later one.

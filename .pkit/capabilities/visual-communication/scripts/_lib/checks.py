@@ -179,6 +179,7 @@ from _lib import (
     location,
     names,
     outlines,
+    paragraph_ends,
     records,
     signs,
     text_size,
@@ -308,9 +309,24 @@ HANDED_OUT_FILE_MISSING = "handed-out-file-missing"
 HANDED_OUT_FILE_CHANGED = "handed-out-file-changed"
 EXPORTS_UNREADABLE = "exports-unreadable"
 
-#: The properties of a scene element that are no property it draws: beside its structure,
-#: the parts its part says it lies over on purpose (DEC-066 point 2).
-_STRUCTURE = ("type", "id", "sources", "children", boxes.LIES_OVER)
+#: What no element draws: each property of an element that describes nothing an output shows
+#: its reader or gives a reader's tools, with the types it may stand on, `None` for every
+#: type (DEC-078 points 1 and 2). The comparison that finds a renderer's losses passes over
+#: each on an element of those types, and no renderer declares that it draws one. The page on
+#: components names the same, under what a scene holds.
+NOT_DRAWN: Mapping[str, frozenset[str] | None] = {
+    "id": None,
+    "sources": None,
+    boxes.LIES_OVER: None,
+    "component": frozenset({"group"}),
+    "version": frozenset({"group"}),
+    "options": frozenset({"group"}),
+}
+
+#: The tree, which the comparison reads and judges as no property: an element's type, which
+#: names its primitive's entry in a declaration, and a group's children, each compared in its
+#: turn (DEC-078 point 1).
+_TREE = ("type", "children")
 
 _CONTENT_FILE = re.compile(r"^content\.(?P<language>[^.]+)\.yaml$")
 
@@ -2878,6 +2894,7 @@ SCENE_CHECKS = (
     boxes.NEAR_ALIGNMENT_CHECK,
     boxes.BOX_OVERLAP_CHECK,
     letters.LETTERS_CHECK,
+    paragraph_ends.CHECK,
     text_size.CHECK,
     SIZE_WIDTHS,
     BRAND_FORMS,
@@ -2969,8 +2986,9 @@ def _in_scene(
     engine's own findings, content the scene's size hides, contrast as drawn, colour roles the
     brand lacks, the renderers' unaccepted losses, components' statuses, pages with no ground
     of their own, the checks of boxes, letters that touch across a text's lines, each letter
-    read from `faces`, and texts smaller than their medium allows, which the check gives each
-    with the scene it holds for (`text_size.found`)."""
+    read from `faces`, paragraphs that a line feed ends on a word kept off a line's end, and
+    texts smaller than their medium allows, which the check gives each with the scene it
+    holds for (`text_size.found`)."""
     piece = project.piece
     size = result.scene.size_key
     served = [key for key in project.keys if project.size_key(key) == size]
@@ -2988,6 +3006,7 @@ def _in_scene(
         *((NO_GROUND, finding) for finding in _no_ground(piece, scene, drawn, served)),
         *_of_boxes(scene, steps[size]),
         *_of_letters(project, scene, size, faces),
+        *_of_paragraph_ends(project, scene, result),
     ]
     pages = [str(page) for page in scene.get("pages", [])]
     return [
@@ -3149,6 +3168,19 @@ def _of_letters(
         (letters.LETTERS_CHECK, dataclasses.replace(finding, file=pl.PIECE_FILE))
         for finding in found
     ]
+
+
+def _of_paragraph_ends(
+    project: pl.Project, scene: Mapping[str, Any], result: SceneResult
+) -> list[tuple[SceneCheck, Finding]]:
+    """What the check of a paragraph that ends on a word kept off a line's end finds in
+    `scene`, reading no paragraph that a line feed the engine added ends (`result.added`):
+    each finding where the text is written, a library version's naming its owner (DEC-075
+    point 2)."""
+    found = paragraph_ends.kept_word_ends(
+        scene, result.added, lambda version: _owner_of(project.held, version)
+    )
+    return [(paragraph_ends.CHECK, finding) for finding in found]
 
 
 def _step_given(project: pl.Project, size: str, text: Mapping[str, Any]) -> letters.Given:
@@ -3936,10 +3968,21 @@ def renderers(piece: pl.Piece) -> list[str]:
     return sorted({PREVIEWS, *(renderer for renderer in found if renderer is not None)})
 
 
+def not_drawn(prop: str, kind: str) -> bool:
+    """Whether `prop`, on an element of the type `kind`, is one no element draws
+    (`NOT_DRAWN`)."""
+    if prop not in NOT_DRAWN:
+        return False
+    types = NOT_DRAWN[prop]
+    return types is None or kind in types
+
+
 def losses(scene: Mapping[str, Any], declaration: Mapping[str, Any]) -> list[seam.Loss]:
     """What a renderer will lose of a scene, known from its declaration before it runs
-    (DEC-005 point 9): a primitive it does not draw it refuses, and a property it does not
-    draw it leaves out. One whose format has a physical page and does not map the physical
+    (DEC-005 point 9): a primitive it does not draw it refuses, and a drawn property it does
+    not draw it leaves out. It passes over the tree, an element's type and a group's
+    children, and over what no element draws, of which no renderer reports a loss (DEC-078
+    points 1 and 2). One whose format has a physical page and does not map the physical
     size the scene's root holds onto it draws each page at its own unit, an approximation
     it names at the top; one whose format has none loses nothing (DEC-034 point 3)."""
     plugin = str(declaration["name"])
@@ -3967,7 +4010,9 @@ def losses(scene: Mapping[str, Any], declaration: Mapping[str, Any]) -> list[sea
             )
             continue
         for prop in element:
-            if prop not in _STRUCTURE and prop not in draws[kind]:
+            if prop in _TREE or not_drawn(prop, kind):
+                continue
+            if prop not in draws[kind]:
                 found.append(
                     seam.Loss(
                         plugin,

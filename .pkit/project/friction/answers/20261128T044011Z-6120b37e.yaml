@@ -1,0 +1,217 @@
+answers:
+  - artefact: tech-docs/analysis/project-management/domain-model/060-parallel-work.md
+    read:
+      - 20261029T002130Z-82af462f.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T220122Z-9823200c.yaml
+      - 20261106T000405Z-f16023ec.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261112T135407Z-115865f2.yaml
+      - 20261112T235648Z-31cd7a21.yaml
+      - 20261118T093416Z-ae3913ed.yaml
+      - 20261119T013318Z-c0734647.yaml
+      - 20261122T001341Z-1f604dc7.yaml
+      - 20261122T230042Z-201d3fa4.yaml
+      - 20261126T215411Z-182da8fc.yaml
+      - 20261126T220343Z-9f22cdc3.yaml
+      - 20261126T220933Z-3e415435.yaml
+      - 20261127T082720Z-4df0b388.yaml
+      - 20261128T041740Z-a8de64c8.yaml
+    revalidated:
+      at: 2026-11-28T04:40:11Z
+      outcome: unchanged
+      unchanged-because: DEC-043's Implication on read cost and DEC-059's Implication on ADR-041's fold now say that only a view shown to a person reads the description mirror, and that even such a view folds a Task In Progress's log; DEC-059 leaves to ADR-041 point 4 the rule that whatever a command or an agent acts on comes from the fold of the issue's whole comment log. The domain model names neither the mirror nor how a fold reads the log, so its seats, ownerships, pool and state issues stand as written.
+      deferred:
+        - anchor:
+            kind: record
+            value: project-management:DEC-059
+          reason: DEC-082's edits of DEC-059, accepted and not built, keep a seat's pace on its state issue, folded apart from its holder. They have a worker build as many Tasks at once as its pace allows, and rank a seat's ready Tasks nearest the Task whose work freed its slot. The Seat section's attributes and its state issue change with DEC-082's build, project-kit#3462. DEC-081's edit also lets a directing seat's message name the ready Task a worker takes next, which the view gains with the agent's messaging, project-kit#3523.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-082-set-up-topology.md
+    read:
+      - 20261029T002130Z-82af462f.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T104927Z-f6afe126.yaml
+      - 20261114T135441Z-fd5c2dc0.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T215333Z-1b18b920.yaml
+      - 20261117T010941Z-d7ea213a.yaml
+      - 20261118T093416Z-ae3913ed.yaml
+      - 20261118T110156Z-9a08eba0.yaml
+      - 20261118T162554Z-507129b2.yaml
+      - 20261119T013318Z-c0734647.yaml
+      - 20261122T001341Z-1f604dc7.yaml
+      - 20261122T230042Z-201d3fa4.yaml
+      - 20261123T192706Z-a190aa12.yaml
+      - 20261123T204526Z-d8337d55.yaml
+      - 20261127T082720Z-4df0b388.yaml
+      - 20261128T041740Z-a8de64c8.yaml
+    revalidated:
+      at: 2026-11-28T04:40:18Z
+      outcome: unchanged
+      unchanged-because: "DEC-059's change here is to its Implication on ADR-041's fold: even a view shown to a person folds a Task In Progress's log, and the rule that whatever a command or an agent acts on comes from the fold rests on ADR-041 point 4, not on DEC-059. Setting up a topology reads no ownership, so the steps, and variant 7a's refusal of an owner written as a label, stand as written."
+  - artefact: tech-docs/analysis/project-management/use-case-model/journeys/JRN-004-set-up-and-adjust-topology.md
+    read:
+      - 20261029T002130Z-82af462f.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T131440Z-90d45a35.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T221030Z-aedda51f.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T144714Z-e8754301.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T101625Z-39c9fced.yaml
+      - 20261115T175013Z-4c973ec1.yaml
+      - 20261115T202513Z-2d70bae9.yaml
+      - 20261115T222227Z-a8c41e80.yaml
+      - 20261116T223146Z-fdad67d7.yaml
+      - 20261116T232343Z-e53423de.yaml
+      - 20261118T093416Z-ae3913ed.yaml
+      - 20261118T110156Z-9a08eba0.yaml
+      - 20261118T162554Z-507129b2.yaml
+      - 20261119T013318Z-c0734647.yaml
+      - 20261122T001341Z-1f604dc7.yaml
+      - 20261123T204526Z-d8337d55.yaml
+      - 20261126T215411Z-182da8fc.yaml
+      - 20261127T082720Z-4df0b388.yaml
+      - 20261128T041740Z-a8de64c8.yaml
+    revalidated:
+      at: 2026-11-28T04:40:25Z
+      outcome: unchanged
+      unchanged-because: "DEC-059's change here is to its Implication on ADR-041's fold: even a view shown to a person folds a Task In Progress's log, and the rule that whatever a command or an agent acts on comes from the fold rests on ADR-041 point 4, not on DEC-059. The journey sets up and adjusts a topology and reads no ownership, so its stages stand as written."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-084-take-next-task.md
+    read:
+      - 20261029T002130Z-82af462f.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T214054Z-3ec700bc.yaml
+      - 20261105T215849Z-25d2581b.yaml
+      - 20261105T221030Z-aedda51f.yaml
+      - 20261106T000405Z-f16023ec.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261107T123620Z-3d057b1b.yaml
+      - 20261107T125436Z-9442a4b6.yaml
+      - 20261107T132338Z-3c4c3246.yaml
+      - 20261107T144714Z-e8754301.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261112T135407Z-115865f2.yaml
+      - 20261112T235648Z-31cd7a21.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T104927Z-f6afe126.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261114T135441Z-fd5c2dc0.yaml
+      - 20261114T140804Z-6f794478.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T010054Z-99f01df7.yaml
+      - 20261115T112500Z-53d20551.yaml
+      - 20261115T180458Z-4e13664f.yaml
+      - 20261115T202513Z-2d70bae9.yaml
+      - 20261115T224856Z-cb4ecf23.yaml
+      - 20261116T095840Z-547638af.yaml
+      - 20261116T223146Z-fdad67d7.yaml
+      - 20261116T232343Z-e53423de.yaml
+      - 20261117T010941Z-d7ea213a.yaml
+      - 20261117T115722Z-5da8fae5.yaml
+      - 20261117T163349Z-7822125e.yaml
+      - 20261118T093416Z-ae3913ed.yaml
+      - 20261118T110156Z-9a08eba0.yaml
+      - 20261118T162554Z-507129b2.yaml
+      - 20261118T204901Z-88c68aa2.yaml
+      - 20261122T001341Z-1f604dc7.yaml
+      - 20261123T005053Z-b5822da6.yaml
+      - 20261123T204526Z-d8337d55.yaml
+      - 20261126T215411Z-182da8fc.yaml
+      - 20261127T082720Z-4df0b388.yaml
+      - 20261128T022501Z-85398747.yaml
+      - 20261128T030516Z-5c071134.yaml
+      - 20261128T033239Z-483cbbe0.yaml
+      - 20261128T035520Z-733e518b.yaml
+      - 20261128T041740Z-a8de64c8.yaml
+    revalidated:
+      at: 2026-11-28T04:40:29Z
+      outcome: unchanged
+      unchanged-because: "Every ownership fold reads the Task's whole comment log, as ADR-041 point 1 has it, and next-task skips a Task whose log cannot be read whole, as it skips one whose claim cannot be judged, such as a claim whose seat its clone holds with no take named, which no command passes. ADR-041 point 4 has whatever a command or an agent acts on, an agent's narrowing to its own issues among it, come from the fold in every project, and lets only a view shown to a person read the mirror; DEC-059's Implication on the fold points there. So step 1's signed listing, which the worker reads, takes from the fold each sign the worker acts on, and next-task judges each Task it offers from its folded log, so a claim a seat's release voided keeps no Task out of the pool. Variant 2b stands: a Task whose claim no longer counts is ready, and a claim made before its seat's current take is such a claim."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-090-see-who-works-on-what.md
+    read:
+      - 20261029T002130Z-82af462f.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T221030Z-aedda51f.yaml
+      - 20261106T000405Z-f16023ec.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T123620Z-3d057b1b.yaml
+      - 20261107T125436Z-9442a4b6.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T163133Z-be7e7e83.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261112T235648Z-31cd7a21.yaml
+      - 20261115T010054Z-99f01df7.yaml
+      - 20261115T223351Z-f0ef2d62.yaml
+      - 20261115T224856Z-cb4ecf23.yaml
+      - 20261116T095840Z-547638af.yaml
+      - 20261116T112808Z-198ad446.yaml
+      - 20261117T113804Z-95a59178.yaml
+      - 20261118T093416Z-ae3913ed.yaml
+      - 20261118T191220Z-3b107524.yaml
+      - 20261118T204901Z-88c68aa2.yaml
+      - 20261119T013318Z-c0734647.yaml
+      - 20261122T001341Z-1f604dc7.yaml
+      - 20261123T192706Z-a190aa12.yaml
+      - 20261123T204526Z-d8337d55.yaml
+      - 20261123T233417Z-17aede6c.yaml
+      - 20261128T022501Z-85398747.yaml
+      - 20261128T030516Z-5c071134.yaml
+      - 20261128T033239Z-483cbbe0.yaml
+      - 20261128T041740Z-a8de64c8.yaml
+    revalidated:
+      at: 2026-11-28T04:40:33Z
+      outcome: unchanged
+      unchanged-because: "instance_ownership.py leaves unjudged a claim whose seat its clone holds with no take named, which no command passes. ADR-041 point 4 lets only a view shown to a person read the mirror, in every project, and has whatever a command or an agent acts on come from the fold: the signed listing folds for any sign an agent acts on, and the listing of seats takes from the fold each claim it shows. Point 1 keeps a view's one call, and point 7 has a mirror read leave a claim unjudged where the mirror carries no comment id and the seat's take decides it. Mirror or log, the owner shown is read from the issue itself, so every instance shows the same owner, and the signed listing is not built."

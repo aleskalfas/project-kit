@@ -42,8 +42,11 @@ _PAGE = re.compile(r"repos/\{owner\}/\{repo\}/issues/(\d+)/comments\?per_page=(\
 _ACCESS = re.compile(r"repos/\{owner\}/\{repo\}/collaborators/([^/]+)/permission")
 _ISSUE = re.compile(r"repos/\{owner\}/\{repo\}/issues/(\d+)")
 
+#: The id of the first comment the fakes post.
+FIRST_COMMENT_ID = 1001
+
 #: The ids of the comments every fake posts, in the order it posts them.
-COMMENT_IDS = itertools.count(1001)
+COMMENT_IDS = itertools.count(FIRST_COMMENT_ID)
 
 
 @dataclass

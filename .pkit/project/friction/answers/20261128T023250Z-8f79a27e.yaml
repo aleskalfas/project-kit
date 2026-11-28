@@ -1,0 +1,39 @@
+answers:
+  - artefact: tech-docs/analysis/project-management/requirements/functional/REQ-042-held-moves-authorised.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T221030Z-aedda51f.yaml
+      - 20261105T225036Z-926c13c5.yaml
+      - 20261106T000405Z-f16023ec.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261114T201720Z-021bd185.yaml
+      - 20261115T103656Z-b7cfd657.yaml
+      - 20261115T180458Z-4e13664f.yaml
+      - 20261115T215333Z-1b18b920.yaml
+      - 20261115T223351Z-f0ef2d62.yaml
+      - 20261115T225419Z-956603ce.yaml
+      - 20261116T033725Z-695e2785.yaml
+      - 20261116T095840Z-547638af.yaml
+      - 20261116T112808Z-198ad446.yaml
+      - 20261117T113804Z-95a59178.yaml
+      - 20261118T093416Z-ae3913ed.yaml
+      - 20261118T191220Z-3b107524.yaml
+      - 20261118T204901Z-88c68aa2.yaml
+      - 20261119T000044Z-b8eeff55.yaml
+      - 20261119T013318Z-c0734647.yaml
+      - 20261128T022501Z-85398747.yaml
+    revalidated:
+      at: 2026-11-28T02:32:50Z
+      outcome: unchanged
+      unchanged-because: test_pm_done_work.py and test_pm_close_issue.py changed only in their fake GitHub, which answers the paged read of an issue's comment log, and in which of its calls they count as reads. test_pm_move_issue.py gains a test that the move back refuses a log it cannot read whole. Their tests of a held move and its authorisation assert what they asserted.

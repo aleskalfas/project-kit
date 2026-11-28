@@ -121,9 +121,9 @@ or the cascade fold. The engine stays content-free.
 
 ## Rationale
 
-**Why comments, not a body region, for the source of truth.** Both are label-free and both bulk-read
-cheaply (`gh issue list --json comments` returns comment bodies inline, just as `--json body`
-returns the body). The decider is *atomicity*: a body region is a whole-object read-modify-write
+**Why comments, not a body region, for the source of truth.** Both are label-free, but comments
+cost a listing a read of each issue's log, where a body region is read in one call (refinement per
+[pkit:ADR-041] point 4). The decider is *atomicity*: a body region is a whole-object read-modify-write
 with no CAS, so concurrent claims clobber and the clash tie-break silently degrades to
 last-writer-wins; per-instance comments are discrete atomic objects, so the tie-break holds
 exactly as the label set's does. Correctness under concurrency, not read cost, chose the
@@ -179,12 +179,10 @@ substrate and making `label` the opt-in fails safe.
 - **The shared audit-log facility** ([project-management:DEC-044-audit-log-facility]) carries the comment-stamp + render spec; the
   ownership event log is that facility specialised with ownership event types, and the existing
   promote / bypass / handoff audit strings migrate onto it rather than running parallel.
-- **Read cost stays one call** — the description mirror is returned inline by
-  `gh issue list --json body`; the comment log is read only to reconcile or show history. In a
-  project with a topology of seats, a claim lapses by the time of reading, so the guard and the
-  shared pool fold the comment log of each Task In Progress, the only claims that lapse. The
-  ownership seam pages a long log, so a fold never reads one cut short (refinement per
-  [project-management:DEC-059-topology-of-seats]).
+- **A listing reads the comment log of each issue it shows,** a read for each issue rather than
+  one call — the description mirror is text on the issue's page for a person who opens it, and no command takes ownership
+  from it (refinement per [pkit:ADR-041] point 4). The ownership seam pages a long log, so a
+  fold never reads one cut short (refinement per [project-management:DEC-059-topology-of-seats]).
 - **A surface change** — a new selector, a new substrate, a new schema home and schema formats
   bump the capability version per [pkit:PRJ-002]; a
   migration is unnecessary because greenfield (label) behaviour is byte-unchanged and the new

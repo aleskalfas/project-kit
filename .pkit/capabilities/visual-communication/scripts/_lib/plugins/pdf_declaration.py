@@ -1,11 +1,13 @@
 """What the PDF renderer draws: its declaration, plain data (visual-communication DEC-005
-points 9 and 10, DEC-006 point 7).
+points 9 and 10, DEC-006 point 7, DEC-078 points 1 and 2).
 
 The PDF renderer writes one file for each language and combination of modes, its pages in
-order, so it draws, and only draws: it updates nothing in place and reads nothing back. A
-primitive or a property it does not name here is a loss the capability knows before it
-runs: a primitive it refuses, a property it leaves out. It draws every primitive of format
-1's scene, the image of every source and the path among them, in the default font profile,
+order, so it draws, and only draws: it updates nothing in place and reads nothing back. It
+names each drawn property. What no element draws, such as which component drew a group,
+the check's list holds (`checks.NOT_DRAWN`), and it declares none of it drawn. A primitive
+or a drawn property it does not name here is a loss the capability knows before it runs: a
+primitive it refuses, a property it leaves out. It draws every primitive of format 1's
+scene, the image of every source and the path among them, in the default font profile,
 from the brand's committed font files, calls no outside program and reaches no service.
 
 - `unit`: how it maps the scene's unit onto a page with no physical size (DEC-001 point 2).
@@ -46,10 +48,7 @@ DECLARATION = {
     "physical-size": {"page": True, "maps": True},
     "not-carried": ["alternative text", "reading order", "structure"],
     "draws": {
-        "group": dict.fromkeys(
-            (*_FRAME, "component", "version", "options", "page"),
-            DRAWS,
-        ),
+        "group": dict.fromkeys((*_FRAME, "page"), DRAWS),
         "box": dict.fromkeys((*_FRAME, "fill", "stroke", "stroke-width", "rx"), DRAWS),
         "ellipse": dict.fromkeys((*_FRAME, "fill", "stroke", "stroke-width"), DRAWS),
         "line": dict.fromkeys(
