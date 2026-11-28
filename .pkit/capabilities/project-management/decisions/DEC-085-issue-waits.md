@@ -9,10 +9,11 @@ author: Aleš Kalfas <kalfas.ales@gmail.com>
 **In plain terms:** an issue *waits* on another when it is not to start until the other closes. Today the capability reads every issue number in an issue's `## Dependencies` section as such a wait. So a line that names the issue's own EPIC, or an issue that waits on this one, holds the issue back for good. This record has each wait recorded in a form a command reads without guessing:
 
 - **The form.** The tracker's own "blocked by" links, by default, or a typed `Blocked by: #N` line in the body, where the project selects it.
-- **The reader.** One reader gives every command that reckons what is ready the same waits.
+- **The reader.** One reader gives every command that reckons what is ready the same waits. A Task waits on what its Feature, Umbrella or EPIC waits on too.
 - **The checks.** A wait is checked when it is written: it names an issue that exists, not the issue itself or its ancestor, and closes no loop.
 - **The prose.** The rest of the `## Dependencies` section explains, and no command reads it as a wait.
 - **A wait left out.** Each Task states its waits, or that it waits for nothing. Text that hints at a wait with none is flagged. Starting a Task and merging its change are refused while a wait is open, and a change that rests on unfinished work waits on it.
+- **The key.** The checks that refuse or hold a Task apply once the project turns them on with a key, and a new project starts with them on. A project that upgrades keeps working as before until it turns them on: the prose of a Task that states neither its waits nor that it waits for nothing still holds it back.
 - **The conversion.** A project's existing sections are converted through a proposal that a person reviews.
 
 ## Context
@@ -23,20 +24,22 @@ Meanwhile the shared pool reckons which Tasks are ready from the prose ([project
 
 Trackers record this relation themselves too. GitHub records that one issue is blocked by another, shows it on both issues' pages, and answers it through its interfaces, as it does sub-issues. The record on containment settled the like question for a parent: the tracker's sub-issues where it has them, and a textual line where it does not or the project selects it ([project-management:DEC-039-containment-substrate-selection]). The maintainer chose the same shape for waits on 28 November 2026.
 
-A wait that is written can be checked, but a wait left out leaves no trace. A Task whose wait was never recorded reads the same as a Task that waits on nothing, so the pool offers it, and its change can land before the work it rests on. The acceptance gate asks that work built on a proposed record reach the default branch no earlier than the change that proposes it ([COR-066] point 1). Nothing checks that order while only whoever built the change knows it. On the same day, the maintainer decided how a wait left out is made visible.
+A wait that is written can be checked, but a wait left out leaves no trace. A Task whose wait was never recorded reads the same as a Task that waits on nothing, so the pool offers it, and its change can land before the work it rests on. The acceptance gate asks that work built on a proposed record reach the default branch no earlier than the change that proposes it ([COR-066] point 1). Nothing checks that order while only whoever built the change knows it. On the same day, the maintainer decided how a wait left out is made visible, how a project turns on the checks that do so, and that a wait recorded on a Feature, an Umbrella or an EPIC holds the Tasks under it.
 
 ## Decision
 
-**A wait is recorded in one of two forms: the tracker's own blocked-by links, which a project uses by default, or a typed `Blocked by: #N` line in the issue's `## Dependencies` section, where the project selects it. One reader gives every command that reckons readiness the waits of both forms. The capability checks each wait it writes. The rest of the section is prose that no command reads as a wait. Each Task states its waits, or that it waits for nothing, and text that hints at a wait with none is flagged. Starting a Task and merging its change are refused while a wait is open, and a change that rests on unfinished work waits on it. A project's existing sections are converted through a proposal a person reviews.**
+**A wait is recorded in one of two forms: the tracker's own blocked-by links, which a project uses by default, or a typed `Blocked by: #N` line in the issue's `## Dependencies` section, where the project selects it. One reader gives every command that reckons readiness the waits of both forms, and a Task's waits are its own and its ancestors'. The capability checks each wait it writes. The rest of the section is prose that no command reads as a wait. Each Task states its waits, or that it waits for nothing, and text that hints at a wait with none is flagged. Starting a Task and merging its change are refused while a wait is open, and a change that rests on unfinished work waits on it. The checks that refuse or hold a Task apply once the project turns them on with a key, and a new project starts with them on. A project's existing sections are converted through a proposal a person reviews.**
 
 ### 1. A wait, and its two forms
 
 A *wait* is a recorded relation between two issues: the *waiting issue* is not ready to start until the *awaited issue*'s work has landed. Until then the wait is *open*. It orders work in sequence, the conflict DEC-025 names.
 
-- **It ends** once the awaited issue closes as completed: its change merged, or its work was done with no change to merge ([project-management:DEC-006-state-machine-and-cascade], its closure triggers).
+- **It ends** once the awaited issue closes as completed: its change merged, or its work was done with no change to merge ([project-management:DEC-006-state-machine-and-cascade], its closure triggers). A change that closes both issues lands the awaited issue's work with its own (point 8).
 - **An awaited issue closed otherwise,** such as not planned, leaves its work unlanded, so the wait stays open. The reader reports it (point 3), and a person points the wait at the issue that carries the work, or removes it.
 
 A parent is no wait. A child may start while its parent is open, and a parent reaches Done only once every child has ([project-management:DEC-006-state-machine-and-cascade]).
+
+**A wait on a container holds its Tasks.** Where a Feature, an Umbrella or an EPIC waits on an issue, every Task under it, at any depth, waits on that issue too, a Task filed under it later among them. So a Task's waits are its own and its ancestors', and readiness and the gates read them all (points 3 and 8).
 
 A wait takes one of two forms:
 
@@ -53,7 +56,7 @@ A project selects the form of its waits by hand, in its substrate map ([project-
 - **`native`** is the default, where the key or the whole map is absent. The capability writes each wait as a link.
 - **`textual`:** the capability writes each wait as a typed line. A project selects it where its tracker has no such links, or where it keeps its waits in the body by choice.
 
-The capability writes each wait in the selected form alone, never in both. It reports a wait it cannot write in that form, such as a link the tracker refuses. It never drops the wait in silence, nor writes it in the other form instead. Where the tracker has no links, the report names the `textual` selection.
+The capability writes each wait in the selected form alone, never in both. It reports a wait it cannot write in that form, such as a link the tracker refuses. It never drops the wait in silence, nor writes it in the other form instead. Where the tracker answers that it has no links (point 3), the report names the `textual` selection.
 
 ### 3. One reader reads both forms, for every command
 
@@ -62,9 +65,11 @@ Every command that reads waits reads them through one reader. Among them are the
 The reader reads both forms, whichever the project selects. An issue waits on each issue either form names:
 
 - **Both forms found.** The waits are the two forms' union, and a wait recorded in both counts once. The reader reports each wait recorded only in the form the project did not select. The report says how to record it in the selected form, or to remove it.
-- **Neither form names a wait.** A Task whose body declares that it waits for nothing (point 6) is ready in sequence. Without that declaration, the Task's answer is *undeclared*: the reader reports it, a command that reckons readiness holds it back as not ready, and a view of the work shows its readiness as unknown. Any other kind of issue waits on nothing.
+- **Neither form names a wait.** A Task whose body declares that it waits for nothing (point 6) is ready in sequence. Without that declaration, the Task's answer is *undeclared*: the reader reports it, a command that reckons readiness holds it back as not ready, and a view of the work shows its readiness as unknown. Until the project turns the checks on, an undeclared Task is read as before instead (point 11). Any other kind of issue waits on nothing.
 - **A form that could not be read,** such as links whose read failed or was cut short, makes the answer incomplete, and the reader says so. A command that reckons readiness holds the issue back as not ready. A view of the work shows its readiness as unknown, never as ready.
-- **A tracker found to have no links** gives a complete answer from the typed lines.
+- **A tracker that answers that it has no links** gives a complete answer from the typed lines. Only the tracker's own answer counts: a read that failed, whatever its cause, says nothing of the kind, and leaves the answer incomplete.
+
+The waits the reader gives a Task are its own and its ancestors' (point 1), each ancestor's read as above. An ancestor whose waits it cannot read in full, or a parent it cannot tell, makes the Task's answer incomplete.
 
 ### 4. A wait is checked when it is written
 
@@ -73,7 +78,7 @@ Every command of the capability that writes a wait writes it through one writer.
 - **names no issue of the waiting issue's repository,** such as a pull request, a number that is not there, or another repository's issue
 - **names the waiting issue itself**
 - **names the waiting issue's own ancestor,** each parent read as the parent links give it (DEC-005, DEC-039)
-- **closes a loop of waits.** A loop counts each container as waiting on its children, since a container reaches Done only once they have. A wait on an ancestor is the shortest such loop.
+- **closes a loop of waits.** A loop counts each container as waiting on its children, since a container reaches Done only once they have, and each Task as waiting on what its ancestors wait on (point 1). A wait on an ancestor is the shortest such loop, and a container's wait on an issue under it is another.
 
 The reader checks a wait written outside the capability, such as a link made on the tracker's page or a line typed into a body. It reports each that the writer would refuse:
 
@@ -84,7 +89,7 @@ A person mends what the reader reports.
 
 ### 5. The prose of the `## Dependencies` section explains
 
-The section stays optional ([project-management:DEC-010-issue-body-minimum-structure]), save on a Task that records no wait, where it holds point 6's declaration. Beside any typed lines it holds prose: why the issue waits, what it relates to, what waits on it. No command reads an issue number in that prose as a wait. The capability reads it only for hints of a wait, which it flags and never counts (point 7). In a project that selects links, the capability writes no typed line in the section.
+The section stays optional ([project-management:DEC-010-issue-body-minimum-structure]), save on a Task that records no wait, where it holds point 6's declaration. Beside any typed lines it holds prose: why the issue waits, what it relates to, what waits on it. No command reads an issue number in that prose as a wait, save in an undeclared Task until the project turns the checks on (point 11). The capability reads it only for hints of a wait, which it flags and never counts (point 7). In a project that selects links, the capability writes no typed line in the section.
 
 ### 6. A Task declares its waits, or that it waits for nothing
 
@@ -92,9 +97,10 @@ A Task *declares* its waits: it records at least one wait, in either form, or it
 
 - **The declaration's line** takes a typed line's shape (point 1), with the word `nothing` in place of the number. It names no wait, whatever issue its words go on to name.
 - **It is written in the body, whatever form the project selects.** The tracker's links say what an issue waits on, never that it waits on nothing.
-- **Filing a Task asks for its waits or its declaration,** and is refused where it is given neither. So is an edit that would leave the Task with neither. Both refusals are hard rejects, as for a body that lacks a section its type requires ([project-management:DEC-014-validation-severity-model]).
+- **Filing a Task asks for its waits or its declaration.** Once the project turns the checks on (point 11), it is refused where it is given neither, and so is an edit that would leave the Task with neither. Both refusals are hard rejects, as for a body that lacks a section its type requires ([project-management:DEC-014-validation-severity-model]).
 - **A wait and the declaration do not stand together.** The writer removes the declaration when it writes the Task's first wait. Where the reader finds both, the waits count, and it reports the declaration.
-- **A Task found declaring neither,** such as one filed on the tracker's own page, is undeclared (point 3): it is not ready, and the reader reports it.
+- **An ancestor's wait** holds the Task all the same (point 1). It neither stands in for the Task's declaration nor stands against it: the Task still declares its own waits, or that it has none.
+- **A Task found declaring neither,** such as one filed on the tracker's own page, is undeclared (point 3): once the project turns the checks on, it is not ready, and the reader reports it.
 
 ### 7. A hint of a wait with no wait is flagged
 
@@ -106,20 +112,21 @@ A *hint of a wait* is text in a Task's body that names an open issue as somethin
 
 ### 8. The lifecycle's gates read the waits
 
-The moves that start a Task and merge its change read its waits through the reader (point 3):
+Once the project turns the checks on (point 11), the moves that start a Task and merge its change read its waits through the reader (point 3), its ancestors' among them:
 
 - **Starting a Task,** its move into In Progress, whichever command makes it, is refused while one of its waits is open. A person may bypass the refusal with an audited reason (DEC-014).
 - **Merging a Task's change** is refused while one of its waits is open, since the work it rests on has not landed. The refusal is a hard reject.
 - **An answer that is not whole, or a Task that is undeclared** (points 3 and 6), refuses either move in the same way, since neither shows that no wait is open.
+- **A wait on an issue the change itself closes** lands with the change, since its merge lands that issue's work too. So it holds no merge of that change. What a change closes is what its pull request names as closed ([project-management:DEC-013-branch-and-pr-conventions]).
 
 ### 9. A change that rests on unfinished work waits on it
 
-A change *rests on unfinished work* where it rests on work another open issue carries: a record that is not accepted (point 7), which that issue's change proposes, or that issue's own work as a Task, such as commits of its branch. Its Task then waits on that issue. Whoever finds that the change rests on such work records the wait through the writer, when the Task is filed or while it is built, so the merge gate holds the change until that work lands (point 8). A record the change proposes itself is its own work, and needs no wait.
+A change *rests on unfinished work* where it rests on work another open issue carries: a record that is not accepted (point 7), which that issue's change proposes, or that issue's own work as a Task, such as commits of its branch. Its Task then waits on that issue. Whoever finds that the change rests on such work records the wait through the writer, when the Task is filed or while it is built, so the merge gate holds the change until that work lands (point 8). Work the change carries itself is its own, and needs no wait: a record it proposes, or the work of an issue it closes (point 8).
 
-The capability checks it where it puts a Task's change up for review, and again before it merges the change. It refuses the change, as a hard reject, where the Task records no wait on the issue that carries work the change:
+Once the project turns the checks on (point 11), the capability checks it where it puts a Task's change up for review, and again before it merges the change. It refuses the change, as a hard reject, where the change rests on an open issue it does not close, and the Task records no wait on that issue. The change rests on that issue where it:
 
-- **cites:** a record that is not accepted, which another open issue's change proposes
-- **holds:** commits of another open Task's branch that the default branch does not hold
+- **cites** a record that is not accepted, which that issue's change proposes
+- **holds** commits of that issue's branch, the issue being a Task, which the default branch does not hold
 
 ### 10. A project's existing sections are converted through a proposal a person reviews
 
@@ -133,11 +140,24 @@ The proposal also flags each proposed wait the writer would refuse, such as one 
 
 The person reviews the proposal and may change it. The command then writes the waits and the declarations the person accepted, waits in the selected form, through the writer. It leaves the prose as it stood. It proposes no wait already recorded, and no declaration a Task already makes, so it may run again.
 
-Once the reader stops reading the prose, a project's open Tasks that record no wait are undeclared until the project converts them. None of them is ready, and the gates of point 8 refuse to start or merge it. So the capability's release that brings the reader changes how a project's state reads. Its migration points each project with open Tasks to the conversion ([COR-010]).
+A project that turns the checks on while open Tasks are undeclared finds none of them ready, and the gates of point 8 refuse to start or merge them. So a project converts its sections first, and then turns the checks on (point 11).
 
-### 11. DEC-025's open questions 4, 8 and 10
+### 11. A project turns the checks on with a key
 
-- **Question 4, the typed line's shape,** is answered. A typed line names one issue of its own repository, as `#N` (points 1 and 4). A line of the same shape with `nothing` in place of the number declares that a Task waits for nothing (point 6). A wait is apart from containment: a child does not wait on its parent, and a wait on an ancestor is refused, since it would never end.
+The checks that refuse or hold a Task apply once the project turns them on, with a key in the capability's project configuration:
+
+- **at filing and at each edit,** the refusal of a Task that declares neither its waits nor that it waits for nothing (point 6)
+- **in readiness,** the hold on an undeclared Task (points 3 and 6)
+- **at the start and at the merge,** the gates of point 8
+- **at review and at the merge,** the check of a change that rests on unfinished work (point 9)
+
+With the key absent, they are off. An install of the capability writes the key on, so a new project starts with them on, as [COR-066] point 4 turns its refusal on. An upgrade never writes it: a person turns the checks on, or off, by a change they authorise. The key counts as the default branch holds it, so no change turns off a check that judges it.
+
+Until the project turns the checks on, it keeps working as before. An undeclared Task is read from its `## Dependencies` section as the shared pool read it before this record: each open issue the section names holds the Task back, beside its ancestors' waits. So DEC-025's promise, that a project that writes its dependencies as prose meets no breaking change, holds until then. All else works as with the checks on. A Task that records a wait, or declares that it waits for nothing, is read by its waits alone, its ancestors' among them. The reader's holds and reports, the writer's checks, the flag on hints and the conversion all apply.
+
+### 12. DEC-025's open questions 4, 8 and 10
+
+- **Question 4, the typed line's shape,** is answered. A typed line names one issue of its own repository, as `#N` (points 1 and 4). A line of the same shape with `nothing` in place of the number declares that a Task waits for nothing (point 6). A wait is apart from containment: a child does not wait on its parent, and a wait on an ancestor is refused, since it would never end. A container's wait holds the Tasks under it (point 1).
 - **Question 8, waits across repositories,** is narrowed. Until a record answers it, the writer refuses a wait on another repository's issue, and a found one leaves its waiting issue's readiness unknown.
 - **Question 10, what evidence builds the primitive,** is answered for waits and stays open for lanes. Prose read as waits held Tasks back for good, and a view of the work needs waits it can read. That evidence is enough to build waits. Lanes still wait for the evidence the question asks for.
 
@@ -153,9 +173,13 @@ Once the reader stops reading the prose, a project's open Tasks that record no w
 
 **Why an answer that is not whole holds the issue back.** An answer cut short could miss the one open wait. A command that took the issue as ready would start work the project meant to wait. A view would show it ready when it cannot tell (#1548).
 
+**Why a tracker without links is told from a failed read.** A project selects typed lines where its tracker has no links, and there every read of links fails. Taken as a failed read, it would leave every Task's answer incomplete, so none would be ready and every merge would be refused. Taken as no links, a read that truly failed would pass for an empty answer and miss a wait. So only the tracker's own answer that it keeps no such links counts, as containment's reader tells a tracker without sub-issues from a read that failed ([pkit:ADR-035]). The reader selects no form by it: the project still selects the form (point 2).
+
+**Why a wait on a container holds its Tasks.** The tracker lets a person mark a Feature or an EPIC as blocked by another issue, the most natural use of the link. DEC-060 point 4 already gives weight to a wait on a Feature, so people write waits of Features too. A wait that held none of the container's Tasks would be written and do nothing, the mirror of a wait left out. Only Tasks are offered, started and merged, so a container's wait holds its work through them. A Task filed under it later is held too, since the wait says that the container's work comes after.
+
 **Why the checks run when a wait is written.** A wait on itself, on an ancestor or in a loop never ends, since what it awaits closes only after it. Refused when written, it never holds work back. Found only when read, it already has. The reader still checks waits written elsewhere, since the capability checks no write it did not make.
 
-**Why a loop counts each container's children.** A container reaches Done only once its children have. Say an issue waits on a container, and one of that container's children waits on the issue. Then the issue's wait never ends. The wait on an ancestor is the shortest such case.
+**Why a loop counts each container's children.** A container reaches Done only once its children have. Say an issue waits on a container, and one of that container's children waits on the issue. Then the issue's wait never ends. The wait on an ancestor is the shortest such case. A Task waits on what its ancestors wait on too, so a container's wait on an issue under it never ends either: the Tasks under that issue, or the issue itself where it is a Task, wait on it through the container.
 
 **Why the prose no longer counts.** Prose says many things about other issues: what waits on this one, what it belongs to, what it follows from. A reader that counts every number in it reads each as a wait, as #3548 and #2290 show. A typed line or a link says one thing.
 
@@ -173,9 +197,13 @@ Once the reader stops reading the prose, a project's open Tasks that record no w
 
 **Why the start may be bypassed and the merge may not.** The severity model keeps a bypass for a discipline a person may have reason to skip, and a hard reject for what later work rests on (DEC-014). A person may start a Task on another Task's branch on purpose, and the merge gate keeps the order: at worst the work is built again. A merge before the work it rests on lands the change on a record nobody accepted, or on code that is not there, which the acceptance gate forbids ([COR-066] point 1).
 
+**Why a wait on an issue the same change closes holds none of its merge.** A pull request may close several Tasks of one parent where their work is tightly coupled (DEC-013), and that is where one Task waits on another. The awaited Task closes only when that merge lands, so a gate that read its wait as open would refuse the merge on every try. The one merge lands both Tasks' work, so the order the wait asks holds. At the start no change says yet what it closes, so a Task built in one change with the issue it waits on starts by the bypass, with that as its reason.
+
 **Why a change that rests on unfinished work waits on it.** The acceptance gate asks that work built on a proposal land no earlier than the change that proposes it (COR-066 point 1). A wait is what the merge gate reads, so recording one makes that order a check. The check at review and at merge catches what the change itself shows: a record it cites, and a branch it holds. Any other way a change rests on unfinished work is recorded by whoever finds it.
 
 **Why a person reviews the conversion.** Only the author of a section knows whether each number in it is a wait, and some sections do not say. A command can propose and flag. A wrong wait written unseen holds work back, and a missed one lets work start too early.
+
+**Why the checks wait for a key.** A project that upgrades has open Tasks whose waits are prose. Turned on at once, the checks would find each of them undeclared: none would be ready, and none could start or merge, before the project had converted its sections. So a project turns the checks on once it has converted, and a new project, with no prose to convert, starts with them on, as COR-066 point 4 has it for its refusal. Until then the prose of an undeclared Task is read as before, so a project that writes its dependencies as prose meets no breaking change (DEC-025). Held by the default branch, the key cannot be moved by the change it would judge.
 
 **Why waits stay within the repository for now.** The shared pool is the repository's own (DEC-059). A loop check across repositories would read each other repository's waits, and readiness would read its states. Holding a found wait on another repository's issue as unknown keeps its waiting issue from starting early, until a record decides how to read another repository.
 
@@ -184,7 +212,8 @@ Once the reader stops reading the prose, a project's open Tasks that record no w
 - **Typed lines alone, as DEC-025 named.** Rejected: the tracker's links show on its pages and need no parsing, and a person adds one without learning a shape. A project whose tracker has none selects typed lines.
 - **Links alone.** Rejected: not every tracker has them, as not every tracker has sub-issues (DEC-039).
 - **Write both forms, as containment does.** Rejected, as "Why one form is written" says.
-- **Read only the selected form.** Rejected: a wait written by hand in the other form would be lost, and its issue would start early.
+- **Read only the selected form.** Rejected: a wait written by hand in the other form would be lost, and its issue would start early. Where the tracker has no links, the reader tells its answer from a failed read instead (point 3).
+- **Refuse a wait whose waiting issue is not a Task, and report one found.** Rejected, as "Why a wait on a container holds its Tasks" says: it would refuse the link a person most naturally writes.
 - **Keep reading the prose, and teach the reader to tell a wait from context.** Rejected: no reading of free prose is sure, and a wrong guess holds work back or lets it start early.
 - **End a wait however its awaited issue closed.** Rejected, as "Why a wait ends only when its work lands" says.
 - **Take a Task that records no wait as waiting for nothing.** Rejected, as "Why a Task declares that it waits for nothing" says.
@@ -192,8 +221,9 @@ Once the reader stops reading the prose, a project's open Tasks that record no w
 - **Hold work back through readiness alone.** Rejected, as "Why the gates read the waits" says.
 - **Hold the start as firmly as the merge.** Rejected, as "Why the start may be bypassed and the merge may not" says.
 - **Convert the sections without a person's review.** Rejected, as "Why a person reviews the conversion" says.
+- **Turn the checks on with the release that brings them.** Rejected, as "Why the checks wait for a key" says.
 - **Answer question 8 here, and read another repository's waits and states.** Not taken: it needs reads of other repositories, which a record of their own decides.
-- **Detect whether the tracker has links, rather than select by hand.** Deferred, as DEC-039 defers detecting sub-issues. A project knows its tracker, and the selection serves both cases now.
+- **Detect whether the tracker has links, rather than select by hand.** Deferred, as DEC-039 defers detecting sub-issues. A project knows its tracker, and the selection serves both cases now. The reader tells only whether the tracker answered that it has no links (point 3), and selects nothing by it.
 
 ## Implications
 
@@ -202,28 +232,30 @@ The edits this record makes to accepted records, once a person accepts it, each 
 - **DEC-025 is refined in place.**
   - **Its summary, its Context and its Decision's lead** then say that what an issue waits on is recorded and read as this record decides, and that lanes alone wait for lived evidence.
   - **Its design table's row on the sequence conflict** then gives the tracker's links, or typed lines where the project selects them, as the substrate, decided by this record.
-  - **Its section on the typed line** then says that a wait is a link or a typed line, that one reader reads both, that the section's prose explains, and that a Task declares its waits or that it waits for nothing.
+  - **Its section on the typed line** then says that a wait is a link or a typed line, that one reader reads both, that a Task waits on what its ancestors wait on too, that the section's prose explains, and that a Task declares its waits or that it waits for nothing.
   - **"Readiness is reckoned once"** then says that every command reads waits through that one reader.
-  - **Its open questions** then give point 11's answers to questions 4 and 10, and question 8 its narrowing. Their lead then says that the record that builds lanes answers the rest.
-  - **"Why the mechanisms wait for evidence" and "Why lanes and the typed line wait"** then say that lanes wait, and that waits had their evidence first. Its paragraph on the typed line keeping the prose then says that the prose explains, and that existing sections are converted.
+  - **Its open questions** then give point 12's answers to questions 4 and 10, and question 8 its narrowing. Their lead then says that the record that builds lanes answers the rest.
+  - **"Why the mechanisms wait for evidence" and "Why lanes and the typed line wait"** then say that lanes wait, and that waits had their evidence first.
+  - **Its paragraph on the typed line keeping the prose** then says that the prose explains, and that existing sections are converted. It says too that until a project turns this record's checks on, the prose of an undeclared Task is read as before, so its promise of no breaking change, for a project that writes its dependencies as prose, holds until then.
   - **Its alternatives "Build the full primitive now" and "Manual discipline only"** then say that this record builds waits, and that lanes wait.
   - **Its Implications** then say that a record of their own builds lanes, that this record refines DEC-005's table, and that the build of waits is a surface change. Its source scratchpad then retires with the record that builds lanes.
 - **DEC-005 is refined in place.** Its table's row for "Blocked by" then gives the tracker's own link, or a typed line where the project selects it. "Follow-up to" and "see also" stay textual, in a body section.
-- **DEC-006 is refined in place.** Its "Authorisation gates" then say that a Task's move into In Progress is refused while one of its waits is open, while its waits cannot be read in full, or while it is undeclared, and that a person may bypass the refusal with an audited reason. Its Implications then say that the merge of a Task's change is refused on the same terms, as a hard reject, beside the checkbox check.
+- **DEC-006 is refined in place.** Its "Authorisation gates" then say that, once a project turns this record's checks on, a Task's move into In Progress is refused while one of its waits is open, its ancestors' among them, while its waits cannot be read in full, or while it is undeclared, and that a person may bypass the refusal with an audited reason. Its Implications then say that the merge of a Task's change is refused on the same terms, as a hard reject, beside the checkbox check, save for a wait on an issue the change itself closes.
 - **DEC-010 is refined in place.**
   - **Its universal body rules** then add that a hint of a wait that no wait of the Task names is reported as a warning on a Task body.
-  - **Its table's row for a Task, and its note on a Task,** then say that a Task declares its waits, or that it waits for nothing, and that a Task that does neither is refused.
+  - **Its table's row for a Task, and its note on a Task,** then say that a Task declares its waits, or that it waits for nothing, and that once a project turns this record's checks on, a Task that does neither is refused, as a hard reject.
   - **Its optional sections** then say that a Task that records no wait carries the `## Dependencies` section, which holds the declaration.
 - **DEC-036 point 4** then lists waits beside containment: degradable to typed lines, by the `waits: native | textual` selector.
-- **DEC-059 point 7** then defines a ready Task in Backlog as one that declares its waits and has none open, citing this record.
-- **DEC-060's Implications** then say that its rule rests on waits as this record records them, where they say that dependencies stay prose. Their named question of how a Task In Progress waits for a change to the foundation then takes point 8's answer, that a wait recorded on it holds its merge.
+- **DEC-059 point 7** then defines a ready Task in Backlog as one that declares its waits and has none open, its ancestors' among them, and whose waits could be read in full, citing this record. It says too that until a project turns this record's checks on, an undeclared Task is read from its `## Dependencies` section as before, beside its ancestors' waits.
+- **DEC-060's Implications** then say that its rule rests on waits as this record records them, where they say that dependencies stay prose. Their named question of how a Task In Progress waits for a change to the foundation then takes point 8's answer, that once a project turns the checks on, a wait recorded on the Task holds its change's merge.
 - **DEC-066 point 1** then has the later of two Tasks that share a file wait on the earlier, with the prose of its `## Dependencies` section saying that they share a file. Its Implications then say that point 1 rests on waits as this record records them, where they say that dependencies stay prose.
 
 Other implications:
 
-- **The build** is a Task of its own (#3553). It brings the reader and the writer, the selector in the substrate map's schema, the declaration's check, the flag on hints, the gates on starting and merging, the check of a change that rests on unfinished work, the conversion command, the shared pool reading waits through the reader, and the pm skill's filing steps. It converts project-kit's own open issues through a proposal the maintainer reviews. It is a surface change of the capability, versioned under [pkit:PRJ-002], with the migration of point 10.
+- **The build** is a Task of its own (#3553), and rests on the architecture record below once it is accepted. It brings the reader and the writer, the selector in the substrate map's schema, the key of point 11, which the capability's install writes on, the declaration's check, the flag on hints, the gates on starting and merging, the check of a change that rests on unfinished work, the conversion command, the shared pool reading waits through the reader, and the pm skill's filing steps. It is a surface change of the capability, versioned under [pkit:PRJ-002]. With the key absent the checks are off, so a project that upgrades keeps working as before, and the release's notes point it to the conversion and the key.
+- **project-kit's own issues** are converted through a proposal the maintainer reviews, with the build. project-kit turns the checks on once the maintainer has reviewed its conversion.
 - **The commands that start a Task and merge its change** take point 8's gates with the build, and the capability's README lists them among each command's gates.
-- **An architecture record** may pin the reader's and the writer's contract, as [pkit:ADR-035] pins containment's. It is the architect's to author.
+- **An architecture record pins how waits are read and written** (#3562), as [pkit:ADR-035] pins containment's: the reader's and the writer's contract, and the key of point 11. It is the architect's to author.
 - **The capability's README** says, where the shared pool reads dependencies, that this record decides how an issue records its waits. Its account of how the pool reads them changes with the build.
 - **Other records** that say a Task names another among its dependencies stay true of a wait in either form, and keep their words.
 - **The analysis of parallel work** and its glossary define a ready Task by the prose, and change with the build.
