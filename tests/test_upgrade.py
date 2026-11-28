@@ -4122,20 +4122,24 @@ def test_a_first_hop_cut_short_goes_on_when_it_is_run_again(
 
 
 def test_a_move_under_pre_cut_short_hands_over_again_when_it_is_run_again(
-    installed_target: Path, stub_ls_remote: _RecordingRun, monkeypatch: pytest.MonkeyPatch
+    installed_target: Path,
+    stub_ls_remote: _RecordingRun,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     """`pkit upgrade --pre` cut short leaves the candidate recorded as the target,
     the pin at the release the project left. Run again, its routed child hands
     over to the candidate once more, whose upgrade finishes the move (ADR-089
     point 8). It targets the candidate the project records, whatever the source
     lists, so a newer candidate or final release published since takes no part
-    (ADR-092 point 7, ADR-065 point 9)."""
-    candidate = "3.0.0rc1"
+    (ADR-092 point 7, ADR-065 point 9). Its one lookup only names the newer
+    candidate."""
+    candidate, later = "3.0.0rc1", "3.0.0rc2"
     router.pin_file_path(installed_target).write_text(f"{_this_pkit()}\n", encoding="utf-8")
     manifest.record_backbone_target(installed_target, candidate)
     monkeypatch.setenv(router._LOOP_GUARD_ENV, "1")
     stub_ls_remote.ls_remote_returncode = 0
-    stub_ls_remote.ls_remote_stdout = _tag_output(_this_pkit(), candidate, "3.0.0rc2", "3.0.0")
+    stub_ls_remote.ls_remote_stdout = _tag_output(_this_pkit(), candidate, later, "3.0.0")
     handed: list[tuple[str, list[str]]] = []
     monkeypatch.setattr(
         upgrade, "run_bypassed", lambda pin, argv, _environ=None: handed.append((pin, argv)) or 0
@@ -4145,6 +4149,8 @@ def test_a_move_under_pre_cut_short_hands_over_again_when_it_is_run_again(
 
     assert handed == [(candidate, ["upgrade"])]
     assert router.read_version_pin(installed_target) == candidate
+    assert f"A later release candidate is published: {later}." in capsys.readouterr().out
+    assert len(stub_ls_remote.ls_remote_calls) == 1
 
 
 def test_the_lookup_under_pre_counts_candidates_in_their_normal_form_alone() -> None:
