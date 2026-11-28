@@ -87,7 +87,7 @@ $ pkit agents | grep -e capability:software-engineering -e Optional
   security-reviewer               capability:software-engineering  deployable  model inherit  effort inherit  project-conventions
   software-engineer               capability:software-engineering  deployable  model inherit  effort inherit  project-conventions
 Optional: 1 categor(ies) undefined   (agents deploy without them)
-  ⚠ Optional categor(ies) undefined (project-conventions): agents deploy without them; `pkit agents reconcile` to define and enrich.
+  ⚠ Optional categor(ies) undefined, each with the agents that deploy without it: project-conventions (code-reviewer, docs-reviewer, security-reviewer, software-engineer); `pkit agents reconcile` to define and enrich.
 $ printf 'project-conventions:\n  - docs/conventions.md\n' >> .pkit/agents/project/overlay.yaml
 $ pkit sync | tail -n 1
 Sync complete.

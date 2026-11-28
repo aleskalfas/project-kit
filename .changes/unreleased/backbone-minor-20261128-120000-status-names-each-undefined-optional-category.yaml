@@ -1,0 +1,18 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  `pkit status` names each optional category the agents overlay leaves
+  undefined, with the agents that deploy without it, in an `overlay` line
+  under `Agents` (#3564). An optional category is one that every agent naming
+  it reads only through `reads.patterns`. The line appears only where there is
+  a category to name, and it fails nothing. A category defined for every agent
+  that reads it is not listed, an explicit empty list among them, and one
+  defined only in an agent's override is listed with the other agents that
+  read it. `pkit agents` says the same line in its `Optional` footer, which
+  now names the agents too. Both now read a bare key, `category:` with no
+  value, as undefined, as the deploy does. So `pkit agents` shows an agent
+  whose required category is a bare key as `SKIPPED`, where it showed it
+  `deployable` though the deploy skipped it. No migration: nothing an
+  installed project holds changes.
