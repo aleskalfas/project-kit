@@ -1,0 +1,16 @@
+{
+  "commit": "1e3abab4cecaf73b8ed5ed865c25c8568203458f",
+  "backbone": "2.2.0",
+  "components": {
+    "claude-code": "0.8.0",
+    "demo-recording": "0.2.1",
+    "doc-examples": "1.0.1",
+    "evidence": "0.5.2",
+    "lean-business": "0.1.0",
+    "living-docs": "1.0.0",
+    "project-management": "0.57.0",
+    "software-analysis": "1.0.0",
+    "software-engineering": "0.3.2",
+    "visual-communication": "0.4.0"
+  }
+}

@@ -2,9 +2,9 @@ schema_version: 1
 component:
   kind: capability
   name: lean-business
-  version: 0.1.0
+  version: 0.2.0rc3
 description: Guides a person through the lean method of validating a business model, from the canvas and its desk checks to experiments and 90-day cycles, keeping each judgement theirs.
-requires_backbone: ">=2.2.0,<3.0.0"
+requires_backbone: ">=2.2.0,<3.1.0"
 aliases:
   - lean
 commands:
