@@ -22,7 +22,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from tests import pm_lifecycle_world as lw
-from tests.pm_ownership_support import FakeGitHub, clone_with
+from tests.pm_ownership_support import FakeGitHub, clone_with, is_read
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATH = (
@@ -793,7 +793,7 @@ def _close(
     fake = github if github is not None else FakeGitHub()
 
     def ownership_gh(args: list[str], _config: dict):
-        if args[1:3] != ["issue", "view"]:
+        if not is_read(args):
             calls.append(args)
         return fake(args)
 

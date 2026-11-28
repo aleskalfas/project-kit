@@ -1440,6 +1440,21 @@ def test_a_move_back_of_an_issue_that_cannot_be_read_is_refused(monkeypatch, cap
     assert "→ run this again once the issue can be read." in err
 
 
+def test_a_move_back_of_an_issue_whose_log_cannot_be_read_whole_is_refused(
+    monkeypatch, capsys
+) -> None:
+    """The move back asks whose the issue is from its whole comment log (ADR-041
+    point 1), so a log cut short refuses it before it writes."""
+    rc, writes, github = _move_back(
+        monkeypatch, "--to", "backlog", "--reason", "stalled", "--yes", failing=("page",)
+    )
+    assert rc == 1
+    assert writes == [] and github.writes() == []
+    err = capsys.readouterr().err
+    assert "#42's comment log could not be read whole" in err
+    assert "so whose it is cannot be told" in err
+
+
 def test_where_the_board_carries_the_state_the_move_back_is_refused(monkeypatch, capsys) -> None:
     """Where the board carries the state, the move back is refused and writes
     nothing, so it releases no claim and journals no move (DEC-006)."""
