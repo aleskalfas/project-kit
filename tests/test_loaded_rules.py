@@ -811,7 +811,7 @@ def test_an_upgrade_from_a_version_with_no_rule_set_cannot_tell_what_bound_befor
     each rule it holds, none as newly binding (#2369)."""
     # The tool step's lookup of the latest release finds none, so nothing reaches the
     # network.
-    monkeypatch.setattr(upgrade, "_latest_released_version", lambda: None)
+    monkeypatch.setattr(upgrade, "latest_released_version", lambda: None)
     recorded = read_backbone_manifest(adopter.root)
     assert recorded is not None
     recorded.backbone_version = "0.1.0"
