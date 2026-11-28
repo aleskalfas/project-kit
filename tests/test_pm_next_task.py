@@ -24,6 +24,7 @@ import pytest
 
 from tests import pm_assignee_lookup
 from tests.pm_ownership_support import (
+    EARLIEST_TAKE,
     FakeGitHub,
     clone_with,
     seat_issue,
@@ -478,7 +479,7 @@ def _seat(nt, monkeypatch, *, role: str = "worker", scope: Any = None, holders: 
     """This clone holds `worker-2`, the second seat, with the key `k2`."""
     claims = nt.instance_claims
     ownership = claims.ownership
-    held = {"worker-2": ownership.Holder(ownership.SEAT_HELD, "me", "k2")}
+    held = {"worker-2": ownership.Holder(ownership.SEAT_HELD, "me", "k2", EARLIEST_TAKE)}
     seat = claims.Seat("worker-2", 2, role, scope)
     topology_with(claims, monkeypatch, claims.Topology(seat, holders or held), key="k2")
 
@@ -516,7 +517,7 @@ def test_a_task_whose_seat_was_released_is_taken_over(run, nt, monkeypatch, caps
         monkeypatch,
         holders={
             "worker-1": ownership.Holder(ownership.SEAT_FREE),
-            "worker-2": ownership.Holder(ownership.SEAT_HELD, "me", "k2"),
+            "worker-2": ownership.Holder(ownership.SEAT_HELD, "me", "k2", EARLIEST_TAKE),
         },
     )
     rc, starts = run(pool)
@@ -538,8 +539,8 @@ def test_a_task_in_progress_whose_claim_counts_is_left_alone(run, nt, monkeypatc
         nt,
         monkeypatch,
         holders={
-            "worker-1": ownership.Holder(ownership.SEAT_HELD, "me", "k1"),
-            "worker-2": ownership.Holder(ownership.SEAT_HELD, "me", "k2"),
+            "worker-1": ownership.Holder(ownership.SEAT_HELD, "me", "k1", EARLIEST_TAKE),
+            "worker-2": ownership.Holder(ownership.SEAT_HELD, "me", "k2", EARLIEST_TAKE),
         },
     )
     rc, starts = run(pool)

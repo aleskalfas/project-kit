@@ -22,6 +22,7 @@ from types import SimpleNamespace
 import pytest
 
 from tests.pm_ownership_support import (
+    EARLIEST_TAKE,
     FakeGitHub,
     seat_issue,
     seat_snapshot,
@@ -837,7 +838,7 @@ def test_a_log_that_cannot_be_read_whole_is_never_a_pass(ic, root, monkeypatch) 
 
 
 def _held(ic, login: str = "me", key: str = "k2"):
-    return ic.ownership.Holder(ic.ownership.SEAT_HELD, login, key)
+    return ic.ownership.Holder(ic.ownership.SEAT_HELD, login, key, EARLIEST_TAKE)
 
 
 def _seat_clone(ic, root: Path, *, role: str = "worker", holders: dict | None = None):
@@ -954,7 +955,7 @@ def test_with_no_topology_a_claim_names_no_seat(ic, root: Path) -> None:
     "holder",
     [
         pytest.param(("free", None, None), id="its-seat-is-free"),
-        pytest.param(("held", "me", "k3"), id="another-clone-took-its-seat"),
+        pytest.param(("held", "me", "k3", EARLIEST_TAKE), id="another-clone-took-its-seat"),
     ],
 )
 def test_a_claim_whose_clone_lost_its_seat_is_no_claim(ic, root, holder) -> None:

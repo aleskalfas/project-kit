@@ -28,7 +28,9 @@ A project with a topology of seats (DEC-059) is stood in for by
 that reading of the topology, as `read_topology` builds it from one run's
 snapshot, and `key` as this clone's key, as its runtime file keeps it, beside
 the name of the seat the reading gives. The stamp that names a seat is the
-audit-log facility's own.
+audit-log facility's own. A seat a reading gives as held names its holder's
+take of it (ADR-041 point 7): `EARLIEST_TAKE` is a take made before every
+comment the fakes post, so a claim a test posts comes after it.
 """
 
 from __future__ import annotations
@@ -43,7 +45,10 @@ from typing import Any
 
 import pytest
 
-from tests.pm_state_issue_fakes import COMMENT_IDS
+from tests.pm_state_issue_fakes import COMMENT_IDS, FIRST_COMMENT_ID
+
+#: A seat's take made before every comment the fakes post.
+EARLIEST_TAKE = FIRST_COMMENT_ID - 1
 
 _PAGE = re.compile(r"repos/\{owner\}/\{repo\}/issues/(\d+)/comments\?per_page=(\d+)&page=(\d+)")
 _COMMENT_URL = re.compile(r"#issuecomment-(\d+)$")

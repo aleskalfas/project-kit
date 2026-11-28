@@ -196,8 +196,8 @@ class Holder:
 
     ``take`` is the id of the comment on the seat's state issue whose claim made
     the clone the holder, its current take of the seat. A holder read from a
-    state issue always names it. Where a caller names none, a claim is judged
-    on its clone alone."""
+    state issue always names it. A held seat named with none is a holder not
+    read whole, so its clone's claims cannot be judged."""
 
     state: str
     login: str | None = None
@@ -446,7 +446,9 @@ def judge_claim(
     claim counts only where it came after the holder's take of the seat. GitHub
     numbers the comments of every issue from one sequence, so the claim's id is
     then the higher. A claim made before the take is void, even where the same
-    clone took the seat again. One whose id was not read is unjudged (#2182)."""
+    clone took the seat again. One whose id was not read is unjudged (#2182),
+    and so is one whose seat is held by its clone with no take named, since its
+    seat's holder was not read whole."""
     if not event.seat:
         return ClaimJudgement(instance, None, event.clone, VOID, NO_SEAT)
     holder = holders.get(event.seat)
@@ -458,7 +460,7 @@ def judge_claim(
     if not (holder.state == SEAT_HELD and holder.clone == event.clone and same_account):
         return ClaimJudgement(instance, event.seat, event.clone, VOID, SEAT_RELEASED)
     if holder.take is None:
-        return ClaimJudgement(instance, event.seat, event.clone, COUNTS)
+        return ClaimJudgement(instance, event.seat, event.clone, UNJUDGED, SEAT_UNREAD_REASON)
     if event.comment_id is None:
         return ClaimJudgement(instance, event.seat, event.clone, UNJUDGED, NO_COMMENT_ID)
     if event.comment_id <= holder.take:

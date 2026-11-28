@@ -12,7 +12,13 @@ import pytest
 
 from tests import pm_assignee_lookup
 from tests.pm_composed_move_support import FakeEngine, MoveIssueInProcess, status_at
-from tests.pm_ownership_support import FakeGitHub, clone_with, is_read, topology_with
+from tests.pm_ownership_support import (
+    EARLIEST_TAKE,
+    FakeGitHub,
+    clone_with,
+    is_read,
+    topology_with,
+)
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts" / "start-work.py"
@@ -1142,7 +1148,7 @@ def seats(sw, monkeypatch) -> Any:
     ownership = claims.ownership
 
     def seat(role: str = "worker", holders: dict | None = None) -> None:
-        held = {"worker-2": ownership.Holder(ownership.SEAT_HELD, "me", "k2")}
+        held = {"worker-2": ownership.Holder(ownership.SEAT_HELD, "me", "k2", EARLIEST_TAKE)}
         topology = claims.Topology(claims.Seat("worker-2", 2, role), holders or held)
         topology_with(claims, monkeypatch, topology, key="k2")
 
@@ -1174,7 +1180,7 @@ def test_a_claim_whose_seat_was_released_is_no_claim(run_main, sw, seats, capsys
     seats(
         holders={
             "worker-1": ownership.Holder(ownership.SEAT_FREE),
-            "worker-2": ownership.Holder(ownership.SEAT_HELD, "me", "k2"),
+            "worker-2": ownership.Holder(ownership.SEAT_HELD, "me", "k2", EARLIEST_TAKE),
         }
     )
     github = _assigned_42()
@@ -1189,8 +1195,8 @@ def test_another_seats_task_is_refused(run_main, sw, seats, capsys) -> None:
     ownership = sw.instance_claims.ownership
     seats(
         holders={
-            "worker-1": ownership.Holder(ownership.SEAT_HELD, "me", "k1"),
-            "worker-2": ownership.Holder(ownership.SEAT_HELD, "me", "k2"),
+            "worker-1": ownership.Holder(ownership.SEAT_HELD, "me", "k1", EARLIEST_TAKE),
+            "worker-2": ownership.Holder(ownership.SEAT_HELD, "me", "k2", EARLIEST_TAKE),
         }
     )
     github = _assigned_42()
@@ -1224,7 +1230,7 @@ def test_code_that_cannot_read_the_topology_in_full_makes_no_claim(
     the mark with exit 2, before anything is written."""
     claims = sw.instance_claims
     ownership = claims.ownership
-    held = {"worker-2": ownership.Holder(ownership.SEAT_HELD, "me", "k2")}
+    held = {"worker-2": ownership.Holder(ownership.SEAT_HELD, "me", "k2", EARLIEST_TAKE)}
     reading = claims.Topology(
         claims.Seat("worker-2", 2, "worker"), held, refusal="this code cannot read it in full."
     )
@@ -1242,7 +1248,7 @@ def _pooled(sw, monkeypatch, *, seat_pools: tuple[str, ...], rows: Any) -> None:
     read fails)."""
     claims = sw.instance_claims
     ownership = claims.ownership
-    held = {"worker-2": ownership.Holder(ownership.SEAT_HELD, "me", "k2")}
+    held = {"worker-2": ownership.Holder(ownership.SEAT_HELD, "me", "k2", EARLIEST_TAKE)}
     seat = claims.Seat("worker-2", 2, "worker", None, seat_pools)
     topology_with(
         claims, monkeypatch, claims.Topology(seat, held, pools=("alpha", "bravo")), key="k2"
