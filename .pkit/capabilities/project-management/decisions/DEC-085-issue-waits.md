@@ -142,6 +142,8 @@ Once the project turns the checks on (point 11), the capability checks it where 
 - **cites** a record that is not accepted, which that issue's change proposes
 - **holds** commits of that issue's branch, the issue being a Task, which the default branch does not hold
 
+Whatever issues and their closes say, a change merged into the default branch that cites a record the default branch does not hold as accepted is refused, as a hard reject, unless the change proposes that record itself. This is read from the default branch alone, so it holds where an issue's close or its marker misleads, and where the capability cannot tell which issue proposes the record.
+
 ### 10. A project's existing sections are converted through a proposal a person reviews
 
 A command reads each open issue's `## Dependencies` section, proposes the waits it means, and writes only those a person accepts. It sorts each issue the section names:
