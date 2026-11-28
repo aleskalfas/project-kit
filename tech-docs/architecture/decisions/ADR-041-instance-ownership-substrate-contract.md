@@ -86,16 +86,20 @@ ownership record is lost.
 ([project-management:DEC-059](../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md)),
 the fold takes four inputs from its caller: the time of reading, which is GitHub's,
 the limit after which a claim lapses, the Task's state in the lifecycle and the
-seats' holders. So the ownership seam reads no other seam. A claim names its seat,
-the seat's number and the clone's key, counts only while that clone holds that seat,
-and on a Task In Progress lapses once its work has not renewed it within the limit.
-The ownership-event comment is built by the audit-log facility's builder, which
-also builds every event of a state issue (point 3).
+seats' holders. So the ownership seam reads no other seam.
+
+A claim names its seat, the seat's number and the clone's key. It counts only while
+that clone holds that seat, and only where its comment id is higher than that of the
+clone's current take. A clone's take of a seat is the claim, on the seat's state
+issue, that made the clone the seat's holder. On a Task In Progress, a claim lapses
+once its work has not renewed it within the limit. The ownership-event comment is
+built by the audit-log facility's builder, which also builds every event of a state
+issue (point 3).
 
 **A claim the seam cannot judge is never treated as free,** in any project: one
 whose author cannot be told from the expected assignee (point 1), and, in a
-project with a topology, one for a log or a seat it could not read (point 7)
-(refinement per [ADR-094](ADR-094-acting-account-reading.md)).
+project with a topology, one for a log, a seat or a comment id it could not read
+(point 7) (refinement per [ADR-094](ADR-094-acting-account-reading.md)).
 
 ## Context
 
@@ -154,15 +158,25 @@ seat's pools where the topology declares pools of workers
 `next-task` takes over a Task In Progress whose claim
 does not count, and none whose claim the fold cannot judge. For the seat's release,
 `seats` judges each Task in Review against the seats' holders, and names each Task a
-released seat left. It reads each log whole through the shared reader, while the
-other commands fold the comments a `gh issue view` read returns.
+released seat left. Every command that folds a log reads it whole through the shared
+reader.
 
 Of point 7's inputs, the fold takes the seats' holders, and no time of reading, limit
 or state, so it judges no lapse. It returns the owners whose claims count, and each
-claim that does not count, for no seat named or its seat released. It leaves
-unjudged a claim whose seat is unread or missing from the holders. A failed read of
-the issue is its caller's: the guard refuses, the claim and the release fail, and the
-pool skips the Task.
+claim that does not count. A claim does not count where it names no seat, its seat was
+released, or it was made before its seat's current take.
+
+The fold leaves unjudged a claim whose seat is unread or missing from the holders. A
+claim whose comment id was not read is unjudged too, where its seat's take decides it.
+The shared reader reads no log whole that holds a comment with no id, so a command's
+fold has every claim's comment id.
+
+The fold leaves no claim unjudged for a log not read whole, since no command folds such
+a log. An issue that cannot be read, or whose log cannot be read whole, is a failed
+read before any fold. Each caller treats that failed read as point 5 treats an
+unjudged claim: the guard and the move back from In Progress refuse, and the pool
+skips the Task. The claim and the release fail, and `seats` reports the Task as
+unread, so whether a released seat left it cannot be told.
 
 Point 5's writers build an argv or a body and report no outcome. Their caller reads
 success from `gh`'s exit and a lost race from the re-read fold, and no path reports
@@ -325,8 +339,10 @@ In a project with a topology of seats, every event that makes an owner names the
 owner's seat, the seat's number and the clone's key (DEC-059 point 9). The fold then
 takes four more inputs from its caller, and reads no other seam:
 
-- **The seats' holders:** for each seat, the clone that holds it, by its account and
-  key, or free, or unread. The caller reads them from each seat's state issue
+- **The seats' holders:** for each seat, the clone that holds it, by its account, its
+  key and its current take of the seat, or free, or unread. The take is the claim, on
+  the seat's state issue, that made the clone the seat's holder, and the caller passes
+  that claim's comment id. The caller reads the holders from each seat's state issue
   ([project-management:DEC-058](../../../.pkit/capabilities/project-management/decisions/DEC-058-state-issues.md),
   DEC-059 point 3). A command on one Task reads the seats its claims name, which the
   seam gives from the Task's log, and the pool reads every seat.
@@ -350,6 +366,12 @@ When a claim counts:
 - **Its seat.** A claim counts only while the clone it names holds the seat it
   names, by the holders the caller passed. A claim that names no seat, made under a
   typed number before the topology, does not count (DEC-059 point 9).
+- **Its take.** A claim counts only where it was made after the holder's current take
+  of its seat. A claim made before the take is void, even where the same clone took
+  the seat again. So a claim that stopped counting at its seat's release does not count
+  again, with no write to its issue (DEC-059 point 5 and #2182). GitHub numbers the
+  comments of every issue from one sequence, so a claim made after the take has the
+  higher comment id.
 - **A handoff to a seat** names the target seat, its number and the key of its
   holder in the holders the caller passed. It counts for the target as a claim
   does.
@@ -376,11 +398,15 @@ What it returns:
   count is no claim, so the tie-break by the lower number runs among the claims that
   count (DEC-035 point 6).
 - **Each claim that does not count,** with its reason: lapsed, its seat released,
-  or no seat named.
-- **Each claim it cannot judge,** with its reason: a log it could not read whole, a
-  seat it names that is unread or missing from the holders, a state it could not
-  read, or no time of reading. No consumer treats an unjudged claim as free (point
-  5).
+  made before its seat's current take, or no seat named.
+- **Each claim it cannot judge,** with its reason. No consumer treats an unjudged
+  claim as free (point 5). The fold leaves a claim unjudged where:
+  - the seam could not read the log whole
+  - the seat the claim names is unread or missing from the holders
+  - the claim's comment id could not be read, where its seat's take decides whether
+    the claim counts
+  - the caller could not read the issue's state
+  - the caller has no time of reading
 
 What it reads:
 
@@ -599,9 +625,20 @@ would see live claims lapse, and the pool would take live Tasks over. Taking
 both times from GitHub keeps DEC-059 point 9's rule that the sandboxes' clocks
 decide nothing, at no extra call.
 
+**Why a claim made before its seat's current take is void.** A clone that takes its
+seat again keeps its key, so the key alone would revive its earlier claims. A Task
+another seat took over while the seat was free would then have two owners. GitHub
+numbers every issue's comments from one sequence, so comment ids order a claim and a
+take with no clock, even within one second.
+
 **Why an unread seat leaves a claim unjudged.** Reading an unread seat as free would
 turn every claim naming it into a released one, so one failed read would hand a
 live clone's Tasks to the pool. An unjudged claim costs a retry, never a takeover.
+
+**Why an unread comment id leaves a claim unjudged.** Without the id, the fold cannot
+tell a claim made after the take from one made before. Counting such a claim could
+revive a released one, and voiding it could hand a live Task to the pool. An unjudged
+claim costs a retry, never a takeover.
 
 **Why the mirror only lets a consumer pass over an issue.** DEC-043 keeps a
 listing's cost at one call by reading the mirror, and DEC-059 makes the mirror unfit
@@ -705,6 +742,10 @@ enforced by the seam having no engine-side caller.
   would lapse live claims, against DEC-059 point 9.
 - **An unread seat passed as free.** Rejected — one failed read would release every
   claim naming the seat.
+- **A clone that takes its seat again revives its earlier claims.** Rejected — a Task
+  another seat took over while the seat was free would have two owners.
+- **A claim whose comment id was not read counts, or is void.** Rejected — counting
+  it could revive a released claim, and voiding it could hand a live Task to the pool.
 - **Each consumer judges the mirror against the holders.** Rejected — a second
   resolver in every consumer, the scatter point 1 forbids.
 - **The mirror stands for the fold of a Task In Progress.** Rejected — the claim
@@ -725,7 +766,7 @@ enforced by the seam having no engine-side caller.
   claim/handoff/abandon/release sequence to current ownership. The lifecycle commands
   resolve through it, as do the pool in `next-task` and, for the seat's
   release, `seats`. The signed listing is not built, no function reads the mirror back, and
-  only `seats` reads a log through the shared reader.
+  every fold reads its log whole through the shared reader.
 - **Comment-log-wins is a seam invariant over the union of both substrates** — a
   comment-log marker is authoritative; a coexisting lingering `instance:N` label is
   residual and does not win, and is stripped on the next ownership mutation (DEC-035
