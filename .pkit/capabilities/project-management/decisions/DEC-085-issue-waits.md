@@ -1,7 +1,7 @@
 ---
 id: DEC-085
 title: An issue's waits are the tracker's blocked-by links, or typed lines where the project selects them
-status: proposed
+status: accepted
 date: 2026-11-28
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
